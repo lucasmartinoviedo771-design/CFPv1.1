@@ -1,0 +1,88 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.py[cod]
+*$py.class
+
+# Django stuff:
+*.log
+*.pot
+*.sqlite3
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+
+# IDEs:
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS generated files:
+.DS_Store
+.Trashes
+thumbs.db
+Thumbs.db
+
+# Frontend
+node_modules/
+build/
+dist/
+.vite/
+pnpm-lock.yaml
+package-lock.json
+*.local
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temp files
+tmp/
+temp/
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# Database volumes
+data/
+backups/
+*.sql
+*.dump
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# pytest
+.pytest_cache/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Logs
+logs/
+*.log
+
+# macOS
+.AppleDouble
+.LSOverride
