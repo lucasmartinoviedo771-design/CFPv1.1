@@ -2,8 +2,8 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
-from core.auth import EmailOrUsernameTokenObtainPairView
+from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
+# from core.auth import EmailOrUsernameTokenObtainPairView
 from academia.api import api as api_v2
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -52,8 +52,11 @@ urlpatterns = [
     path("api/analytics/graduates/", AnalyticsGraduatesView.as_view(), name="analytics-graduates"),
     path("api/administracion/grafico-cursos/", CoursesGraphView.as_view(), name="courses-graph"),
     path("api/", include(router.urls)),
-    path('api/token/', EmailOrUsernameTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    
+    # Standard SimpleJWT Login View (for debugging 500 errors)
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
     path('api/logout/', LogoutView.as_view(), name='logout'),
     # --- OpenAPI schema + UIs ---
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),                 # JSON

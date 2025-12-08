@@ -15,23 +15,25 @@ class EmailOrUsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         raw = (attrs.get("username") or "").strip()
         password = attrs.get("password")
-
+        
+        # Safe lookup
         resolved_username = raw
-        if "@" in raw:
-            try:
-                u = User.objects.get(email__iexact=raw)
-                resolved_username = u.username
-            except User.DoesNotExist:
-                # Fall back to parent handling (will raise invalid credentials)
-                resolved_username = raw
-        else:
-            try:
-                u = User.objects.get(username__iexact=raw)
-                resolved_username = u.username
-            except User.DoesNotExist:
-                resolved_username = raw
-
-        return super().validate({"username": resolved_username, "password": password})
+        try:
+            if "@" in raw:
+                # Filter is safer than get for preventing 500 on duplicates
+                users = User.objects.filter(email__iexact=raw)
+                if users.exists():
+                    resolved_username = users.first().username
+            else:
+                users = User.objects.filter(username__iexact=raw)
+                if users.exists():
+                    resolved_username = users.first().username
+                    
+            return super().validate({"username": resolved_username, "password": password})
+        except Exception as e:
+            # Fallback debug log (this will print to console where runserver is running)
+            print(f"!!! AUTH ERROR: {e}")
+            raise
 
 
 class EmailOrUsernameTokenObtainPairView(TokenObtainPairView):
