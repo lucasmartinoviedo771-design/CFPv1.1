@@ -1,13 +1,152 @@
+@import "tailwindcss";
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  background-color: #0a0033;
+  color: white;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0033;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a0b5c;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF6600;
+}
+
+/* Animated background lines effect */
+.lines-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+  background: linear-gradient(to bottom right, #050020, #0a0040);
+  pointer-events: none;
+}
+
+.line {
+  position: absolute;
+  width: 200%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 204, 255, 0.3), transparent);
+  transform: rotate(-45deg);
+  animation: drift 10s linear infinite;
+}
+
+.line:nth-child(1) {
+  top: 20%;
+  left: -50%;
+  animation-duration: 8s;
+  background: linear-gradient(90deg, transparent, rgba(170, 0, 255, 0.4), transparent);
+}
+
+.line:nth-child(2) {
+  top: 50%;
+  left: -60%;
+  animation-duration: 12s;
+}
+
+.line:nth-child(3) {
+  top: 80%;
+  left: -40%;
+  animation-duration: 15s;
+  background: linear-gradient(90deg, transparent, rgba(255, 102, 0, 0.2), transparent);
+}
+
+@keyframes drift {
+  0% {
+    transform: rotate(-45deg) translateX(-10%);
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: rotate(-45deg) translateX(10%);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+}
+
+@keyframes bounce-slow {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 4s ease-in-out infinite;
+}
+
+@keyframes bounce-slow-delay {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-slow-delay {
+  animation: bounce-slow-delay 5s ease-in-out infinite 1s;
+}
+
+/* Tailwind v4 theme configuration via CSS variables to match tailwind.config.js */
+@theme {
+  --color-brand-dark: #0a0033;
+  --color-brand-primary: #1a0b5c;
+  --color-brand-accent: #FF6600;
+  --color-brand-cyan: #00ccff;
+  --color-brand-purple: #aa00ff;
+  --font-sans: 'Inter', sans-serif;
+  --animate-fade-in-up: fade-in-up 0.8s ease-out forwards;
+  --animate-bounce-slow: bounce-slow 4s ease-in-out infinite;
+  --animate-bounce-slow-delay: bounce-slow-delay 5s ease-in-out infinite 1s;
+
+  /* Custom background images aren't directly exposed in @theme the same way, usually, 
+     but we can use utilities or standard CSS. The components use 'bg-brand-primary' etc. */
 }

@@ -1,13 +1,16 @@
-FROM node:18-alpine
-
+# Build Stage
+FROM node:18-alpine as build
 WORKDIR /app
-
-COPY package.json package-lock.json* ./
-
-RUN npm install
-
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm install
 COPY . .
+# En producción, el proxy de nginx redigirá /api al backend
+ENV VITE_API_BASE=/api
+RUN pnpm build
 
-EXPOSE 3000
-
-CMD ["npm", "run", "dev", "--", "--host"]
+# Serve Stage
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  Box, Typography, Accordion, AccordionSummary, AccordionDetails, CircularProgress, 
+  Box, Typography, Accordion, AccordionSummary, AccordionDetails, CircularProgress,
   List, ListItem, ListItemText, Grid, IconButton, Tooltip, Button,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Checkbox, FormControlLabel,
   Snackbar, Alert
@@ -22,7 +22,7 @@ const formatDate = (dateString) => {
   const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
   const day = parseInt(parts[2], 10);
   const date = new Date(Date.UTC(year, month, day));
-  
+
   // toLocaleDateString with timeZone: 'UTC' ensures the date is formatted as is.
   return date.toLocaleDateString('es-AR', { timeZone: 'UTC' });
 };
@@ -175,27 +175,27 @@ function ProgramaFormDialog({ open, onClose, onSave, programa }) {
 
 function ModuloItem({ modulo, onEdit, onDelete }) {
   return (
-    <ListItem 
-      disablePadding 
+    <ListItem
+      disablePadding
       secondaryAction={
         <Box>
           <Tooltip title="Editar Módulo">
             <IconButton edge="end" aria-label="edit" onClick={() => onEdit(modulo)}>
-              <EditOutlinedIcon />
+              <EditOutlinedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Eliminar Módulo">
             <IconButton edge="end" aria-label="delete" onClick={() => onDelete(modulo)}>
-              <DeleteOutlineRoundedIcon />
+              <DeleteOutlineRoundedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
             </IconButton>
           </Tooltip>
         </Box>
       }
     >
-      <ListItemText 
-        primary={<Typography variant="body1">{modulo.nombre}</Typography>}
+      <ListItemText
+        primary={<Typography variant="body1" sx={{ color: 'white' }}>{modulo.nombre}</Typography>}
         secondary={
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
             Inicio: {formatDate(modulo.fecha_inicio)} | Fin: {formatDate(modulo.fecha_fin)}
           </Typography>
         }
@@ -206,23 +206,30 @@ function ModuloItem({ modulo, onEdit, onDelete }) {
 
 function BloqueAccordion({ bloque, expanded, onChange, onAddModulo, onEditBloque, onDeleteBloque, onEditModulo, onDeleteModulo }) {
   return (
-    <Accordion expanded={expanded} onChange={onChange} sx={{ mt: 1, mb: 1, bgcolor: 'grey.100' }}>
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+    <Accordion expanded={expanded} onChange={onChange} sx={{
+      mt: 1,
+      mb: 1,
+      bgcolor: 'rgba(255, 255, 255, 0.05)',
+      color: 'white',
+      border: '1px solid rgba(255,255,255,0.1)',
+      '&:before': { display: 'none' }
+    }}>
+      <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}>
         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>Bloque: {bloque.nombre}</Typography>
           <Tooltip title="Añadir Módulo">
             <IconButton size="small" onClick={(e) => { e.stopPropagation(); onAddModulo(bloque.id); }}>
-              <AddRoundedIcon />
+              <AddRoundedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Editar Bloque">
             <IconButton size="small" onClick={(e) => { e.stopPropagation(); onEditBloque(bloque); }}>
-              <EditOutlinedIcon />
+              <EditOutlinedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Eliminar Bloque">
             <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDeleteBloque(bloque); }}>
-              <DeleteOutlineRoundedIcon />
+              <DeleteOutlineRoundedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -230,7 +237,7 @@ function BloqueAccordion({ bloque, expanded, onChange, onAddModulo, onEditBloque
       <AccordionDetails>
         <List dense>
           {bloque.modulos.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">No hay módulos en este bloque.</Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>No hay módulos en este bloque.</Typography>
           ) : (
             bloque.modulos.map((modulo) => (
               <ModuloItem key={modulo.id} modulo={modulo} onEdit={onEditModulo} onDelete={onDeleteModulo} />
@@ -305,7 +312,7 @@ export default function Estructura() {
 
   const handleEditModulo = (modulo) => {
     setCurrentModulo(modulo);
-    setParentBloqueId(modulo.bloque_id || modulo.bloque); 
+    setParentBloqueId(modulo.bloque_id || modulo.bloque);
     setOpenModuloDialog(true);
   };
 
@@ -364,7 +371,7 @@ export default function Estructura() {
 
   const handleEditBloque = (bloque, programaId) => {
     setCurrentBloque(bloque);
-    setParentProgramaId(programaId); 
+    setParentProgramaId(programaId);
     setOpenBloqueDialog(true);
   };
 
@@ -470,46 +477,58 @@ export default function Estructura() {
 
   return (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">Editor de Estructura de Cursos</Typography>
-        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={handleAddPrograma}>Añadir Programa</Button>
-      </Box>
-      <Typography color="text.secondary" sx={{ mb: 4 }}>Gestiona la jerarquía de tus programas, bloques y módulos.</Typography>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Editor de Estructura de Cursos</h1>
+          <p className="text-indigo-200 mt-2">Gestiona la jerarquía de tus programas, bloques y módulos.</p>
+        </div>
+        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={handleAddPrograma} sx={{ bgcolor: '#4f46e5', '&:hover': { bgcolor: '#4338ca' } }}>Añadir Programa</Button>
+      </div>
 
       <Box>
         {programas.length === 0 ? (
-          <Typography>No hay programas cargados. Crea uno para empezar.</Typography>
+          <div className="text-white text-center py-10 opacity-70">No hay programas cargados. Crea uno para empezar.</div>
         ) : (
           programas.map((programa) => (
-            <Accordion expanded={expandedProgram === `programa-${programa.id}`} onChange={handleProgramChange(`programa-${programa.id}`)} key={programa.id}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Accordion expanded={expandedProgram === `programa-${programa.id}`} onChange={handleProgramChange(`programa-${programa.id}`)} key={programa.id}
+              sx={{
+                bgcolor: 'rgba(30, 27, 75, 0.6)',
+                backdropFilter: 'blur(10px)',
+                color: 'white',
+                mb: 2,
+                borderRadius: '8px !important',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                '&:before': { display: 'none' }
+              }}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}>
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                   <Typography variant="h6" sx={{ flexGrow: 1 }}>{programa.codigo} - {programa.nombre}</Typography>
                   <Tooltip title="Añadir Bloque">
                     <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleAddBloque(programa.id); }}>
-                      <AddRoundedIcon />
+                      <AddRoundedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Editar Programa">
                     <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleEditPrograma(programa); }}>
-                      <EditOutlinedIcon />
+                      <EditOutlinedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Eliminar Programa">
                     <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeletePrograma(programa); }}>
-                      <DeleteOutlineRoundedIcon />
+                      <DeleteOutlineRoundedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
                     </IconButton>
                   </Tooltip>
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
                 {programa.bloques.length === 0 ? (
-                  <Typography>No hay bloques en este programa.</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', p: 2 }}>No hay bloques en este programa.</Typography>
                 ) : (
                   programa.bloques.map((bloque) => (
-                    <BloqueAccordion 
-                      key={bloque.id} 
-                      bloque={bloque} 
+                    <BloqueAccordion
+                      key={bloque.id}
+                      bloque={bloque}
                       expanded={expandedBloque === `bloque-${bloque.id}`}
                       onChange={handleBloqueChange(`bloque-${bloque.id}`)}
                       onAddModulo={handleAddModulo}
@@ -527,28 +546,28 @@ export default function Estructura() {
       </Box>
 
       {/* Modulo Form Dialog */}
-      <ModuloFormDialog 
-        open={openModuloDialog} 
-        onClose={handleCloseModuloDialog} 
-        onSave={handleSaveModulo} 
+      <ModuloFormDialog
+        open={openModuloDialog}
+        onClose={handleCloseModuloDialog}
+        onSave={handleSaveModulo}
         modulo={currentModulo}
         bloqueId={parentBloqueId}
       />
 
       {/* Bloque Form Dialog */}
-      <BloqueFormDialog 
-        open={openBloqueDialog} 
-        onClose={handleCloseBloqueDialog} 
-        onSave={handleSaveBloque} 
+      <BloqueFormDialog
+        open={openBloqueDialog}
+        onClose={handleCloseBloqueDialog}
+        onSave={handleSaveBloque}
         bloque={currentBloque}
         programaId={parentProgramaId}
       />
 
       {/* Programa Form Dialog */}
-      <ProgramaFormDialog 
-        open={openProgramaDialog} 
-        onClose={handleCloseProgramaDialog} 
-        onSave={handleSavePrograma} 
+      <ProgramaFormDialog
+        open={openProgramaDialog}
+        onClose={handleCloseProgramaDialog}
+        onSave={handleSavePrograma}
         programa={currentPrograma}
       />
 

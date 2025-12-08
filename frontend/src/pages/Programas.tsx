@@ -105,7 +105,7 @@ export default function Programas() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>Programas</Typography>
+      <h1 className="text-3xl font-bold text-white mb-6">Programas</h1>
 
       <Box
         component="form"
@@ -197,7 +197,7 @@ export default function Programas() {
                 {!paginatedRows.length && (
                   <TableRow>
                     <TableCell colSpan={4}>
-                      <Typography color="text.secondary">No hay programas cargados.</Typography>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>No hay programas cargados.</Typography>
                     </TableCell>
                   </TableRow>
                 )}

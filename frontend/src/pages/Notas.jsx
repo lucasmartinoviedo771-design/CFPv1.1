@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Grid, TextField } from '@mui/material';
 import apiClient from '../services/apiClient';
-import HistorialAcademico from '../components/HistorialAcademico'; // Import the new component
+import HistorialAcademico from '../components/HistorialAcademico';
+import { Card, Select } from '../components/UI';
+import { UserSearch, FileText } from 'lucide-react';
 
-// These functions remain here as they are specific to the page's primary purpose
 async function fetchEstudiantes() {
-  const { data } = await apiClient.get('/estudiantes');
-  if (Array.isArray(data)) return data;
-  return [];
+  try {
+    const { data } = await apiClient.get('/estudiantes');
+    if (Array.isArray(data)) return data;
+    return [];
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
 }
 
 export default function Notas() {
@@ -34,48 +39,59 @@ export default function Notas() {
       setHistorial(Array.isArray(data) ? data : []);
     })();
 
-    // Fetch courses for the selected student (for filtering, etc.)
+    // Fetch courses for the selected student
     (async () => {
-      // Since inscriptions are now by module, we need to get the program from the module's block's bateria
-      // This is complex, so for now, we'll fetch all programs as a workaround to populate the modal.
-      // A better solution would be to have a specific endpoint or adjust the inscription serializer.
       const { data: allProgramas } = await apiClient.get('/programas');
       setCursos(Array.isArray(allProgramas) ? allProgramas : []);
     })();
   }, [selEstudiante]);
 
+  // Student options for Select
+  const studentOptions = estudiantes.map(e => ({
+    value: e.id,
+    label: `${e.apellido}, ${e.nombre} (${e.dni})`
+  }));
 
   return (
-    <>
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                select
-                SelectProps={{ native: true }}
-                label="Estudiante"
-                value={selEstudiante}
-                onChange={(e)=>setSelEstudiante(e.target.value)}
-              >
-                <option value=""></option>
-                {estudiantes.map(e=> <option key={e.id} value={e.id}>{e.apellido}, {e.nombre}</option>)}
-              </TextField>
-            </Grid>
-          </Grid>
-        </CardContent>
+    <div className="space-y-6 animate-fade-in-up">
+      <div>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Gestión de Notas</h1>
+        <p className="text-indigo-300">Carga y edición de calificaciones y exámenes.</p>
+      </div>
+
+      <Card className="bg-indigo-900/20 border-indigo-500/30">
+        <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="w-full md:w-1/2">
+            <Select
+              label="Seleccionar Estudiante"
+              value={selEstudiante}
+              onChange={(e) => setSelEstudiante(e.target.value)}
+              options={[{ value: '', label: 'Buscar estudiante...' }, ...studentOptions]}
+              className="bg-indigo-950/50 border-indigo-500/30 text-white"
+            />
+          </div>
+          <div className="pb-2 text-indigo-400 hidden md:block">
+            <UserSearch size={24} />
+          </div>
+        </div>
       </Card>
 
-      {selEstudiante && 
-        <HistorialAcademico 
-          historial={historial} 
-          setHistorial={setHistorial} 
-          selEstudiante={selEstudiante} 
-          cursos={cursos} 
-          readOnly={false} // Explicitly set to false for clarity
-        />
-      }
-    </>
+      {selEstudiante ? (
+        <div className="animate-fade-in-up delay-100">
+          <HistorialAcademico
+            historial={historial}
+            setHistorial={setHistorial}
+            selEstudiante={selEstudiante}
+            cursos={cursos}
+            readOnly={false}
+          />
+        </div>
+      ) : (
+        <div className="text-center py-10 opacity-50 flex flex-col items-center">
+          <FileText size={48} className="text-indigo-400 mb-2" />
+          <p className="text-indigo-300">Selecciona un estudiante para gestionar sus notas.</p>
+        </div>
+      )}
+    </div>
   );
 }

@@ -78,24 +78,24 @@ export default function Cohortes() {
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">Gestión de Cohortes</Typography>
+        <h1 className="text-3xl font-bold text-white">Gestión de Cohortes</h1>
         <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setOpenDialog(true)}>
           Crear Cohorte
         </Button>
       </Box>
-      <Typography color="text.secondary" sx={{ mb: 4 }}>
+      <p className="text-indigo-200 mb-6 font-medium">
         Una cohorte representa una cursada específica, vinculando un Programa con un Calendario.
-      </Typography>
+      </p>
 
       {loading ? <CircularProgress /> : (
         <>
-          <TableContainer component={Paper}>
-            <Table>
+          <TableContainer component={Paper} sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: 'white' }}>
+            <Table sx={{ '& .MuiTableCell-root': { color: 'white', borderBottom: '1px solid rgba(255,255,255,0.1)' } }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Nombre Cohorte</TableCell>
-                  <TableCell>Programa</TableCell>
-                  <TableCell>Calendario</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Nombre Cohorte</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Programa</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Calendario</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -109,8 +109,9 @@ export default function Cohortes() {
               </TableBody>
             </Table>
           </TableContainer>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
             <TablePagination
+              sx={{ color: 'white', '& .MuiTablePagination-selectIcon': { color: 'white' }, '& .MuiIconButton-root': { color: 'white' } }}
               rowsPerPageOptions={[10, 25, 50]}
               component="div"
               count={total}
@@ -124,10 +125,10 @@ export default function Cohortes() {
         </>
       )}
 
-      <CohorteFormDialog 
-        open={openDialog} 
-        onClose={() => setOpenDialog(false)} 
-        onSave={handleSave} 
+      <CohorteFormDialog
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+        onSave={handleSave}
         programas={programas}
         bloques={bloques}
       />

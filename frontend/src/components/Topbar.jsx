@@ -1,12 +1,10 @@
-
 import React, { useContext } from 'react';
-import { AppBar, Toolbar, Typography, Box, IconButton, Avatar, Button, Chip } from '@mui/material';
-import LogoutIcon from '@mui/icons-material/Logout';
 import { useNavigate } from 'react-router-dom';
+import { LogOut, User, KeyRound } from 'lucide-react';
 import authService from '../services/authService';
 import { UserContext } from '../App';
 
-export default function Topbar({ title='Dashboard', drawerWidth=240 }) {
+export default function Topbar({ title }) {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
 
@@ -16,36 +14,47 @@ export default function Topbar({ title='Dashboard', drawerWidth=240 }) {
   };
 
   return (
-    <AppBar
-      position="fixed"
-      color="default"
-      elevation={0}
-      sx={(theme) => ({
-        borderBottom: '1px solid #eee',
-        bgcolor: '#fff',
-        zIndex: theme.zIndex.drawer + 1,
-        width: `calc(100% - ${drawerWidth}px)`,
-        ml: `${drawerWidth}px`,
-      })}
-    >
-      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>
-        <Box sx={{ display:'flex', alignItems:'center' }}>
-          {user?.username && (
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
-              {user.username}
-            </Typography>
+    <header className="bg-transparent border-b border-indigo-500/10 backdrop-blur-sm h-16 flex items-center justify-between px-6 z-20">
+      <h2 className="text-xl font-bold text-white tracking-tight drop-shadow-md">
+        {title}
+      </h2>
+
+      <div className="flex items-center gap-4">
+        {/* User Info */}
+        <div className="hidden md:flex flex-col items-end">
+          <span className="text-sm font-medium text-white">
+            {user?.username || 'Usuario'}
+          </span>
+          {Array.isArray(user?.groups) && user.groups.length > 0 && (
+            <span className="text-xs text-brand-cyan">
+              {user.groups[0]}
+            </span>
           )}
-          {Array.isArray(user?.groups) && user.groups.slice(0,1).map((g) => (
-            <Chip key={g} label={g} size="small" sx={{ mr: 1 }} />
-          ))}
-          <Button size="small" onClick={() => navigate('/set-password')}>Cambiar contraseña</Button>
-          <IconButton size="large" color="inherit" aria-label="logout" onClick={handleLogout}>
-            <LogoutIcon />
-          </IconButton>
-          <Avatar sx={{ ml: 1, bgcolor: '#0D6EFD' }}>{(user?.username || 'A').charAt(0).toUpperCase()}</Avatar>
-        </Box>
-      </Toolbar>
-    </AppBar>
+        </div>
+
+        {/* Change Password Button (Icon only on mobile) */}
+        <button
+          onClick={() => navigate('/set-password')}
+          className="p-2 text-indigo-300 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          title="Cambiar contraseña"
+        >
+          <KeyRound size={20} />
+        </button>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="p-2 text-red-400 hover:text-red-200 hover:bg-red-500/10 rounded-full transition-colors"
+          title="Cerrar Sessión"
+        >
+          <LogOut size={20} />
+        </button>
+
+        {/* Avatar */}
+        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-brand-accent to-purple-600 flex items-center justify-center text-white font-bold shadow-lg border border-white/20">
+          {(user?.username || 'A').charAt(0).toUpperCase()}
+        </div>
+      </div>
+    </header>
   );
 }

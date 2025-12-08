@@ -12,8 +12,6 @@ import authService from '../services/authService';
 import SecuenciaFormDialog from '../components/SecuenciaFormDialog';
 import BloqueFormDialog from '../components/BloqueFormDialog';
 
-
-
 // --- Main Calendario Page Component ---
 export default function Calendario() {
   const [bloques, setBloques] = useState([]);
@@ -109,31 +107,31 @@ export default function Calendario() {
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">Gestión de Calendarios</Typography>
+        <h1 className="text-3xl font-bold text-white">Gestión de Calendarios</h1>
         <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={handleAddBloque}>
           Añadir Bloque de Fechas
         </Button>
       </Box>
-      <Typography color="text.secondary" sx={{ mb: 4 }}>
+      <p className="text-indigo-200 mb-6 font-medium">
         Crea y gestiona los bloques de calendario que se asignarán a los cursos.
-      </Typography>
+      </p>
 
       {loading ? (
         <CircularProgress />
       ) : (
         <Box>
           {bloques.map(bloque => (
-            <Box key={bloque.id} sx={{ mb: 2, p: 2, border: '1px solid #ddd', borderRadius: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box key={bloque.id} sx={{ mb: 2, p: 2, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.05)', color: 'white' }}>
               <div>
-                <Typography variant="h6">{bloque.nombre}</Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="h6" sx={{ color: 'white' }}>{bloque.nombre}</Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                   Inicia el: {new Date(bloque.fecha_inicio).toLocaleDateString('es-AR', { timeZone: 'UTC' })}
                 </Typography>
               </div>
               <div>
-                <Button sx={{ mr: 1 }} onClick={() => handleOpenSecuencia(bloque)}>Gestionar Secuencia</Button>
-                <Tooltip title="Editar Bloque"><IconButton onClick={() => handleEditBloque(bloque)}><EditOutlinedIcon /></IconButton></Tooltip>
-                <Tooltip title="Eliminar Bloque"><IconButton onClick={() => handleDeleteBloque(bloque.id)}><DeleteOutlineRoundedIcon /></IconButton></Tooltip>
+                <Button sx={{ mr: 1, color: 'white', borderColor: 'rgba(255,255,255,0.3)' }} variant="outlined" onClick={() => handleOpenSecuencia(bloque)}>Gestionar Secuencia</Button>
+                <Tooltip title="Editar Bloque"><IconButton onClick={() => handleEditBloque(bloque)}><EditOutlinedIcon sx={{ color: 'white' }} /></IconButton></Tooltip>
+                <Tooltip title="Eliminar Bloque"><IconButton onClick={() => handleDeleteBloque(bloque.id)}><DeleteOutlineRoundedIcon sx={{ color: 'white' }} /></IconButton></Tooltip>
               </div>
             </Box>
           ))}

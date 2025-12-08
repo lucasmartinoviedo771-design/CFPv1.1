@@ -8,9 +8,12 @@ import { handleApiError } from '../utils/errorHandler';
  * @param {string} password - Contraseña
  * @returns {Promise<Object>} Datos de respuesta con tokens
  */
+// Hardcoded backend URL to bypass Vite Proxy issues
+const API_URL = 'http://127.0.0.1:8000';
+
 const login = async (username, password) => {
     try {
-        const response = await axios.post('/api/token/', {
+        const response = await axios.post(`${API_URL}/api/token/`, {
             username,
             password,
         });
@@ -31,7 +34,7 @@ const login = async (username, password) => {
  */
 const refresh = async (refreshToken) => {
     try {
-        const response = await axios.post('/api/token/refresh/', {
+        const response = await axios.post(`${API_URL}/api/token/refresh/`, {
             refresh: refreshToken,
         });
         if (response.data.access) {
@@ -50,7 +53,7 @@ const refresh = async (refreshToken) => {
 const getUserDetails = async () => {
     try {
         const token = getAccessToken();
-        const response = await axios.get('/api/user/', {
+        const response = await axios.get(`${API_URL}/api/user/`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         return response.data;
@@ -70,7 +73,7 @@ const logout = async () => {
     try {
         const refresh = sessionStorage.getItem('refreshToken');
         if (refresh) {
-            await axios.post('/api/logout/', { refresh });
+            await axios.post(`${API_URL}/api/logout/`, { refresh });
         }
     } catch (e) {
         // Ignore server-side logout errors; proceed to clear local state

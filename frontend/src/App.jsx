@@ -5,23 +5,24 @@ import theme from "./theme";
 import AppLayout from "./layout/AppLayout";
 
 // Page Components
-import Asistencia from "./pages/Asistencia";
-import Estudiantes from "./pages/Estudiantes";
-import Notas from "./pages/Notas";
+import Landing from "./pages/Landing";
+import Asistencia from "./pages/Asistencia.jsx";
+import Estudiantes from "./pages/Estudiantes.jsx";
+import Notas from "./pages/Notas.jsx";
 import CursoDetail from "./pages/CursoDetail";
-import DashboardPage from "./pages/Dashboard";
-import Login from "./pages/Login";
-import SetPassword from './pages/SetPassword';
-import Inscripciones from './pages/Inscripciones';
-import Programas from './pages/Programas';
-import Estructura from './pages/Estructura';
+import DashboardPage from "./pages/Dashboard.jsx"; // Check extension if needed, safe to add .jsx if it is jsx
+import Login from "./pages/Login.jsx";
+import SetPassword from './pages/SetPassword.jsx';
+import Inscripciones from './pages/Inscripciones.jsx';
+import Programas from './pages/Programas'; // Still .tsx based on file list
+import Estructura from './pages/Estructura'; // Still .jsx based on file list
 import Calendario from './pages/Calendario';
 import Cohortes from './pages/Cohortes';
-import HistoricoCursos from './pages/HistoricoCursos';
-import HistoricoEstudiante from './pages/HistoricoEstudiante';
+import HistoricoCursos from './pages/HistoricoCursos.jsx';
+import HistoricoEstudiante from './pages/HistoricoEstudiante.jsx';
 import GraficoCursos from './pages/GraficoCursos';
-import Egresados from './pages/Egresados';
-import Usuarios from './pages/Usuarios';
+import Egresados from './pages/Egresados.jsx';
+import Usuarios from './pages/Usuarios.jsx';
 
 // Services
 import authService from "./services/authService";
@@ -80,8 +81,9 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <UserContext.Provider value={{ user, setUser }}>
         <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           {/* Protected Routes */}
           <Route path="/set-password" element={<PrivateRoute><WithLayout title="Actualizar Contraseña"><SetPassword /></WithLayout></PrivateRoute>} />
@@ -101,7 +103,8 @@ export default function App() {
           <Route path="/egresados" element={<PrivateRoute><WithLayout title="Egresados"><Egresados /></WithLayout></PrivateRoute>} />
           <Route path="/usuarios" element={<PrivateRoute><WithLayout title="Usuarios"><Usuarios /></WithLayout></PrivateRoute>} />
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </UserContext.Provider>
     </ThemeProvider>

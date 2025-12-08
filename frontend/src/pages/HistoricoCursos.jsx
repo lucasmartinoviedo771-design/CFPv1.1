@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, FormControl, InputLabel, Select, MenuItem, Button, CircularProgress, TableContainer, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
 import apiClient from '../services/apiClient';
 import axios from 'axios';
 import authService from '../services/authService';
+import { Card, Select, Button } from '../components/UI';
+import { Search, AlertCircle } from 'lucide-react';
 
 export default function HistoricoCursos() {
   const [cohortes, setCohortes] = useState([]);
   const [selectedCohorte, setSelectedCohorte] = useState('');
   const [tipoDato, setTipoDato] = useState('notas');
-  
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -21,7 +22,7 @@ export default function HistoricoCursos() {
       })
       .catch(err => {
         console.error("Error al cargar cohortes:", err);
-        setError("No se pudieron cargar las cohortes.");
+        setError("No se pudieron cargar las cohortes. Verifica la conexión.");
       });
   }, []);
 
@@ -35,9 +36,9 @@ export default function HistoricoCursos() {
     setData(null);
 
     const token = authService.getAccessToken();
-    axios.get(`/api/historico-cursos/?cohorte_id=${selectedCohorte}&tipo_dato=${tipoDato}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
+    // Usamos el endpoint configurado, ajusta la URL base si es necesario en axios
+    // O mejor aún, usamos apiClient para mantener la configuración base
+    apiClient.get(`/historico-cursos/?cohorte_id=${selectedCohorte}&tipo_dato=${tipoDato}`)
       .then(response => {
         setData(response.data);
       })
@@ -50,69 +51,102 @@ export default function HistoricoCursos() {
       });
   };
 
+  // Convertir cohortes a formato {value, label} para el Select
+  const cohorteOptions = cohortes.map(c => ({ value: c.id, label: c.nombre }));
+  const tipoOptions = [
+    { value: 'notas', label: 'Notas' },
+    { value: 'asistencia', label: 'Asistencia' }
+  ];
+
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>Histórico por Cursos y Capacitaciones</Typography>
-      
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
-        <FormControl sx={{ minWidth: 240 }}>
-          <InputLabel id="cohorte-select-label">Cohorte</InputLabel>
-          <Select
-            labelId="cohorte-select-label"
-            value={selectedCohorte}
-            label="Cohorte"
-            onChange={e => setSelectedCohorte(e.target.value)}
-          >
-            {cohortes.map(cohorte => (
-              <MenuItem key={cohorte.id} value={cohorte.id}>{cohorte.nombre}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+    <div className="space-y-6 animate-fade-in-up">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Histórico por Cursos</h1>
+          <p className="text-indigo-300">Consulta de calificaciones y asistencia por cohorte.</p>
+        </div>
+      </div>
 
-        <FormControl sx={{ minWidth: 180 }}>
-          <InputLabel id="tipo-dato-select-label">Tipo de Dato</InputLabel>
-          <Select
-            labelId="tipo-dato-select-label"
-            value={tipoDato}
-            label="Tipo de Dato"
-            onChange={e => setTipoDato(e.target.value)}
-          >
-            <MenuItem value="notas">Notas</MenuItem>
-            <MenuItem value="asistencia">Asistencia</MenuItem>
-          </Select>
-        </FormControl>
+      {/* Panel de Filtros */}
+      <Card className="bg-indigo-900/20 border-indigo-500/30">
+        <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="w-full md:w-64">
+            <Select
+              label="Cohorte"
+              id="cohorte-select"
+              value={selectedCohorte}
+              onChange={e => setSelectedCohorte(e.target.value)}
+              options={[{ value: '', label: 'Seleccionar...' }, ...cohorteOptions]}
+              className="bg-indigo-950/50 border-indigo-500/30 text-white"
+            />
+          </div>
 
-        <Button variant="contained" onClick={handleBuscar} disabled={loading}>
-          {loading ? <CircularProgress size={24} /> : 'Buscar'}
-        </Button>
-      </Box>
+          <div className="w-full md:w-48">
+            <Select
+              label="Tipo de Dato"
+              id="tipo-dato-select"
+              value={tipoDato}
+              onChange={e => setTipoDato(e.target.value)}
+              options={tipoOptions}
+              className="bg-indigo-950/50 border-indigo-500/30 text-white"
+            />
+          </div>
 
-      {error && <Typography color="error">{error}</Typography>}
+          <div className="flex-none">
+            <Button
+              onClick={handleBuscar}
+              isLoading={loading}
+              className="bg-brand-accent hover:bg-orange-600 text-white border-none shadow-lg shadow-orange-500/20"
+              startIcon={<Search size={18} />}
+            >
+              Buscar
+            </Button>
+          </div>
+        </div>
+      </Card>
 
-      {data && (
-        <TableContainer component={Paper}>
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                {data.headers && data.headers.map(header => (
-                  <TableCell key={header}>{header}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.rows && data.rows.map(row => (
-                <TableRow key={row.ID}>
-                  {data.headers.map(header => (
-                    <TableCell key={`${row.ID}-${header}`}>
-                      {row[header] !== null && row[header] !== undefined ? String(row[header]) : '-'}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+      {/* Mensajes de Error */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center text-red-200">
+          <AlertCircle className="mr-2" size={20} />
+          {error}
+        </div>
       )}
-    </Paper>
+
+      {/* Resultados */}
+      {data && (
+        <Card className="bg-indigo-900/20 border-indigo-500/30 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-indigo-500/30">
+              <thead className="bg-indigo-950/50">
+                <tr>
+                  {data.headers && data.headers.map(header => (
+                    <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-indigo-300 uppercase tracking-wider">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-indigo-500/10 bg-transparent">
+                {data.rows && data.rows.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-white/5 transition-colors">
+                    {data.headers.map(header => (
+                      <td key={`${row.ID}-${header}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {row[header] !== null && row[header] !== undefined ? String(row[header]) : '-'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {(!data.rows || data.rows.length === 0) && (
+              <div className="p-8 text-center text-indigo-300">
+                No se encontraron datos para la selección.
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }
