@@ -9,7 +9,7 @@ import { handleApiError } from '../utils/errorHandler';
  * @returns {Promise<Object>} Datos de respuesta con tokens
  */
 // Hardcoded backend URL to bypass Vite Proxy issues
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = '';
 
 const login = async (username, password) => {
     try {

@@ -123,7 +123,7 @@ export default function Dashboard() {
             Inscripciones por Programa
           </h3>
           <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridStroke} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: chartAxisStroke }} />
@@ -141,7 +141,7 @@ export default function Dashboard() {
             Tendencia Mensual
           </h3>
           <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridStroke} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: chartAxisStroke }} />

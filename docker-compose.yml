@@ -13,7 +13,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     ports:
-      - "3307:3306" # Expuesto en 3307 para no chocar con local
+      - "3308:3306" # Expuesto en 3308 para no chocar con local ni IPES6
     networks:
       - cfp_network
 
