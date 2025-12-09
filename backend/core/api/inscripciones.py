@@ -11,6 +11,25 @@ from core.api.permissions import require_authenticated_group
 router = Router(tags=["inscripciones"])
 
 
+# COHORTES - must be defined before /{inscripcion_id} to avoid routing conflict
+@router.get("/cohortes", response=List[CohorteOut])
+@require_authenticated_group
+def listar_cohortes(request, programa_id: Optional[int] = None):
+    qs = Cohorte.objects.select_related("programa", "bloque_fechas").order_by("-bloque_fechas__fecha_inicio")
+    if programa_id:
+        qs = qs.filter(programa_id=programa_id)
+    return [
+        CohorteOut(
+            id=c.id,
+            nombre=c.nombre,
+            programa_id=c.programa_id,
+            bloque_fechas_id=c.bloque_fechas_id,
+        )
+        for c in qs
+    ]
+
+
+# INSCRIPCIONES
 @router.get("", response=List[dict])
 @require_authenticated_group
 def listar_inscripciones(request, cohorte_id: Optional[int] = None, estudiante_id: Optional[int] = None, estado: Optional[str] = None):
@@ -54,21 +73,7 @@ def actualizar_inscripcion(request, inscripcion_id: int, payload: InscripcionIn)
     return detalle_inscripcion(request, insc.id)
 
 
-@router.get("/cohortes", response=List[CohorteOut])
-@require_authenticated_group
-def listar_cohortes(request, programa_id: Optional[int] = None):
-    qs = Cohorte.objects.select_related("programa", "bloque_fechas").order_by("-bloque_fechas__fecha_inicio")
-    if programa_id:
-        qs = qs.filter(programa_id=programa_id)
-    return [
-        CohorteOut(
-            id=c.id,
-            nombre=c.nombre,
-            programa_id=c.programa_id,
-            bloque_fechas_id=c.bloque_fechas_id,
-        )
-        for c in qs
-    ]
+# Cohorte detail endpoints
 
 
 @router.get("/cohortes/{cohorte_id}", response=CohorteOut)
