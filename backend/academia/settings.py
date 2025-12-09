@@ -104,10 +104,11 @@ CSRF_TRUSTED_ORIGINS = env.list(
 )
 
 # Security Settings (for production)
+# NOTA: SECURE_SSL_REDIRECT deshabilitado porque el servidor no tiene HTTPS configurado
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    # SECURE_SSL_REDIRECT = True  # Deshabilitado: no tenemos HTTPS
+    SESSION_COOKIE_SECURE = False  # Cambiado a False para HTTP
+    CSRF_COOKIE_SECURE = False  # Cambiado a False para HTTP
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
