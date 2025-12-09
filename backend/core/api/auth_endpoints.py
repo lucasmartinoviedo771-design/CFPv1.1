@@ -10,13 +10,13 @@ router = Router(tags=["auth"])
 @router.post("/token", auth=None)
 def obtain_token(request):
     view = TokenObtainPairView.as_view()
-    return view(request._request)
+    return view(request)
 
 
 @router.post("/token/refresh", auth=None)
 def refresh_token(request):
     view = TokenRefreshView.as_view()
-    return view(request._request)
+    return view(request)
 
 
 @router.post("/logout", auth=None)
