@@ -29,7 +29,7 @@ export default function Usuarios() {
   };
 
   useEffect(() => {
-    if (user && user.groups.includes('Admin')) {
+    if (user && (user.is_superuser || user.groups.includes('Admin'))) {
       fetchUsers();
     }
   }, [user]);
@@ -56,7 +56,7 @@ export default function Usuarios() {
     }
   };
 
-  if (!user || !user.groups.includes('Admin')) {
+  if (!user || (!user.is_superuser && !user.groups.includes('Admin'))) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-indigo-300 animate-fade-in-up">
         <AlertCircle size={48} className="text-red-500 mb-4" />
