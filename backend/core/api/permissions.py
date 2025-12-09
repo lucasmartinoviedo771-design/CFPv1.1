@@ -9,6 +9,9 @@ def require_authenticated_group(func):
     def wrapper(request, *args, **kwargs):
         if not request.user or not request.user.is_authenticated:
             raise HttpError(401, "Authentication credentials were not provided.")
+        # Superusuarios tienen acceso automático
+        if request.user.is_superuser:
+            return func(request, *args, **kwargs)
         if not IsInAGroup().has_permission(request, None):
             raise HttpError(403, "You do not have permission to perform this action.")
         return func(request, *args, **kwargs)
