@@ -5,6 +5,7 @@ from ninja import Router
 
 from core.serializers import UserSerializer, GroupSerializer
 from core.api.permissions import require_admin
+from core.api.schemas import UserIn
 
 router = Router(tags=["users"])
 
@@ -24,8 +25,8 @@ def listar_users(request):
 
 @router.post("/users", response=dict)
 @require_admin
-def crear_user(request, payload: dict):
-    serializer = UserSerializer(data=payload)
+def crear_user(request, payload: UserIn):
+    serializer = UserSerializer(data=payload.dict(exclude_none=True))
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
     return UserSerializer(user).data
@@ -34,9 +35,9 @@ def crear_user(request, payload: dict):
 @router.put("/users/{user_id}", response=dict)
 @router.patch("/users/{user_id}", response=dict)
 @require_admin
-def actualizar_user(request, user_id: int, payload: dict):
+def actualizar_user(request, user_id: int, payload: UserIn):
     user = get_object_or_404(User, pk=user_id)
-    serializer = UserSerializer(instance=user, data=payload, partial=True)
+    serializer = UserSerializer(instance=user, data=payload.dict(exclude_none=True), partial=True)
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
     return UserSerializer(user).data

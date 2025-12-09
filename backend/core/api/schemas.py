@@ -170,3 +170,14 @@ class InscripcionOut(Schema):
     estado: str
     created_at: datetime
     updated_at: datetime
+
+
+class UserIn(Schema):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    password: Optional[str] = None
+    password2: Optional[str] = None
+    groups: Optional[List[str]] = None
+
