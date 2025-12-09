@@ -1,4 +1,4 @@
-import apiClient from "./apiClient";
+import apiClient from "../api/client";
 
 export async function listNotas(params) {
   const { data } = await apiClient.get("/examenes/notas", { params });
