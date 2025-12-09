@@ -2,14 +2,17 @@ from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
 from ninja import Router
+from core.api.permissions import require_authenticated_group
 
 from core.models import Bloque
+from core.serializers import BloqueSerializer
 from .schemas import BloqueOut, BloqueDetailOut, ModuloOut
 
 router = Router(tags=["bloques"])
 
 
 @router.get("", response=List[BloqueOut])
+@require_authenticated_group
 def listar_bloques(request, programa_id: Optional[int] = None):
     qs = Bloque.objects.all().order_by("programa_id", "orden", "id").prefetch_related("correlativas")
     if programa_id:
@@ -30,6 +33,7 @@ def listar_bloques(request, programa_id: Optional[int] = None):
 
 
 @router.get("/{bloque_id}", response=BloqueDetailOut)
+@require_authenticated_group
 def detalle_bloque(request, bloque_id: int):
     bloque = get_object_or_404(
         Bloque.objects.select_related("programa").prefetch_related("modulos", "correlativas"),
@@ -57,3 +61,31 @@ def detalle_bloque(request, bloque_id: int):
         correlativas_ids=correlativas_ids,
         modulos=modulos,
     )
+
+
+@router.post("", response=BloqueDetailOut)
+@require_authenticated_group
+def crear_bloque(request, payload: dict):
+    serializer = BloqueSerializer(data=payload)
+    serializer.is_valid(raise_exception=True)
+    bloque = serializer.save()
+    return detalle_bloque(request, bloque.id)
+
+
+@router.put("/{bloque_id}", response=BloqueDetailOut)
+@router.patch("/{bloque_id}", response=BloqueDetailOut)
+@require_authenticated_group
+def actualizar_bloque(request, bloque_id: int, payload: dict):
+    bloque = get_object_or_404(Bloque, pk=bloque_id)
+    serializer = BloqueSerializer(instance=bloque, data=payload, partial=True)
+    serializer.is_valid(raise_exception=True)
+    bloque = serializer.save()
+    return detalle_bloque(request, bloque.id)
+
+
+@router.delete("/{bloque_id}", response=dict)
+@require_authenticated_group
+def eliminar_bloque(request, bloque_id: int):
+    bloque = get_object_or_404(Bloque, pk=bloque_id)
+    bloque.delete()
+    return {"deleted": True, "id": bloque_id}

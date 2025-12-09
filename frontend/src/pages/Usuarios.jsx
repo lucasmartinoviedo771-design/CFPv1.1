@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import axios from 'axios';
-import authService from '../services/authService';
+import api from '../api/client';
 import UserFormDialog from '../components/UserFormDialog';
 import { UserContext } from '../App';
 import { Card, Button } from '../components/UI';
@@ -18,8 +17,7 @@ export default function Usuarios() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const token = authService.getAccessToken();
-      const response = await axios.get('/api/users/', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const response = await api.get('/users');
       setUsers(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error("Error fetching users:", err);
@@ -49,8 +47,7 @@ export default function Usuarios() {
   const handleDelete = async (userId) => {
     if (window.confirm('¿Está seguro de que desea eliminar este usuario?')) {
       try {
-        const token = authService.getAccessToken();
-        await axios.delete(`/api/users/${userId}/`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        await api.delete(`/users/${userId}`);
         setFeedback({ open: true, message: 'Usuario eliminado con éxito', severity: 'success' });
         fetchUsers();
       } catch (err) {

@@ -1,33 +1,27 @@
-import axios from 'axios';
-import authService from './authService';
-
-const authHeaders = () => {
-  const token = authService.getAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+import apiClient from '../api/client';
 
 export async function getEnrollments(params) {
-  const { data } = await axios.get('/api/analytics/enrollments/', { params, headers: authHeaders() });
+  const { data } = await apiClient.get('/analytics/enrollments', { params });
   return data;
 }
 
 export async function getAttendance(params) {
-  const { data } = await axios.get('/api/analytics/attendance/', { params, headers: authHeaders() });
+  const { data } = await apiClient.get('/analytics/attendance', { params });
   return data;
 }
 
 export async function getGrades(params) {
-  const { data } = await axios.get('/api/analytics/grades/', { params, headers: authHeaders() });
+  const { data } = await apiClient.get('/analytics/grades', { params });
   return data;
 }
 
 export async function getDropout(params) {
-  const { data } = await axios.get('/api/analytics/dropout/', { params, headers: authHeaders() });
+  const { data } = await apiClient.get('/analytics/dropout', { params });
   return data;
 }
 
 export async function getGraduates(params) {
-  const { data } = await axios.get('/api/analytics/graduates/', { params, headers: authHeaders() });
+  const { data } = await apiClient.get('/analytics/graduates', { params });
   return data;
 }
 

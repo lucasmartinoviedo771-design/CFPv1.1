@@ -8,7 +8,7 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
-import api from '../services/apiClient';
+import api from '../api/client';
 
 const SEMANA_TIPOS = [
   { id: 'CLASE', label: 'Clase' },
@@ -24,7 +24,7 @@ export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSucce
   useEffect(() => {
     if (bloque) {
       setLoading(true);
-      api.get(`/bloques-de-fechas/${bloque.id}/`)
+      api.get(`/bloques-de-fechas/${bloque.id}`)
         .then(response => setSemanas(response.data.semanas_config || []))
         .catch(err => console.error("Failed to fetch semanas", err))
         .finally(() => setLoading(false));
@@ -56,7 +56,7 @@ export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSucce
     if (!bloque) return;
     setLoading(true);
     try {
-      await api.post(`/bloques-de-fechas/${bloque.id}/guardar_secuencia/`, { semanas });
+      await api.post(`/bloques-de-fechas/${bloque.id}/guardar_secuencia`, { semanas });
       onSaveSuccess();
       onClose();
     } catch (error) {

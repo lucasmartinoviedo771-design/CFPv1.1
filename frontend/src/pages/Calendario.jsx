@@ -7,8 +7,7 @@ import {
   EditOutlined as EditOutlinedIcon,
   DeleteOutlineRounded as DeleteOutlineRoundedIcon
 } from '@mui/icons-material';
-import axios from 'axios';
-import authService from '../services/authService';
+import api from '../api/client';
 import SecuenciaFormDialog from '../components/SecuenciaFormDialog';
 import BloqueFormDialog from '../components/BloqueFormDialog';
 
@@ -24,10 +23,7 @@ export default function Calendario() {
   const fetchBloques = useCallback(async () => {
     setLoading(true);
     try {
-      const token = authService.getAccessToken();
-      const { data } = await axios.get('/api/bloques-de-fechas/', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const { data } = await api.get('/bloques-de-fechas');
       setBloques(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error al cargar los bloques de fechas:", error);
@@ -54,10 +50,7 @@ export default function Calendario() {
   const handleDeleteBloque = async (id) => {
     if (!window.confirm("¿Estás seguro de eliminar este bloque de fechas?")) return;
     try {
-      const token = authService.getAccessToken();
-      await axios.delete(`/api/bloques-de-fechas/${id}/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      await api.delete(`/bloques-de-fechas/${id}`);
       setFeedback({ open: true, message: 'Bloque eliminado con éxito.', severity: 'success' });
       fetchBloques();
     } catch (error) {
@@ -69,16 +62,10 @@ export default function Calendario() {
   const handleSaveBloque = async (formData) => {
     try {
       if (currentBloque && currentBloque.id) {
-        const token = authService.getAccessToken();
-        await axios.put(`/api/bloques-de-fechas/${currentBloque.id}/`, formData, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        await api.put(`/bloques-de-fechas/${currentBloque.id}`, formData);
         setFeedback({ open: true, message: 'Bloque actualizado con éxito.', severity: 'success' });
       } else {
-        const token = authService.getAccessToken();
-        await axios.post('/api/bloques-de-fechas/', formData, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        await api.post('/bloques-de-fechas', formData);
         setFeedback({ open: true, message: 'Bloque creado con éxito.', severity: 'success' });
       }
       setOpenBloqueDialog(false);

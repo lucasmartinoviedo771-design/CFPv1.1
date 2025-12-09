@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/apiClient';
+import api from '../api/client';
 import { Button, Input } from './UI';
 import { Shield, AlertCircle } from 'lucide-react';
 
@@ -39,7 +39,7 @@ export default function UserFormDialog({ open, onClose, user, onSave }) {
   useEffect(() => {
     const fetchGroups = async () => {
       try {
-        const response = await api.get('/groups/');
+        const response = await api.get('/groups');
         setAvailableGroups(response.data.results || response.data);
       } catch (err) { console.error(err); }
     };
@@ -84,8 +84,8 @@ export default function UserFormDialog({ open, onClose, user, onSave }) {
     if (!dataToSave.password) { delete dataToSave.password; delete dataToSave.password2; }
 
     try {
-      if (user) await api.patch(`/users/${user.id}/`, dataToSave);
-      else await api.post('/users/', dataToSave);
+      if (user) await api.patch(`/users/${user.id}`, dataToSave);
+      else await api.post('/users', dataToSave);
       onSave();
       onClose();
     } catch (err) {

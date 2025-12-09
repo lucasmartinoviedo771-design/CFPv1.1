@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import apiClient from '../services/apiClient';
+import apiClient from '../api/client';
 import { listInscripciones } from '../services/inscripcionesService';
 import { listNotas } from '../services/notasService';
 import { Card, Select, Button, Input } from './UI';

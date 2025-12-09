@@ -3,6 +3,7 @@ from typing import List, Optional
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from ninja import Router
+from core.api.permissions import require_authenticated_group
 
 from core.models import Estudiante
 from core.serializers import EstudianteSerializer
@@ -12,6 +13,7 @@ router = Router(tags=["estudiantes"])
 
 
 @router.get("", response=List[EstudianteOut])
+@require_authenticated_group
 def listar_estudiantes(request, search: Optional[str] = None, dni: Optional[str] = None, estatus: Optional[str] = None):
     qs = Estudiante.objects.all().order_by("apellido", "nombre")
     if dni:
@@ -41,6 +43,7 @@ def listar_estudiantes(request, search: Optional[str] = None, dni: Optional[str]
 
 
 @router.get("/{estudiante_id}", response=EstudianteDetailOut)
+@require_authenticated_group
 def detalle_estudiante(request, estudiante_id: int):
     e = get_object_or_404(Estudiante.objects.all(), pk=estudiante_id)
     return EstudianteDetailOut(
@@ -73,6 +76,7 @@ def detalle_estudiante(request, estudiante_id: int):
 
 
 @router.post("", response=EstudianteDetailOut)
+@require_authenticated_group
 def crear_estudiante(request, payload: EstudianteIn):
     serializer = EstudianteSerializer(data=payload.dict())
     serializer.is_valid(raise_exception=True)
@@ -82,6 +86,7 @@ def crear_estudiante(request, payload: EstudianteIn):
 
 @router.put("/{estudiante_id}", response=EstudianteDetailOut)
 @router.patch("/{estudiante_id}", response=EstudianteDetailOut)
+@require_authenticated_group
 def actualizar_estudiante(request, estudiante_id: int, payload: EstudianteIn):
     estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
     serializer = EstudianteSerializer(instance=estudiante, data=payload.dict(), partial=True)

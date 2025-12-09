@@ -2,14 +2,17 @@ from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
 from ninja import Router
+from core.api.permissions import require_authenticated_group
 
 from core.models import Programa
+from core.serializers import ProgramaSerializer
 from .schemas import ProgramaOut, ProgramaDetailOut, BloqueSimpleOut
 
 router = Router(tags=["programas"])
 
 
 @router.get("", response=List[ProgramaOut])
+@require_authenticated_group
 def listar_programas(request, activo: Optional[bool] = None):
     qs = Programa.objects.all().order_by("codigo")
     if activo is not None:
@@ -18,6 +21,7 @@ def listar_programas(request, activo: Optional[bool] = None):
 
 
 @router.get("/{programa_id}", response=ProgramaDetailOut)
+@require_authenticated_group
 def detalle_programa(request, programa_id: int):
     programa = get_object_or_404(
         Programa.objects.prefetch_related("bloques"),
@@ -34,3 +38,31 @@ def detalle_programa(request, programa_id: int):
         activo=programa.activo,
         bloques=bloques,
     )
+
+
+@router.post("", response=ProgramaDetailOut)
+@require_authenticated_group
+def crear_programa(request, payload: dict):
+    serializer = ProgramaSerializer(data=payload)
+    serializer.is_valid(raise_exception=True)
+    programa = serializer.save()
+    return detalle_programa(request, programa.id)
+
+
+@router.put("/{programa_id}", response=ProgramaDetailOut)
+@router.patch("/{programa_id}", response=ProgramaDetailOut)
+@require_authenticated_group
+def actualizar_programa(request, programa_id: int, payload: dict):
+    programa = get_object_or_404(Programa, pk=programa_id)
+    serializer = ProgramaSerializer(instance=programa, data=payload, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return detalle_programa(request, programa.id)
+
+
+@router.delete("/{programa_id}", response=dict)
+@require_authenticated_group
+def eliminar_programa(request, programa_id: int):
+    programa = get_object_or_404(Programa, pk=programa_id)
+    programa.delete()
+    return {"deleted": True, "id": programa_id}

@@ -9,6 +9,14 @@ from core.api import (
     inscripciones_router,
     examenes_router,
     analytics_router,
+    bloques_fechas_router,
+    users_router,
+    dashboard_router,
+    imports_router,
+    historicos_router,
+    auth_endpoints_router,
+    user_info_router,
+    estructura_router,
 )
 from core.api.auth import jwt_auth
 
@@ -29,3 +37,11 @@ api.add_router("/modulos", modulos_router)
 api.add_router("/inscripciones", inscripciones_router)
 api.add_router("/examenes", examenes_router)
 api.add_router("/analytics", analytics_router)
+api.add_router("/bloques-de-fechas", bloques_fechas_router)
+api.add_router("", users_router)  # users/groups paths
+api.add_router("", dashboard_router)
+api.add_router("", imports_router)
+api.add_router("", historicos_router)
+api.add_router("", auth_endpoints_router, auth=None)  # login/refresh/logout
+api.add_router("", user_info_router)
+api.add_router("", estructura_router)

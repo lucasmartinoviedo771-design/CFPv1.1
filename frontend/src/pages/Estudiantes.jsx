@@ -264,7 +264,7 @@ export default function Estudiantes() {
                         <FileUpload
                             title="Carga Masiva de Inscripciones"
                             description="Arrastra tu archivo .csv o .xlsx aquí"
-                            doUpload={(file, onProgress) => uploadFile("/api/import-inscripciones", file, onProgress)}
+                            doUpload={(file, onProgress) => uploadFile("/import-inscripciones", file, onProgress)}
                             onUpload={() => {
                                 setFeedback({ open: true, message: "Archivo procesado correctamente", severity: "info" });
                                 refetch();

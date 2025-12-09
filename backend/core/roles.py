@@ -21,7 +21,7 @@ class IsInAGroup(permissions.BasePermission):
     Custom permission to only allow users in a group.
     """
     def has_permission(self, request, view):
-        return request.user.groups.exists()
+        return request.user.groups.exists() or request.user.is_superuser
 
 
 def get_user_highest_role(user) -> str | None:
