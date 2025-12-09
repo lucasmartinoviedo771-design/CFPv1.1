@@ -54,7 +54,7 @@ const refresh = async (refreshToken) => {
 const getUserDetails = async () => {
     try {
         const token = getAccessToken();
-        const response = await axios.get(`${API_URL}/user/`, {
+        const response = await axios.get(`${API_URL}/user`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         return response.data;
