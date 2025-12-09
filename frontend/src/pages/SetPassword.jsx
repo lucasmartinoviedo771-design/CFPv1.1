@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Card, CardContent, Typography, TextField, Button, Alert, IconButton, InputAdornment } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import api from '../services/apiClient';
+import api from '../api/client';
 import { UserContext } from '../App';
 import authService from '../services/authService';
 
@@ -31,7 +31,7 @@ export default function SetPassword() {
     e.preventDefault();
     setError(''); setOk(false); setLoading(true);
     try {
-      await api.put('/user/change-password/', { current_password: currentPassword, new_password: newPassword });
+      await api.put('/user/change-password', { current_password: currentPassword, new_password: newPassword });
       // refresh user details and go to dashboard
       const me = await authService.getUserDetails();
       if (me) setUser(me);

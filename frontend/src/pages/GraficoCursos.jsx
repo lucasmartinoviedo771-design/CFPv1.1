@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Typography, FormControl, InputLabel, Select, MenuItem, Accordion, AccordionSummary, AccordionDetails, CircularProgress, Button } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { listProgramas } from '../services/programasService';
-import api from '../services/apiClient';
+import api from '../api/client';
 import { getCoursesGraph } from '../services/estructuraService';
 
 export default function GraficoCursos() {

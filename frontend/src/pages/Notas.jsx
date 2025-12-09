@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import apiClient from '../services/apiClient';
+import apiClient from '../api/client';
 import HistorialAcademico from '../components/HistorialAcademico';
 import { Card, Select } from '../components/UI';
 import { UserSearch, FileText } from 'lucide-react';

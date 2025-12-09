@@ -4,9 +4,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Snackbar, Alert, TablePagination
 } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
-import axios from 'axios';
-import api from '../services/apiClient';
-import authService from '../services/authService';
+import api from '../api/client';
 import CohorteFormDialog from '../components/CohorteFormDialog';
 
 
@@ -27,9 +25,7 @@ export default function Cohortes() {
       const [cohortesRes, programasRes, bloquesRes] = await Promise.all([
         api.get('/inscripciones/cohortes', { params: { programa_id: undefined } }),
         api.get('/programas'),
-        axios.get('/api/bloques-de-fechas/', {
-          headers: authService.getAccessToken() ? { Authorization: `Bearer ${authService.getAccessToken()}` } : {},
-        }),
+        api.get('/bloques-de-fechas'),
       ]);
       const cohortesData = Array.isArray(cohortesRes.data) ? cohortesRes.data : [];
       setCohortes(cohortesData);
@@ -58,9 +54,7 @@ export default function Cohortes() {
         bloque_fechas_id: formData.bloque_fechas,
       };
 
-      // Persist via DRF (aun no hay POST en Ninja para cohortes)
-      const token = authService.getAccessToken();
-      await axios.post('/api/cohortes/', payload, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      await api.post('/inscripciones/cohortes', payload);
       setFeedback({ open: true, message: 'Cohorte creada con éxito.', severity: 'success' });
       setOpenDialog(false);
       fetchData();

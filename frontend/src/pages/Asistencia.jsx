@@ -3,7 +3,7 @@ import FileUpload from "../components/FileUpload";
 import ResultPanel from "../components/ResultPanel";
 import { uploadFile } from "../services/uploadService";
 import { listAsistencias, createAsistencia, updateAsistencia } from "../services/asistenciasService";
-import api from '../services/apiClient';
+import api from '../api/client';
 import { Card, Select, Button, Input } from '../components/UI';
 import { Check, X, Upload, Save, Calendar, CheckSquare, AlertCircle, Loader } from 'lucide-react';
 
@@ -267,8 +267,8 @@ export default function Asistencia() {
             {/* Fallback to original component logic wrapper if needed, or reimplement UI */}
             <FileUpload
               title="" // Hide title as we rendered custom one
-              endpoint="/api/import-asistencia/"
-              doUpload={(file, onProgress) => uploadFile("/api/import-asistencia/", file, onProgress)}
+              endpoint="/import-asistencia"
+              doUpload={(file, onProgress) => uploadFile("/import-asistencia", file, onProgress)}
               onUpload={setUploadResult}
             />
           </div>

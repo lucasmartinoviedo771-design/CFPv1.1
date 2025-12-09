@@ -40,6 +40,16 @@ class ModuloOut(Schema):
     asistencia_requerida_practica: int
 
 
+class ModuloIn(Schema):
+    bloque_id: int
+    nombre: str
+    orden: int
+    fecha_inicio: Optional[date] = None
+    fecha_fin: Optional[date] = None
+    es_practica: bool
+    asistencia_requerida_practica: int
+
+
 class BloqueDetailOut(BloqueOut):
     modulos: List[ModuloOut] = []
 
@@ -52,6 +62,12 @@ class BloqueDeFechasOut(Schema):
 
 class CohorteOut(Schema):
     id: int
+    nombre: str
+    programa_id: int
+    bloque_fechas_id: int
+
+
+class CohorteIn(Schema):
     nombre: str
     programa_id: int
     bloque_fechas_id: int
@@ -107,6 +123,13 @@ class AsistenciaIn(Schema):
     presente: bool
     archivo_origen: Optional[str] = None
 
+
+class ExamenIn(Schema):
+    modulo_id: Optional[int] = None
+    bloque_id: Optional[int] = None
+    tipo_examen: str
+    fecha: Optional[date] = None
+    peso: Optional[float] = 0
 
 class EstudianteOut(Schema):
     id: int

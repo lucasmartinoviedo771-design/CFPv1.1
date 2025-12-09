@@ -1,7 +1,9 @@
+from datetime import timedelta
 from django.db.models import Avg, Count, Exists, OuterRef, Q
 from django.db.models.functions import TruncMonth, TruncWeek
 from django.utils.dateparse import parse_date
 from ninja import Router
+from core.api.permissions import require_authenticated_group
 
 from core.models import Inscripcion, Asistencia, Nota, Estudiante, Cohorte, Bloque, Examen
 
@@ -9,12 +11,14 @@ router = Router(tags=["analytics"])
 
 
 @router.get("/inscriptos", response=list)
+@require_authenticated_group
 def inscriptos(request):
     qs = Inscripcion.objects.values("cohorte__programa__codigo", "cohorte__nombre").annotate(inscriptos=Count("id"))
     return list(qs)
 
 
 @router.get("/asistencia-promedio", response=list)
+@require_authenticated_group
 def asistencia_promedio(request):
     qs = (
         Asistencia.objects.values("modulo__id", "modulo__nombre")
@@ -25,6 +29,7 @@ def asistencia_promedio(request):
 
 
 @router.get("/aprobacion-por-examen", response=list)
+@require_authenticated_group
 def aprobacion_por_examen(request):
     qs = (
         Nota.objects.values("examen__modulo__id", "examen__tipo_examen")
@@ -35,12 +40,14 @@ def aprobacion_por_examen(request):
 
 
 @router.get("/equivalencias", response=list)
+@require_authenticated_group
 def equivalencias(request):
     qs = Nota.objects.filter(es_equivalencia=True).values("examen__modulo__id").annotate(count=Count("id"))
     return list(qs)
 
 
 @router.get("/enrollments", response=dict)
+@require_authenticated_group
 def analytics_enrollments(request, programa_id: int = None, cohorte_id: int = None, date_from: str = None, date_to: str = None, group_by: str = "month"):
     qs = Inscripcion.objects.all()
     if programa_id:
@@ -71,6 +78,7 @@ def analytics_enrollments(request, programa_id: int = None, cohorte_id: int = No
 
 
 @router.get("/attendance", response=dict)
+@require_authenticated_group
 def analytics_attendance(
     request,
     programa_id: int = None,
@@ -146,6 +154,7 @@ def analytics_attendance(
 
 
 @router.get("/grades", response=dict)
+@require_authenticated_group
 def analytics_grades(
     request,
     programa_id: int = None,
@@ -200,6 +209,7 @@ def analytics_grades(
 
 
 @router.get("/dropout", response=dict)
+@require_authenticated_group
 def analytics_dropout(request, programa_id: int = None, cohorte_id: int = None, date_from: str = None, date_to: str = None, rule: str = "A", lookback_weeks: int = 3):
     rule = (rule or "A").upper()
     qs = Inscripcion.objects.select_related("estudiante", "cohorte__programa")
@@ -274,6 +284,7 @@ def analytics_dropout(request, programa_id: int = None, cohorte_id: int = None, 
 
 
 @router.get("/graduates", response=dict)
+@require_authenticated_group
 def analytics_graduates(request, programa_id: int = None, cohorte_id: int = None):
     if not programa_id and not cohorte_id:
         return {"detail": "'programa_id' o 'cohorte_id' requerido"}, 400
@@ -337,6 +348,7 @@ def analytics_graduates(request, programa_id: int = None, cohorte_id: int = None
 
 
 @router.get("/courses-graph", response=dict)
+@require_authenticated_group
 def courses_graph(request, programa_id: int, cohorte_id: int = None):
     try:
         programa = Cohorte.objects.filter(programa_id=programa_id).first().programa

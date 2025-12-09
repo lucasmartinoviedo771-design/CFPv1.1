@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { listProgramas } from '../services/programasService';
-import api from '../services/apiClient';
+import api from '../api/client';
 import analytics from '../services/analyticsService';
 import { Card, Select, Button } from '../components/UI';
 import { GraduationCap, Users } from 'lucide-react';

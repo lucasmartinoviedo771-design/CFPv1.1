@@ -9,9 +9,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
-import axios from 'axios';
-import api from '../services/apiClient';
-import authService from '../services/authService';
+import api from '../api/client';
 
 const formatDate = (dateString) => {
   if (!dateString) return '-';
@@ -339,6 +337,7 @@ export default function Estructura() {
         orden: moduloData.orden !== undefined && moduloData.orden !== null
           ? Number(moduloData.orden)
           : moduloData.orden,
+        bloque_id: moduloData.bloque_id || parentBloqueId,
       };
 
       if (payload.id) {
@@ -378,8 +377,7 @@ export default function Estructura() {
   const handleDeleteBloque = async (bloque) => {
     if (!window.confirm(`¿Estás seguro de eliminar el bloque ${bloque.nombre}?`)) return;
     try {
-      const token = authService.getAccessToken();
-      await axios.delete(`/api/bloques/${bloque.id}/`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      await api.delete(`/bloques/${bloque.id}`);
       setFeedback({ open: true, message: 'Bloque eliminado con éxito', severity: 'success' });
       fetchProgramas();
     } catch (error) {
@@ -392,12 +390,10 @@ export default function Estructura() {
     try {
       if (bloqueData.id) {
         const payload = { ...bloqueData, programa: parentProgramaId };
-        const token = authService.getAccessToken();
-        await axios.put(`/api/bloques/${bloqueData.id}/`, payload, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        await api.put(`/bloques/${bloqueData.id}`, payload);
         setFeedback({ open: true, message: 'Bloque actualizado con éxito', severity: 'success' });
       } else {
-        const token = authService.getAccessToken();
-        await axios.post('/api/bloques/', { ...bloqueData, programa: parentProgramaId }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        await api.post('/bloques', { ...bloqueData, programa: parentProgramaId });
         setFeedback({ open: true, message: 'Bloque añadido con éxito', severity: 'success' });
       }
       setOpenBloqueDialog(false);
@@ -428,8 +424,7 @@ export default function Estructura() {
   const handleDeletePrograma = async (programa) => {
     if (!window.confirm(`¿Estás seguro de eliminar el programa ${programa.nombre}?`)) return;
     try {
-      const token = authService.getAccessToken();
-      await axios.delete(`/api/programas/${programa.id}/`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      await api.delete(`/programas/${programa.id}`);
       setFeedback({ open: true, message: 'Programa eliminado con éxito', severity: 'success' });
       fetchProgramas();
     } catch (error) {
@@ -441,12 +436,10 @@ export default function Estructura() {
   const handleSavePrograma = async (programaData) => {
     try {
       if (programaData.id) {
-        const token = authService.getAccessToken();
-        await axios.put(`/api/programas/${programaData.id}/`, programaData, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        await api.put(`/programas/${programaData.id}`, programaData);
         setFeedback({ open: true, message: 'Programa actualizado con éxito', severity: 'success' });
       } else {
-        const token = authService.getAccessToken();
-        await axios.post('/api/programas/', programaData, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        await api.post('/programas', programaData);
         setFeedback({ open: true, message: 'Programa añadido con éxito', severity: 'success' });
       }
       setOpenProgramaDialog(false);

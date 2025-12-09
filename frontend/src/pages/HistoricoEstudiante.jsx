@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import apiClient from '../services/apiClient';
+import apiClient from '../api/client';
 import HistorialAcademico from '../components/HistorialAcademico';
 import { Card, Select } from '../components/UI';
 import { UserSearch } from 'lucide-react';
@@ -33,7 +33,7 @@ export default function HistoricoEstudiante() {
     }
     (async () => {
       try {
-        const { data } = await apiClient.get('/examenes/notas', { params: { estudiante_id: selEstudiante } });
+        const { data } = await apiClient.get('/historico-estudiante', { params: { estudiante_id: selEstudiante } });
         setHistorial(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Error fetching history:", error);

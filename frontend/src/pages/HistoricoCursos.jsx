@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import apiClient from '../services/apiClient';
-import axios from 'axios';
-import authService from '../services/authService';
+import apiClient from '../api/client';
 import { Card, Select, Button } from '../components/UI';
 import { Search, AlertCircle } from 'lucide-react';
 
@@ -36,8 +34,6 @@ export default function HistoricoCursos() {
     setData(null);
 
     const token = authService.getAccessToken();
-    // Usamos el endpoint configurado, ajusta la URL base si es necesario en axios
-    // O mejor aún, usamos apiClient para mantener la configuración base
     apiClient.get(`/historico-cursos/?cohorte_id=${selectedCohorte}&tipo_dato=${tipoDato}`)
       .then(response => {
         setData(response.data);
