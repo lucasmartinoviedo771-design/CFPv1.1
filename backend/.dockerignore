@@ -6,3 +6,10 @@ env
 .git
 .env
 db.sqlite3
+
+# Debug and test scripts - no incluir en producción
+create_superuser_emergency.py
+debug_http_request.py
+debug_jwt.py
+test_db_connection.py
+init_su.py

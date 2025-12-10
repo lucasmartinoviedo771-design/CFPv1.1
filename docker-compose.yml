@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8' # Obsoleto en Docker Compose v2+
 
 services:
   db:
@@ -13,7 +13,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     ports:
-      - "3308:3306" # Expuesto en 3308 para no chocar con local ni IPES6
+      - "127.0.0.1:3308:3306" # Solo accesible desde localhost
     networks:
       - cfp_network
 
@@ -24,8 +24,8 @@ services:
     container_name: cfp_backend_prod
     restart: always
     command: /entrypoint.sh
-    volumes:
-      - ./backend:/app # Para desarrollo (opcional en prod)
+    # volumes:
+    #   - ./backend:/app # Solo para desarrollo local, no en producción
     environment:
       - DB_ENGINE=django.db.backends.mysql
       - DB_NAME=${MYSQL_DATABASE:-CFP}
@@ -33,7 +33,7 @@ services:
       - DB_PASSWORD=${MYSQL_PASSWORD}
       - DB_HOST=db
       - DB_PORT=3306
-      - DJANGO_ALLOWED_HOSTS=*
+      - DJANGO_ALLOWED_HOSTS=cfp.lucasoviedodev.org,localhost,127.0.0.1
       - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY}
       - CORS_ALLOWED_ORIGINS=http://localhost:8085,http://192.168.1.212,http://192.168.1.212:8085,http://ips6-server.com,https://cfp.lucasoviedodev.org

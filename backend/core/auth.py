@@ -31,11 +31,11 @@ class EmailOrUsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
                     
             return super().validate({"username": resolved_username, "password": password})
         except Exception as e:
-            # Fallback debug log (this will print to console where runserver is running)
-            print(f"!!! AUTH ERROR: {e}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Authentication error occurred", exc_info=False)
             raise
 
 
 class EmailOrUsernameTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailOrUsernameTokenObtainPairSerializer
-
