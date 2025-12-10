@@ -43,8 +43,8 @@ export default function Login() {
 
             <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
                 <div className="flex justify-center mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                        <span className="text-3xl font-bold text-white">Code3</span>
+                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                        <span className="text-4xl font-bold text-white">CFP</span>
                     </div>
                 </div>
                 <h2 className="mt-2 text-center text-4xl font-extrabold text-white tracking-tight">
