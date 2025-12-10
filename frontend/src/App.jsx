@@ -82,7 +82,7 @@ export default function App() {
       <UserContext.Provider value={{ user, setUser }}>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
 
           {/* Protected Routes */}

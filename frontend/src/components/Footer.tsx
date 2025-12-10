@@ -12,7 +12,7 @@ export const Footer = () => {
                     <div className="space-y-4">
                         <Logo />
                         <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
-                            Centro Politécnico Superior Malvinas Argentinas.
+                            Centro de Formación Profesional Malvinas Argentinas.
                             Formación profesional de vanguardia en tecnología y programación.
                         </p>
                     </div>
