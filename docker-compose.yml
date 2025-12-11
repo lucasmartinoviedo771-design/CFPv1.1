@@ -50,8 +50,11 @@ services:
     restart: always
     ports:
       - "8085:80" # Frontend accesible en puerto 8085
+      - "8444:443" # Frontend HTTPS accesible en puerto 8444
     depends_on:
       - backend
+    volumes:
+      - /home/admin486321/ssl:/etc/nginx/ssl:ro
     networks:
       - cfp_network
 
