@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link as RouterLink } from "react-router-dom";
-import { 
-  Box, Typography, CircularProgress, Breadcrumbs, Paper, TextField, Button, 
-  Table, TableBody, TableCell, TableContainer, TableRow, Accordion, 
+import {
+  Box, Typography, CircularProgress, Breadcrumbs, Paper, TextField, Button,
+  Table, TableBody, TableCell, TableContainer, TableRow, Accordion,
   AccordionSummary, AccordionDetails, Select, MenuItem, FormControl, InputLabel, Divider
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { getCurso, listCohortes } from "../services/cursosService";
-import { 
+import {
   listBloques, createBloque, deleteBloque,
   listModulos, createModulo, deleteModulo,
   listExamenes, createExamen, deleteExamen
@@ -67,9 +67,9 @@ function ModuloExamenManager({ modulo }) {
 
   return (
     <Box>
-      <Typography variant="subtitle2" sx={{mt:1}}>Exámenes del Módulo (Parciales)</Typography>
+      <Typography variant="subtitle2" sx={{ mt: 1 }}>Exámenes del Módulo (Parciales)</Typography>
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1, my: 1, alignItems: 'center' }}>
-        <FormControl size="small" sx={{minWidth: 150}}>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Tipo</InputLabel>
           <Select name="tipo_examen" value={form.tipo_examen} label="Tipo" onChange={handleFormChange}>
             <MenuItem value="PARCIAL">Parcial</MenuItem>
@@ -78,7 +78,7 @@ function ModuloExamenManager({ modulo }) {
         </FormControl>
         <TextField name="fecha" type="date" value={form.fecha} onChange={handleFormChange} size="small" InputLabelProps={{ shrink: true }} />
         <Button type="submit" variant="outlined" size="small" disabled={saveStatus === 'saving'}>Agregar Examen</Button>
-        {saveStatus === 'saving' && <CircularProgress size={20} />} 
+        {saveStatus === 'saving' && <CircularProgress size={20} />}
         {saveStatus === 'saved' && <Typography color="success">Guardado ✓</Typography>}
         {saveStatus === 'error' && <Typography color="error">Error al guardar</Typography>}
       </Box>
@@ -152,9 +152,9 @@ function BloqueExamenManager({ bloque }) {
 
   return (
     <Box>
-      <Typography variant="subtitle1" sx={{mt:2}}>Exámenes Finales del Bloque</Typography>
+      <Typography variant="subtitle1" sx={{ mt: 2 }}>Exámenes Finales del Bloque</Typography>
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1, my: 1, alignItems: 'center' }}>
-        <FormControl size="small" sx={{minWidth: 150}}>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Tipo</InputLabel>
           <Select name="tipo_examen" value={form.tipo_examen} label="Tipo" onChange={handleFormChange}>
             <MenuItem value="FINAL_VIRTUAL">Final Virtual</MenuItem>
@@ -164,7 +164,7 @@ function BloqueExamenManager({ bloque }) {
         </FormControl>
         <TextField name="fecha" type="date" value={form.fecha} onChange={handleFormChange} size="small" InputLabelProps={{ shrink: true }} />
         <Button type="submit" variant="outlined" size="small" disabled={saveStatus === 'saving'}>Agregar Examen Final</Button>
-        {saveStatus === 'saving' && <CircularProgress size={20} />} 
+        {saveStatus === 'saving' && <CircularProgress size={20} />}
         {saveStatus === 'saved' && <Typography color="success">Guardado ✓</Typography>}
         {saveStatus === 'error' && <Typography color="error">Error al guardar</Typography>}
       </Box>
@@ -237,12 +237,12 @@ function ModuloManager({ bloque }) {
 
   return (
     <Box>
-      <Typography variant="subtitle1" sx={{mt:1}}>Módulos del Bloque</Typography>
+      <Typography variant="subtitle1" sx={{ mt: 1 }}>Módulos del Bloque</Typography>
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1, my: 1, alignItems: 'center' }}>
         <TextField name="nombre" value={form.nombre} onChange={handleFormChange} label="Nombre del Módulo" size="small" required />
         <TextField name="orden" value={form.orden} onChange={handleFormChange} label="Orden" type="number" size="small" required />
         <Button type="submit" variant="outlined" size="small" disabled={saveStatus === 'saving'}>Agregar Módulo</Button>
-        {saveStatus === 'saving' && <CircularProgress size={20} />} 
+        {saveStatus === 'saving' && <CircularProgress size={20} />}
         {saveStatus === 'saved' && <Typography color="success">Guardado ✓</Typography>}
         {saveStatus === 'error' && <Typography color="error">Error al guardar</Typography>}
       </Box>
@@ -264,11 +264,11 @@ function ModuloManager({ bloque }) {
 
 // --- BloqueManager ---
 function BloqueManager({ curso, bloques, setBloques }) {
-  const [form, setForm] = useState({ nombre: '', orden: 10, programa: curso.id });
+  const [form, setForm] = useState({ nombre: '', orden: 10, programa_id: curso.id });
   const [saveStatus, setSaveStatus] = useState('idle');
 
   useEffect(() => {
-    setForm(f => ({ ...f, programa: curso.id }));
+    setForm(f => ({ ...f, programa_id: curso.id }));
   }, [curso.id]);
 
   const fetchBloques = useCallback(async () => {
@@ -288,7 +288,7 @@ function BloqueManager({ curso, bloques, setBloques }) {
     setSaveStatus('saving');
     try {
       await createBloque(form);
-      setForm({ nombre: '', orden: 10, programa: curso.id });
+      setForm({ nombre: '', orden: 10, programa_id: curso.id });
       fetchBloques();
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -321,8 +321,8 @@ function BloqueManager({ curso, bloques, setBloques }) {
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 2, my: 2, alignItems: 'center' }}>
         <TextField name="nombre" value={form.nombre} onChange={handleFormChange} label="Nombre del Bloque" size="small" required />
         <TextField name="orden" value={form.orden} onChange={handleFormChange} label="Orden" type="number" size="small" required />
-        <Button type="submit" variant="contained" disabled={saveStatus === 'saving'}>Agregar Bloque</Button>        
-        {saveStatus === 'saving' && <CircularProgress size={20} />} 
+        <Button type="submit" variant="contained" disabled={saveStatus === 'saving'}>Agregar Bloque</Button>
+        {saveStatus === 'saving' && <CircularProgress size={20} />}
         {saveStatus === 'saved' && <Typography color="success">Guardado ✓</Typography>}
         {saveStatus === 'error' && <Typography color="error">Error al guardar</Typography>}
       </Box>
@@ -500,7 +500,7 @@ export default function CursoDetail() {
     try {
       const currentCurso = await getCurso(id);
       setCurso(currentCurso);
-      
+
       const bloquesData = await listBloques({ programa_id: currentCurso.id });
       setBloques(Array.isArray(bloquesData) ? bloquesData : []);
 
@@ -554,21 +554,21 @@ export default function CursoDetail() {
 
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h4" gutterBottom>{curso.nombre}</Typography>
-        <Button variant="outlined" onClick={() => setViewMode(viewMode === 'edit' ? 'preview' : 'edit')}> 
+        <Button variant="outlined" onClick={() => setViewMode(viewMode === 'edit' ? 'preview' : 'edit')}>
           {viewMode === 'edit' ? 'Vista Previa' : 'Volver a Edición'}
         </Button>
       </Box>
-      
-      <Paper sx={{p: 2, mt: 2}}>
+
+      <Paper sx={{ p: 2, mt: 2 }}>
         {/* Grafico de Curso (API) */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" sx={{ mb: 1 }}>Gráfico del Curso (API)</Typography>
-          <Box sx={{ display:'flex', gap:2, alignItems:'center', flexWrap:'wrap', mb: 1 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
             <FormControl size="small" sx={{ minWidth: 240 }}>
               <InputLabel id="coh-label">Cohorte (opcional)</InputLabel>
-              <Select labelId="coh-label" label="Cohorte (opcional)" value={cohorteId} onChange={(e)=>setCohorteId(e.target.value)}>
+              <Select labelId="coh-label" label="Cohorte (opcional)" value={cohorteId} onChange={(e) => setCohorteId(e.target.value)}>
                 <MenuItem value=""><em>Todas</em></MenuItem>
-                {(cohortes||[]).map(c => (
+                {(cohortes || []).map(c => (
                   <MenuItem key={c.id} value={c.id}>{c.nombre}</MenuItem>
                 ))}
               </Select>
