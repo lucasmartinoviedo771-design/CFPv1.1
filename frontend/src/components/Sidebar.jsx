@@ -115,12 +115,11 @@ export default function Sidebar() {
     <aside className="w-64 flex flex-col h-screen bg-indigo-950/20 backdrop-blur-md border-r border-indigo-500/20">
       <div className="p-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <span className="text-xl font-bold text-white">C3</span>
+          <div className="w-12 h-12 shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <span className="text-xl font-bold text-white">CFP</span>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">CFP Admin</h1>
-            <p className="text-xs text-indigo-300">Gestión Académica</p>
+            <h1 className="text-lg font-bold text-white leading-tight">Gestión Académica</h1>
           </div>
         </div>
       </div>
@@ -169,8 +168,8 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-indigo-500/20">
-        <p className="text-xs text-center text-indigo-400 opacity-60">
-          &copy; 2025 Code 3 System
+        <p className="text-xs text-center text-white">
+          lucasoviedodev@gmail.com
         </p>
       </div>
     </aside>

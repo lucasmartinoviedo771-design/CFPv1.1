@@ -19,11 +19,11 @@ export const Button = ({
     ...props
 }) => {
     const variants = {
-        primary: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm',
-        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-        danger: 'bg-red-600 text-white hover:bg-red-700 shadow-sm',
-        ghost: 'bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900',
-        outline: 'bg-transparent border border-gray-300 text-gray-700 hover:bg-gray-50'
+        primary: 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm border border-transparent',
+        secondary: 'bg-indigo-800 text-indigo-100 hover:bg-indigo-700 border border-indigo-500/30',
+        danger: 'bg-red-600 text-white hover:bg-red-700 shadow-sm border border-transparent',
+        ghost: 'bg-transparent text-indigo-300 hover:bg-indigo-900/50 hover:text-white',
+        outline: 'bg-transparent border border-indigo-500/30 text-indigo-300 hover:bg-indigo-900/30 hover:text-white'
     };
 
     const sizes = {
@@ -35,7 +35,7 @@ export const Button = ({
     return (
         <button
             className={cn(
-                'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer',
+                'inline-flex items-center justify-center rounded-md font-medium transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer',
                 variants[variant],
                 sizes[size],
                 className
@@ -65,32 +65,32 @@ export const Input = ({ className, label, error, id, labelClassName, ...props })
             <input
                 id={id}
                 className={cn(
-                    'block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2 px-3 border',
-                    error ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : '',
+                    'block w-full rounded-md border-indigo-500/30 bg-indigo-950/50 text-white placeholder-indigo-400/50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2 px-3 border transition-colors',
+                    error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : '',
                     className
                 )}
                 {...props}
             />
-            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+            {error && <p className="mt-1 text-sm text-red-400 animate-pulse">{error}</p>}
         </div>
     );
 };
 
 // --- Select ---
-export const Select = ({ className, label, options, id, ...props }) => {
+export const Select = ({ className, label, options, id, labelClassName, ...props }) => {
     return (
         <div className="w-full">
-            {label && <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+            {label && <label htmlFor={id} className={cn("block text-sm font-medium text-gray-200 mb-1", labelClassName)}>{label}</label>}
             <select
                 id={id}
                 className={cn(
-                    'block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2 px-3 border bg-white',
+                    'block w-full rounded-md border-indigo-500/30 bg-indigo-950/50 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2 px-3 border transition-colors appearance-none', // appearance-none helps styling but removes arrow, usually need custom arrow or keep default. Kept default for robustness unless requested.
                     className
                 )}
                 {...props}
             >
                 {options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
+                    <option key={opt.value} value={opt.value} className="bg-[#1e1b4b] text-white">
                         {opt.label}
                     </option>
                 ))}
@@ -101,54 +101,55 @@ export const Select = ({ className, label, options, id, ...props }) => {
 
 // --- Card ---
 export const Card = ({ children, className, title }) => (
-    <div className={cn("bg-white overflow-hidden shadow rounded-lg border border-gray-200", className)}>
+    <div className={cn("bg-indigo-900/20 overflow-hidden shadow-lg rounded-xl border border-indigo-500/20 backdrop-blur-sm", className)}>
         {title && (
-            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">{title}</h3>
+            <div className="px-6 py-4 border-b border-indigo-500/20 bg-indigo-950/30">
+                <h3 className="text-lg leading-6 font-bold text-white">{title}</h3>
             </div>
         )}
-        <div className="px-4 py-5 sm:p-6">{children}</div>
+        <div className="px-6 py-6">{children}</div>
     </div>
 );
 
 // --- Table ---
 export const Table = ({ headers, children }) => (
-    <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+    <div className="overflow-x-auto rounded-lg border border-indigo-500/20">
+        <table className="min-w-full divide-y divide-indigo-500/20">
+            <thead className="bg-indigo-950 text-indigo-200">
                 <tr>
                     {headers.map((h, i) => (
-                        <th key={i} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th key={i} scope="col" className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">
                             {h}
                         </th>
                     ))}
                 </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-transparent divide-y divide-indigo-500/10">
                 {children}
             </tbody>
         </table>
     </div>
 );
 
-export const TableRow = ({ children }) => (
-    <tr className="hover:bg-gray-50 transition-colors">{children}</tr>
+export const TableRow = ({ children, className }) => (
+    <tr className={cn("hover:bg-indigo-500/10 transition-colors", className)}>{children}</tr>
 );
 
 export const TableCell = ({ children, className, ...props }) => (
-    <td className={cn("px-6 py-4 whitespace-nowrap text-sm text-gray-500", className)} {...props}>{children}</td>
+    <td className={cn("px-6 py-4 whitespace-nowrap text-sm text-gray-300", className)} {...props}>{children}</td>
 );
 
 // --- Badge ---
 export const Badge = ({ children, variant = 'neutral' }) => {
     const variants = {
-        success: 'bg-green-100 text-green-800',
-        warning: 'bg-yellow-100 text-yellow-800',
-        error: 'bg-red-100 text-red-800',
-        neutral: 'bg-gray-100 text-gray-800'
+        success: 'bg-green-500/20 text-green-400 border border-green-500/30',
+        warning: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+        error: 'bg-red-500/20 text-red-400 border border-red-500/30',
+        neutral: 'bg-gray-500/20 text-gray-300 border border-gray-500/30',
+        primary: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
     };
     return (
-        <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium", variants[variant])}>
+        <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm", variants[variant])}>
             {children}
         </span>
     );

@@ -239,7 +239,7 @@ export default function Estudiantes() {
                                             </tr>
                                         ))}
                                         {paginatedRows.length === 0 && (
-                                            <tr><td colSpan={6} className="text-center py-8 text-gray-500">No se encontraron estudiantes.</td></tr>
+                                            <tr><td colSpan={6} className="text-center py-8 text-white">No se encontraron estudiantes.</td></tr>
                                         )}
                                     </tbody>
                                 </table>

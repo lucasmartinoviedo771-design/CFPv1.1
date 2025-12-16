@@ -132,8 +132,9 @@ export default function Programas() {
           sx={{ flexGrow: 1, minWidth: 240 }}
         />
         <FormControlLabel
-          control={<Checkbox name="activo" checked={!!form.activo} onChange={handleFormChange} />}
+          control={<Checkbox name="activo" checked={!!form.activo} onChange={handleFormChange} sx={{ color: 'white' }} />}
           label="Activo"
+          sx={{ '& .MuiFormControlLabel-label': { color: 'white' } }}
         />
 
         <Stack direction="row" spacing={1}>
@@ -197,7 +198,7 @@ export default function Programas() {
                 {!paginatedRows.length && (
                   <TableRow>
                     <TableCell colSpan={4}>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.7)' }}>No hay programas cargados.</Typography>
+                      <Typography sx={{ color: 'white' }}>No hay programas cargados.</Typography>
                     </TableCell>
                   </TableRow>
                 )}
