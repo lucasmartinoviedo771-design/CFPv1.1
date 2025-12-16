@@ -6,7 +6,7 @@ from core.api.permissions import require_authenticated_group
 
 from core.models import Programa
 from core.serializers import ProgramaSerializer
-from .schemas import ProgramaOut, ProgramaDetailOut, BloqueSimpleOut
+from .schemas import ProgramaOut, ProgramaDetailOut, BloqueSimpleOut, ProgramaIn
 
 router = Router(tags=["programas"])
 
@@ -42,8 +42,8 @@ def detalle_programa(request, programa_id: int):
 
 @router.post("", response=ProgramaDetailOut)
 @require_authenticated_group
-def crear_programa(request, payload: dict):
-    serializer = ProgramaSerializer(data=payload)
+def crear_programa(request, payload: ProgramaIn):
+    serializer = ProgramaSerializer(data=payload.dict())
     serializer.is_valid(raise_exception=True)
     programa = serializer.save()
     return detalle_programa(request, programa.id)
@@ -52,9 +52,9 @@ def crear_programa(request, payload: dict):
 @router.put("/{programa_id}", response=ProgramaDetailOut)
 @router.patch("/{programa_id}", response=ProgramaDetailOut)
 @require_authenticated_group
-def actualizar_programa(request, programa_id: int, payload: dict):
+def actualizar_programa(request, programa_id: int, payload: ProgramaIn):
     programa = get_object_or_404(Programa, pk=programa_id)
-    serializer = ProgramaSerializer(instance=programa, data=payload, partial=True)
+    serializer = ProgramaSerializer(instance=programa, data=payload.dict(), partial=True)
     serializer.is_valid(raise_exception=True)
     serializer.save()
     return detalle_programa(request, programa.id)

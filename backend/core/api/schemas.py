@@ -11,6 +11,12 @@ class ProgramaOut(Schema):
     activo: bool
 
 
+class ProgramaIn(Schema):
+    codigo: str
+    nombre: str
+    activo: bool = True
+
+
 class BloqueSimpleOut(Schema):
     id: int
     nombre: str
