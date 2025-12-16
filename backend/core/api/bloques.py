@@ -6,7 +6,7 @@ from core.api.permissions import require_authenticated_group
 
 from core.models import Bloque
 from core.serializers import BloqueSerializer
-from .schemas import BloqueOut, BloqueDetailOut, ModuloOut
+from .schemas import BloqueOut, BloqueDetailOut, ModuloOut, BloqueIn
 
 router = Router(tags=["bloques"])
 
@@ -65,8 +65,8 @@ def detalle_bloque(request, bloque_id: int):
 
 @router.post("", response=BloqueDetailOut)
 @require_authenticated_group
-def crear_bloque(request, payload: dict):
-    serializer = BloqueSerializer(data=payload)
+def crear_bloque(request, payload: BloqueIn):
+    serializer = BloqueSerializer(data=payload.dict())
     serializer.is_valid(raise_exception=True)
     bloque = serializer.save()
     return detalle_bloque(request, bloque.id)
@@ -75,9 +75,9 @@ def crear_bloque(request, payload: dict):
 @router.put("/{bloque_id}", response=BloqueDetailOut)
 @router.patch("/{bloque_id}", response=BloqueDetailOut)
 @require_authenticated_group
-def actualizar_bloque(request, bloque_id: int, payload: dict):
+def actualizar_bloque(request, bloque_id: int, payload: BloqueIn):
     bloque = get_object_or_404(Bloque, pk=bloque_id)
-    serializer = BloqueSerializer(instance=bloque, data=payload, partial=True)
+    serializer = BloqueSerializer(instance=bloque, data=payload.dict(), partial=True)
     serializer.is_valid(raise_exception=True)
     bloque = serializer.save()
     return detalle_bloque(request, bloque.id)

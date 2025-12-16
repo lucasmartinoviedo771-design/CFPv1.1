@@ -35,6 +35,13 @@ class BloqueOut(Schema):
     correlativas_ids: List[int] = []
 
 
+class BloqueIn(Schema):
+    programa_id: int
+    nombre: str
+    orden: int
+    correlativas_ids: List[int] = []
+
+
 class ModuloOut(Schema):
     id: int
     bloque_id: int
