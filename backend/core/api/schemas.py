@@ -172,6 +172,10 @@ class InscripcionOut(Schema):
     updated_at: datetime
 
 
+class ChangePasswordIn(Schema):
+    current_password: str
+    new_password: str
+
 class UserIn(Schema):
     username: Optional[str] = None
     email: Optional[str] = None
@@ -180,4 +184,19 @@ class UserIn(Schema):
     password: Optional[str] = None
     password2: Optional[str] = None
     groups: Optional[List[str]] = None
+
+
+class UserOut(Schema):
+    id: int
+    username: str
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    is_superuser: bool = False
+    is_staff: bool = False
+    groups: List[str] = []
+
+    @staticmethod
+    def resolve_groups(obj):
+        return [g.name for g in obj.groups.all()]
 

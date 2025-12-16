@@ -7,6 +7,8 @@ from .models import (
 )
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import User, Group
+from django.core.mail import send_mail
+from django.conf import settings
 from .roles import list_roles
 
 class EstudianteSerializer(serializers.ModelSerializer):
@@ -227,13 +229,44 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         groups_data = validated_data.pop('groups', [])
         password = validated_data.pop('password', None)
-        validated_data.pop('password2', None) # Remove password2
+        validated_data.pop('password2', None) # Remove password2 if present
 
+        # Generate password if not provided
+        generated_password = None
+        if not password:
+            password = User.objects.make_random_password()
+            generated_password = password
+
+        # Create user instance safely
         user = User.objects.create(**validated_data)
-        if password:
-            user.set_password(password)
-            user.save()
-        user.groups.set(groups_data)
+        
+        # Set password
+        user.set_password(password)
+        user.save()
+        
+        # Set groups
+        if groups_data:
+            user.groups.set(groups_data)
+
+        # Send email if password was generated
+        if generated_password and user.email:
+            try:
+                send_mail(
+                    subject='Bienvenido al sistema CFP - Tus credenciales',
+                    message=f'Hola {user.first_name or user.username},\n\n'
+                            f'Se ha creado tu cuenta en el sistema de Gestión Académica CFP.\n\n'
+                            f'Tus credenciales de acceso son:\n'
+                            f'Usuario: {user.username}\n'
+                            f'Contraseña: {generated_password}\n\n'
+                            f'Por favor, ingresa y cambia tu contraseña lo antes posible.',
+                    from_email=None, # Uses DEFAULT_FROM_EMAIL
+                    recipient_list=[user.email],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                # Log error but don't fail the request
+                print(f"Error enviando email a {user.email}: {e}")
+
         return user
 
     def update(self, instance, validated_data):

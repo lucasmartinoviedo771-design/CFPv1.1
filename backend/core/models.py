@@ -268,8 +268,33 @@ class Asistencia(TimeStamped):
 
 # --- Users & Roles helpers ---
 class UserProfile(models.Model):
+    """
+    Perfil extendido para usuarios del sistema
+    Proporciona funcionalidad adicional como cambio de contraseña obligatorio
+    y gestión de envío de credenciales por email.
+    """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    must_change_password = models.BooleanField(default=True)
+    must_change_password = models.BooleanField(
+        default=True,
+        help_text="Si está activo, el usuario debe cambiar la contraseña al iniciar sesión."
+    )
+    temp_password = models.CharField(
+        max_length=128,
+        blank=True,
+        null=True,
+        help_text="Contraseña temporal para envío por email (se borra después del primer login o envío)"
+    )
+    credentials_sent_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Fecha y hora en que se enviaron las credenciales por email"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Perfil de Usuario"
+        verbose_name_plural = "Perfiles de Usuario"
 
     def __str__(self):
         return f"Profile({self.user.username})"

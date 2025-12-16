@@ -7,10 +7,10 @@ import { Shield, AlertCircle } from 'lucide-react';
 const Modal = ({ isOpen, onClose, title, children, actions }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#1e1b4b] border border-indigo-500/30 rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 pt-8 bg-black/70 backdrop-blur-sm animate-fade-in">
+      <div className="bg-[#1e1b4b] border border-indigo-500/30 rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[85vh]">
         <div className="p-6 border-b border-indigo-500/20"><h3 className="text-xl font-bold text-white">{title}</h3></div>
-        <div className="p-6 overflow-y-auto flex-1 text-gray-200 space-y-4">{children}</div>
+        <div className="p-6 overflow-y-auto flex-1 text-gray-200 space-y-4 custom-scrollbar">{children}</div>
         <div className="p-4 border-t border-indigo-500/20 flex justify-end gap-3 bg-indigo-950/30 rounded-b-xl">{actions}</div>
       </div>
     </div>
@@ -71,7 +71,7 @@ export default function UserFormDialog({ open, onClose, user, onSave }) {
     let newErrors = {};
     if (!formData.username) newErrors.username = 'El usuario es requerido';
     if (!formData.email) newErrors.email = 'El email es requerido';
-    if (!user && !formData.password) newErrors.password = 'Contraseña requerida';
+    // Password is now optional for new users (auto-generated)
     if (formData.password && formData.password.length < 8) newErrors.password = 'Min 8 caracteres';
     if (formData.password !== formData.password2) newErrors.password2 = 'No coinciden';
     setErrors(newErrors);
@@ -104,42 +104,88 @@ export default function UserFormDialog({ open, onClose, user, onSave }) {
       title={user ? 'Editar Usuario' : 'Nuevo Usuario'}
       actions={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button onClick={handleSubmit}>Guardar</Button></>}
     >
-      <Input name="username" label="Usuario" value={formData.username} onChange={handleChange} />
+      <Input
+        name="username"
+        label="Usuario"
+        value={formData.username}
+        onChange={handleChange}
+        labelClassName="text-indigo-100"
+        className="bg-indigo-950/50 border-indigo-500/30 text-white placeholder-indigo-400 focus:ring-indigo-400"
+      />
       {errors.username && <p className="text-red-400 text-xs mt-1">{errors.username}</p>}
 
-      <Input name="email" label="Email" type="email" value={formData.email} onChange={handleChange} />
+      <Input
+        name="email"
+        label="Email"
+        type="email"
+        value={formData.email}
+        onChange={handleChange}
+        labelClassName="text-indigo-100"
+        className="bg-indigo-950/50 border-indigo-500/30 text-white placeholder-indigo-400 focus:ring-indigo-400"
+      />
       {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
 
       <div className="grid grid-cols-2 gap-4">
-        <Input name="first_name" label="Nombre" value={formData.first_name} onChange={handleChange} />
-        <Input name="last_name" label="Apellido" value={formData.last_name} onChange={handleChange} />
+        <Input
+          name="first_name"
+          label="Nombre"
+          value={formData.first_name}
+          onChange={handleChange}
+          labelClassName="text-indigo-100"
+          className="bg-indigo-950/50 border-indigo-500/30 text-white placeholder-indigo-400 focus:ring-indigo-400"
+        />
+        <Input
+          name="last_name"
+          label="Apellido"
+          value={formData.last_name}
+          onChange={handleChange}
+          labelClassName="text-indigo-100"
+          className="bg-indigo-950/50 border-indigo-500/30 text-white placeholder-indigo-400 focus:ring-indigo-400"
+        />
       </div>
 
       <div className="border-t border-indigo-500/20 pt-4 mt-2">
-        <Input name="password" label={user ? "Nueva Contraseña (opcional)" : "Contraseña"} type="password" value={formData.password} onChange={handleChange} />
+        <Input
+          name="password"
+          label={user ? "Nueva Contraseña (opcional)" : "Contraseña (opcional)"}
+          type="password"
+          value={formData.password}
+          onChange={handleChange}
+          labelClassName="text-indigo-100"
+          className="bg-indigo-950/50 border-indigo-500/30 text-white placeholder-indigo-400 focus:ring-indigo-400"
+          placeholder={user ? "Dejar en blanco para mantener actual" : "Dejar en blanco para generar automáticamente"}
+        />
         {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
 
-        <Input name="password2" label="Confirmar Contraseña" type="password" value={formData.password2} onChange={handleChange} />
+        <Input
+          name="password2"
+          label="Confirmar Contraseña"
+          type="password"
+          value={formData.password2}
+          onChange={handleChange}
+          labelClassName="text-indigo-100"
+          className="bg-indigo-950/50 border-indigo-500/30 text-white placeholder-indigo-400 focus:ring-indigo-400"
+        />
         {errors.password2 && <p className="text-red-400 text-xs mt-1">{errors.password2}</p>}
       </div>
 
       <div className="mt-4">
-        <label className="text-sm font-medium text-indigo-300 mb-2 block flex items-center gap-2">
+        <label className="text-sm font-medium text-indigo-100 mb-2 block flex items-center gap-2">
           <Shield size={14} /> Grupos / Permisos
         </label>
-        <div className="bg-indigo-950/30 p-3 rounded-lg border border-indigo-500/20 max-h-32 overflow-y-auto space-y-2">
+        <div className="bg-indigo-950/30 p-3 rounded-lg border border-indigo-500/20 max-h-32 overflow-y-auto space-y-2 custom-scrollbar">
           {availableGroups.map((group) => (
             <label key={group.id} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-1 rounded">
               <input
                 type="checkbox"
-                className="rounded bg-indigo-900 border-indigo-500 text-brand-accent focus:ring-brand-accent/50"
+                className="rounded bg-indigo-900 border-indigo-500 text-indigo-400 focus:ring-offset-indigo-900 focus:ring-indigo-500"
                 checked={formData.groups.includes(group.name)}
                 onChange={() => handleGroupToggle(group.name)}
               />
-              <span className="text-sm text-gray-300">{group.name}</span>
+              <span className="text-sm text-indigo-100">{group.name}</span>
             </label>
           ))}
-          {availableGroups.length === 0 && <p className="text-xs text-gray-500 text-center">No hay grupos disponibles</p>}
+          {availableGroups.length === 0 && <p className="text-xs text-gray-400 text-center">No hay grupos disponibles</p>}
         </div>
       </div>
 

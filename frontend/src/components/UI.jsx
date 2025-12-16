@@ -58,10 +58,10 @@ export const Button = ({
 };
 
 // --- Input ---
-export const Input = ({ className, label, error, id, ...props }) => {
+export const Input = ({ className, label, error, id, labelClassName, ...props }) => {
     return (
         <div className="w-full">
-            {label && <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+            {label && <label htmlFor={id} className={cn("block text-sm font-medium text-gray-200 mb-1", labelClassName)}>{label}</label>}
             <input
                 id={id}
                 className={cn(

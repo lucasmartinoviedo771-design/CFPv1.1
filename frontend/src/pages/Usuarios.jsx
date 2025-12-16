@@ -3,7 +3,7 @@ import api from '../api/client';
 import UserFormDialog from '../components/UserFormDialog';
 import { UserContext } from '../App';
 import { Card, Button } from '../components/UI';
-import { Edit2, Trash2, UserPlus, Users as UsersIcon, AlertCircle, CheckCircle } from 'lucide-react';
+import { Edit2, Trash2, UserPlus, Users as UsersIcon, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 
 export default function Usuarios() {
   const { user } = useContext(UserContext);
@@ -43,6 +43,21 @@ export default function Usuarios() {
     setEditingUser(user);
     setOpenDialog(true);
   };
+
+  const handleRegenerate = async (targetUser) => {
+    if (window.confirm(`¿Regenerar contraseña para ${targetUser.username}?\n\nSeguridad: Esto creará una contraseña nueva aleatoria y se la enviará por correo. El usuario deberá cambiarla al ingresar.`)) {
+      try {
+        await api.post(`/users/${targetUser.id}/regenerate-password`);
+        setFeedback({ open: true, message: 'Contraseña regenerada y enviada por correo', severity: 'success' });
+        // remove alert quickly
+        setTimeout(() => setFeedback({ ...feedback, open: false }), 4000);
+      } catch (err) {
+        console.error(err);
+        setFeedback({ open: true, message: 'Error al regenerar contraseña. Verifique que tenga email.', severity: 'error' });
+        setTimeout(() => setFeedback({ ...feedback, open: false }), 4000);
+      }
+    }
+  }
 
   const handleDelete = async (userId) => {
     if (window.confirm('¿Está seguro de que desea eliminar este usuario?')) {
@@ -102,17 +117,21 @@ export default function Usuarios() {
                     <td className="px-6 py-3 text-gray-300">{u.email}</td>
                     <td className="px-6 py-3 text-gray-300">{u.first_name} {u.last_name}</td>
                     <td className="px-6 py-3">
+                      {u.is_superuser && (
+                        <span className="px-2 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs mr-1 border border-purple-500/30">SuperAdmin</span>
+                      )}
                       {u.groups && u.groups.map(g => (
                         <span key={g} className="px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs mr-1">{g}</span>
                       ))}
                     </td>
-                    <td className="px-6 py-3 text-right">
-                      <button onClick={() => handleEdit(u)} className="p-1 text-indigo-400 hover:text-white mr-2"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDelete(u.id)} className="p-1 text-red-400 hover:text-red-200"><Trash2 size={16} /></button>
+                    <td className="px-6 py-3 text-right flex justify-end gap-2">
+                      <button onClick={() => handleRegenerate(u)} title="Regenerar credenciales" className="p-1 text-yellow-400 hover:text-yellow-200 transition-colors"><RefreshCw size={16} /></button>
+                      <button onClick={() => handleEdit(u)} className="p-1 text-indigo-400 hover:text-white transition-colors"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDelete(u.id)} className="p-1 text-red-400 hover:text-red-200 transition-colors"><Trash2 size={16} /></button>
                     </td>
                   </tr>
                 ))}
-              </tbody>
+              </tbody> (
             </table>
           </div>
         </Card>
