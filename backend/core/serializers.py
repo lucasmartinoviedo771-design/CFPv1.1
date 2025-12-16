@@ -92,9 +92,16 @@ class ProgramaDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'codigo', 'nombre', 'activo', 'bloques']
 
 class BloqueSerializer(serializers.ModelSerializer):
+    programa_id = serializers.PrimaryKeyRelatedField(
+        queryset=Programa.objects.all(), source='programa', write_only=True
+    )
+    
     class Meta:
         model = Bloque
-        fields = "__all__"
+        fields = ['id', 'nombre', 'orden', 'programa', 'programa_id', 'correlativas']
+        extra_kwargs = {
+            'programa': {'read_only': True}
+        }
 
 class InscripcionSerializer(serializers.ModelSerializer):
     estudiante = EstudianteSerializer(read_only=True)
