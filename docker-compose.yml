@@ -58,8 +58,8 @@ services:
     container_name: cfp_frontend_prod
     restart: always
     ports:
-      - "8085:80" # Frontend accesible en puerto 8085
-      - "8444:443" # Frontend HTTPS accesible en puerto 8444
+      - "127.0.0.1:8085:80"   # Restringido a localhost - solo accesible vía Cloudflare Tunnel
+      - "127.0.0.1:8444:443"  # Restringido a localhost - solo accesible vía Cloudflare Tunnel
     depends_on:
       - backend
     volumes:
