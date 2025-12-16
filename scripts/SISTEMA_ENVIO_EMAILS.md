@@ -36,14 +36,14 @@ Cloudflare Email Routing no tiene servidor SMTP directo, pero podemos usar Gmail
 
 1. **Generar App Password de Gmail:**
    - Ve a https://myaccount.google.com/apppasswords
-   - Inicia sesión con `lucasoviedodev@gmail.com`
+   - Inicia sesión con tu cuenta de Gmail
    - Genera una nueva "App Password"
    - Copia la contraseña generada (16 caracteres)
 
 2. **Actualizar `.env` en CFP:**
    ```bash
    # En /home/admin486321/CFP/.env
-   EMAIL_HOST_USER=lucasoviedodev@gmail.com
+   EMAIL_HOST_USER=tu-email@gmail.com
    EMAIL_HOST_PASSWORD=xxxx_xxxx_xxxx_xxxx  # Reemplazar con App Password de Gmail
    DEFAULT_FROM_EMAIL=CFP <soporte@lucasoviedodev.org>
    ```
@@ -59,7 +59,7 @@ Cloudflare Email Routing no tiene servidor SMTP directo, pero podemos usar Gmail
 Si Cloudflare no funciona:
 
 ```bash
-DEFAULT_FROM_EMAIL=CFP <lucasoviedodev@gmail.com>
+DEFAULT_FROM_EMAIL=CFP <tu-email@gmail.com>
 ```
 
 ---

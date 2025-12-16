@@ -139,7 +139,7 @@ export default function Login() {
                         <div className="mt-4 flex items-center justify-center space-x-2 text-xs text-indigo-200 bg-indigo-900/30 py-2 rounded-lg border border-indigo-500/20">
                             <Info size={14} />
                             <p>
-                                Soporte: <span className="font-mono font-bold text-white">lucasoviedodev@gmail.com</span>
+                                Soporte: <span className="font-mono font-bold text-white">soporte@cfp.edu.ar</span>
                             </p>
                         </div>
                     </form>
