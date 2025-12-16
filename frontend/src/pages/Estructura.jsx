@@ -38,7 +38,7 @@ const initialModuloFormState = {
 const initialBloqueFormState = {
   nombre: '',
   orden: 1,
-  programa: null,
+  programa_id: null,
 };
 
 const initialProgramaFormState = {
@@ -104,7 +104,7 @@ function BloqueFormDialog({ open, onClose, onSave, bloque, programaId }) {
     if (bloque) {
       setForm(bloque);
     } else {
-      setForm({ ...initialBloqueFormState, programa: programaId });
+      setForm({ ...initialBloqueFormState, programa_id: programaId });
     }
   }, [bloque, programaId, open]);
 
@@ -389,11 +389,11 @@ export default function Estructura() {
   const handleSaveBloque = async (bloqueData) => {
     try {
       if (bloqueData.id) {
-        const payload = { ...bloqueData, programa: parentProgramaId };
+        const payload = { ...bloqueData, programa_id: parentProgramaId };
         await api.put(`/bloques/${bloqueData.id}`, payload);
         setFeedback({ open: true, message: 'Bloque actualizado con éxito', severity: 'success' });
       } else {
-        await api.post('/bloques', { ...bloqueData, programa: parentProgramaId });
+        await api.post('/bloques', { ...bloqueData, programa_id: parentProgramaId });
         setFeedback({ open: true, message: 'Bloque añadido con éxito', severity: 'success' });
       }
       setOpenBloqueDialog(false);
