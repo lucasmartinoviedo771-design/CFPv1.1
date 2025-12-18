@@ -13,10 +13,12 @@ router = Router(tags=["programas"])
 
 @router.get("", response=List[ProgramaOut])
 @require_authenticated_group
-def listar_programas(request, activo: Optional[bool] = None):
+def listar_programas(request, activo: Optional[bool] = None, resolucion_id: Optional[int] = None):
     qs = Programa.objects.all().order_by("codigo")
     if activo is not None:
         qs = qs.filter(activo=activo)
+    if resolucion_id is not None:
+        qs = qs.filter(resolucion_id=resolucion_id)
     return qs
 
 
@@ -28,8 +30,8 @@ def detalle_programa(request, programa_id: int):
         pk=programa_id,
     )
     bloques = [
-        BloqueSimpleOut(id=b.id, nombre=b.nombre, orden=b.orden)
-        for b in sorted(programa.bloques.all(), key=lambda x: (x.orden, x.id))
+        BloqueSimpleOut(id=b.id, nombre=b.nombre)
+        for b in sorted(programa.bloques.all(), key=lambda x: x.id)
     ]
     return ProgramaDetailOut(
         id=programa.id,

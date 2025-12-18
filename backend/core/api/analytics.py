@@ -363,19 +363,18 @@ def courses_graph(request, programa_id: int, cohorte_id: int = None):
 
     bloques = (
         Bloque.objects.filter(programa=programa)
-        .order_by("orden", "id")
+        .order_by("id")
         .prefetch_related("modulos")
     )
     tree = []
     for blo in bloques:
-        blo_node = {"type": "bloque", "id": blo.id, "nombre": blo.nombre, "orden": blo.orden, "children": []}
-        for mod in blo.modulos.all().order_by("orden", "id"):
+        blo_node = {"type": "bloque", "id": blo.id, "nombre": blo.nombre, "children": []}
+        for mod in blo.modulos.all().order_by("id"):
             blo_node["children"].append(
                 {
                     "type": "modulo",
                     "id": mod.id,
                     "nombre": mod.nombre,
-                    "orden": mod.orden,
                     "es_practica": mod.es_practica,
                     "fecha_inicio": mod.fecha_inicio.isoformat() if mod.fecha_inicio else None,
                     "fecha_fin": mod.fecha_fin.isoformat() if mod.fecha_fin else None,

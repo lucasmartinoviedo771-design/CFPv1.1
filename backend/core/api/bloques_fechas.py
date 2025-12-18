@@ -1,7 +1,7 @@
 from typing import List
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from ninja import Router
+from ninja import Router, Schema
 from core.api.permissions import require_authenticated_group
 
 from core.models import BloqueDeFechas, SemanaConfig
@@ -10,10 +10,18 @@ from core.serializers import BloqueDeFechasSerializer, SemanaConfigSerializer
 router = Router(tags=["bloques-de-fechas"])
 
 
+class SemanaInput(Schema):
+    tipo: str
+
+
+class SecuenciaPayload(Schema):
+    semanas: List[SemanaInput]
+
+
 @router.get("", response=List[dict])
 @require_authenticated_group
 def listar_bloques_fechas(request):
-    qs = BloqueDeFechas.objects.prefetch_related("semanas_config").order_by("-fecha_inicio", "id")
+    qs = BloqueDeFechas.objects.prefetch_related("semanas_config").order_by("nombre")
     return BloqueDeFechasSerializer(qs, many=True).data
 
 
@@ -54,13 +62,13 @@ def eliminar_bloque_fechas(request, bloque_id: int):
 
 @router.post("/{bloque_id}/guardar_secuencia", response=dict)
 @require_authenticated_group
-def guardar_secuencia(request, bloque_id: int, payload: dict):
+def guardar_secuencia(request, bloque_id: int, payload: SecuenciaPayload):
     """
     Reemplaza la secuencia de semanas para un bloque de fechas.
     Espera payload {"semanas": [{"tipo": "CLASE"}, ...]} respetando el orden enviado.
     """
     bloque = get_object_or_404(BloqueDeFechas, pk=bloque_id)
-    semanas_data = payload.get("semanas", [])
+    semanas_data = payload.semanas
 
     with transaction.atomic():
         bloque.semanas_config.all().delete()
@@ -68,7 +76,7 @@ def guardar_secuencia(request, bloque_id: int, payload: dict):
             SemanaConfig.objects.create(
                 bloque=bloque,
                 orden=idx + 1,
-                tipo=semana.get("tipo"),
+                tipo=semana.tipo,
             )
 
     return {"status": "ok", "bloque_id": bloque_id, "semanas": SemanaConfigSerializer(bloque.semanas_config.all(), many=True).data}

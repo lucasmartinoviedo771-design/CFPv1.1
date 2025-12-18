@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from django.db.models import Q, Avg, Count
 from .models import (
-    Estudiante, Programa, Bloque, Modulo, Examen, Nota, Asistencia, 
+    Resolucion, Estudiante, Programa, Bloque, Modulo, Examen, Nota, Asistencia, 
     Inscripcion, BloqueDeFechas, SemanaConfig, Cohorte
 )
 from django.contrib.auth.password_validation import validate_password
@@ -31,12 +31,24 @@ class BloqueDeFechasSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BloqueDeFechas
-        fields = ['id', 'nombre', 'fecha_inicio', 'semanas_config']
+        fields = ['id', 'nombre', 'descripcion', 'semanas_config']
+
+class ResolucionSerializer(serializers.ModelSerializer):
+    """Serializer para el modelo Resolucion"""
+    class Meta:
+        model = Resolucion
+        fields = ['id', 'numero', 'nombre', 'fecha_publicacion', 'vigente', 'observaciones', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
 
 class ProgramaSerializer(serializers.ModelSerializer):
+    resolucion = ResolucionSerializer(read_only=True)
+    resolucion_id = serializers.PrimaryKeyRelatedField(
+        queryset=Resolucion.objects.all(), source='resolucion', write_only=True, required=False, allow_null=True
+    )
+    
     class Meta:
         model = Programa
-        fields = ['id', 'codigo', 'nombre', 'activo']
+        fields = ['id', 'codigo', 'nombre', 'activo', 'resolucion', 'resolucion_id']
 
 class CohorteSerializer(serializers.ModelSerializer):
     programa = ProgramaSerializer(read_only=True)
@@ -70,7 +82,7 @@ class ModuloSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Modulo
-        fields = ['id', 'nombre', 'orden', 'fecha_inicio', 'fecha_fin', 'es_practica', 'asistencia_requerida_practica', 'bloque', 'bloque_id']
+        fields = ['id', 'nombre', 'fecha_inicio', 'fecha_fin', 'es_practica', 'asistencia_requerida_practica', 'bloque', 'bloque_id']
 
 class BloqueDetailSerializer(serializers.ModelSerializer):
     modulos = ModuloSerializer(many=True, read_only=True)
@@ -78,7 +90,7 @@ class BloqueDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Bloque
-        fields = ['id', 'nombre', 'orden', 'modulos', 'examenes_finales']
+        fields = ['id', 'nombre', 'modulos', 'examenes_finales']
     
     def get_examenes_finales(self, obj):
         qs = Examen.objects.filter(bloque=obj, tipo_examen__in=['FINAL_VIRTUAL', 'FINAL_SINC', 'EQUIVALENCIA'])
@@ -98,7 +110,7 @@ class BloqueSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Bloque
-        fields = ['id', 'nombre', 'orden', 'programa', 'programa_id', 'correlativas']
+        fields = ['id', 'nombre', 'programa', 'programa_id', 'correlativas']
         extra_kwargs = {
             'programa': {'read_only': True}
         }

@@ -14,7 +14,7 @@ router = Router(tags=["bloques"])
 @router.get("", response=List[BloqueOut])
 @require_authenticated_group
 def listar_bloques(request, programa_id: Optional[int] = None):
-    qs = Bloque.objects.all().order_by("programa_id", "orden", "id").prefetch_related("correlativas")
+    qs = Bloque.objects.all().order_by("id").prefetch_related("correlativas")
     if programa_id:
         qs = qs.filter(programa_id=programa_id)
     bloques = []
@@ -25,7 +25,6 @@ def listar_bloques(request, programa_id: Optional[int] = None):
                 id=b.id,
                 programa_id=b.programa_id,
                 nombre=b.nombre,
-                orden=b.orden,
                 correlativas_ids=correlativas_ids,
             )
         )
@@ -45,19 +44,17 @@ def detalle_bloque(request, bloque_id: int):
             id=m.id,
             bloque_id=m.bloque_id,
             nombre=m.nombre,
-            orden=m.orden,
             fecha_inicio=m.fecha_inicio,
             fecha_fin=m.fecha_fin,
             es_practica=m.es_practica,
             asistencia_requerida_practica=m.asistencia_requerida_practica,
         )
-        for m in sorted(bloque.modulos.all(), key=lambda x: (x.orden, x.id))
+        for m in sorted(bloque.modulos.all(), key=lambda x: x.id)
     ]
     return BloqueDetailOut(
         id=bloque.id,
         programa_id=bloque.programa_id,
         nombre=bloque.nombre,
-        orden=bloque.orden,
         correlativas_ids=correlativas_ids,
         modulos=modulos,
     )

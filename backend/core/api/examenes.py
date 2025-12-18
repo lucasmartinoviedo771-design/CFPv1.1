@@ -1,12 +1,14 @@
 from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
+from django.core.exceptions import ValidationError as DjangoValidationError
 from ninja import Router
 from core.api.permissions import require_authenticated_group
 
-from core.models import Nota, Asistencia, Examen
+from core.models import Nota, Asistencia, Examen, Estudiante, Bloque
 from core.serializers import NotaSerializer, AsistenciaSerializer, ExamenSerializer
 from .schemas import NotaIn, AsistenciaIn, ExamenIn
+from core.services.evaluacion_service import EvaluacionService
 
 router = Router(tags=["examenes-notas"])
 
@@ -177,3 +179,173 @@ def actualizar_asistencia(request, asistencia_id: int, payload: AsistenciaIn):
     serializer.is_valid(raise_exception=True)
     asistencia = serializer.save()
     return AsistenciaSerializer(asistencia).data
+
+
+# ==================== NUEVOS ENDPOINTS CON EVALUACION SERVICE ====================
+
+@router.post("/registrar-nota-sincronico", response=dict)
+@require_authenticated_group
+def registrar_nota_sincronico(request, payload: dict):
+    """
+    Registra una nota de Final Sincrónico con validaciones de habilitación.
+    
+    Payload:
+        estudiante_id: int
+        examen_id: int (debe ser FINAL_SINC)
+        calificacion: float
+    """
+    estudiante = get_object_or_404(Estudiante, pk=payload['estudiante_id'])
+    examen = get_object_or_404(Examen, pk=payload['examen_id'])
+    
+    if examen.tipo_examen != Examen.FINAL_SINC:
+        return {"error": "El examen debe ser de tipo Final Sincrónico"}, 400
+    
+    try:
+        # Validar habilitación
+        EvaluacionService.puede_rendir_final_sincronico(estudiante, examen.bloque)
+        
+        # Registrar la nota
+        nota = EvaluacionService.registrar_nota_final_sincronico(
+            estudiante=estudiante,
+            examen_sinc=examen,
+            calificacion=payload['calificacion']
+        )
+        
+        mensaje = f"Nota registrada: {nota.calificacion}"
+        if nota.aprobado:
+            mensaje += " - APROBADO ✅"
+        else:
+            mensaje += " - DESAPROBADO ⚠️ (debe volver a rendir Virtual)"
+        
+        return {
+            "success": True,
+            "nota_id": nota.id,
+            "calificacion": float(nota.calificacion),
+            "aprobado": nota.aprobado,
+            "es_nota_definitiva": nota.es_nota_definitiva,
+            "intento": nota.intento,
+            "mensaje": mensaje
+        }
+    except DjangoValidationError as e:
+        return {"error": str(e)}, 400
+
+
+@router.post("/registrar-nota-parcial", response=dict)
+@require_authenticated_group
+def registrar_nota_parcial(request, payload: dict):
+    """
+    Registra una nota de Parcial con el servicio de evaluación.
+    
+    Payload:
+        estudiante_id: int
+        examen_id: int (debe ser PARCIAL o RECUP)
+        calificacion: float
+    """
+    estudiante = get_object_or_404(Estudiante, pk=payload['estudiante_id'])
+    examen = get_object_or_404(Examen, pk=payload['examen_id'])
+    
+    try:
+        nota = EvaluacionService.registrar_nota_parcial(
+            estudiante=estudiante,
+            examen_parcial=examen,
+            calificacion=payload['calificacion']
+        )
+        
+        return {
+            "success": True,
+            "nota_id": nota.id,
+            "calificacion": float(nota.calificacion),
+            "aprobado": nota.aprobado,
+            "intento": nota.intento,
+            "mensaje": f"Parcial registrado: {nota.calificacion} - {'APROBADO' if nota.aprobado else 'DESAPROBADO'}"
+        }
+    except DjangoValidationError as e:
+        return {"error": str(e)}, 400
+
+
+@router.get("/estudiante/{estudiante_id}/bloque/{bloque_id}/puede-rendir-sincronico", response=dict)
+@require_authenticated_group
+def verificar_habilitacion_sincronico(request, estudiante_id: int, bloque_id: int):
+    """Verifica si un estudiante puede rendir el Final Sincrónico de un bloque."""
+    estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
+    bloque = get_object_or_404(Bloque, pk=bloque_id)
+    
+    try:
+        result = EvaluacionService.puede_rendir_final_sincronico(estudiante, bloque)
+        return {
+            "habilitado": True,
+            "mensaje": result['mensaje'],
+            "virtual_habilitante_id": result['virtual'].id if result['virtual'] else None
+        }
+    except DjangoValidationError as e:
+        return {"habilitado": False, "mensaje": str(e)}
+
+
+@router.get("/estudiante/{estudiante_id}/bloque/{bloque_id}/puede-rendir-virtual", response=dict)
+@require_authenticated_group
+def verificar_habilitacion_virtual(request, estudiante_id: int, bloque_id: int):
+    """Verifica si un estudiante puede rendir el Final Virtual de un bloque."""
+    estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
+    bloque = get_object_or_404(Bloque, pk=bloque_id)
+    
+    try:
+        EvaluacionService.puede_rendir_final_virtual(estudiante, bloque)
+        return {"habilitado": True, "mensaje": "El estudiante puede rendir el Final Virtual"}
+    except DjangoValidationError as e:
+        return {"habilitado": False, "mensaje": str(e)}
+
+
+@router.get("/estudiante/{estudiante_id}/bloque/{bloque_id}/nota-definitiva", response=dict)
+@require_authenticated_group
+def obtener_nota_definitiva(request, estudiante_id: int, bloque_id: int):
+    """Obtiene la nota definitiva de un bloque para un estudiante."""
+    estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
+    bloque = get_object_or_404(Bloque, pk=bloque_id)
+    
+    nota = EvaluacionService.get_nota_definitiva_bloque(estudiante, bloque)
+    
+    if nota:
+        return {
+            "tiene_nota": True,
+            "calificacion": float(nota.calificacion),
+            "fecha": nota.fecha_calificacion.isoformat() if nota.fecha_calificacion else None,
+            "intento": nota.intento,
+            "nota_id": nota.id
+        }
+    else:
+        return {"tiene_nota": False, "mensaje": "El bloque aún no está aprobado"}
+
+
+@router.get("/estudiante/{estudiante_id}/bloque/{bloque_id}/estado-evaluacion", response=dict)
+@require_authenticated_group
+def obtener_estado_evaluacion(request, estudiante_id: int, bloque_id: int):
+    """Obtiene el estado completo de evaluación de un estudiante en un bloque."""
+    estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
+    bloque = get_object_or_404(Bloque, pk=bloque_id)
+    
+    estado = EvaluacionService.get_estado_evaluacion_bloque(estudiante, bloque)
+    
+    # Serializar historial
+    historial_serializado = NotaSerializer(estado['historial'], many=True).data
+    
+    return {
+        "aprobado": estado['aprobado'],
+        "nota_final": float(estado['nota_final']) if estado.get('nota_final') else None,
+        "puede_virtual": estado.get('puede_virtual', False),
+        "puede_sincronico": estado.get('puede_sincronico', False),
+        "mensaje_virtual": estado.get('mensaje_virtual', ''),
+        "mensaje_sincronico": estado.get('mensaje_sincronico', ''),
+        "siguiente_paso": estado['siguiente_paso'],
+        "historial": historial_serializado
+    }
+
+
+@router.get("/estudiante/{estudiante_id}/bloque/{bloque_id}/historial", response=List[dict])
+@require_authenticated_group
+def obtener_historial_intentos(request, estudiante_id: int, bloque_id: int):
+    """Obtiene el historial completo de intentos de un estudiante en un bloque."""
+    estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
+    bloque = get_object_or_404(Bloque, pk=bloque_id)
+    
+    historial = EvaluacionService.get_historial_intentos_bloque(estudiante, bloque)
+    return NotaSerializer(historial, many=True).data

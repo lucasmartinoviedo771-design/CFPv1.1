@@ -74,19 +74,19 @@ export default function GraficoCursos() {
         {(tree.tree || []).map(bat => (
           <Accordion key={`bat-${bat.id}`} sx={accordionStyle}>
             <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}>
-              <Typography fontWeight={600}>Bateria {bat.orden}: {bat.nombre}</Typography>
+              <Typography fontWeight={600}>{bat.nombre}</Typography>
             </AccordionSummary>
             <AccordionDetails>
               {(bat.children || []).map(blo => (
                 <Accordion key={`blo-${blo.id}`} sx={subAccordionStyle}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}>
-                    <Typography>Bloque {blo.orden}: {blo.nombre}</Typography>
+                    <Typography>{blo.nombre}</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     {(blo.children || []).map(mod => (
                       <Box key={`mod-${mod.id}`} sx={{ pl: 2, py: 0.5, borderLeft: '2px solid rgba(255,255,255,0.2)', mb: 1 }}>
                         <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-                          Modulo {mod.orden}: {mod.nombre} {mod.es_practica ? '(Practica)' : ''}
+                          {mod.nombre} {mod.es_practica ? '(Practica)' : ''}
                           {(mod.fecha_inicio || mod.fecha_fin) && ` — ${mod.fecha_inicio || ''} ${mod.fecha_fin ? 'a ' + mod.fecha_fin : ''}`}
                         </Typography>
                       </Box>

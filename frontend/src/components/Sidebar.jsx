@@ -15,7 +15,8 @@ import {
   UserCog,
   ChevronDown,
   ChevronRight,
-  Database
+  Database,
+  FileCheck
 } from 'lucide-react';
 import { cn } from './UI'; // Asumimos que podemos usar cn de UI o directamente
 
@@ -38,7 +39,6 @@ const calificacionesItems = [
 
 const adminCursosItems = [
   { label: 'Estructura Académica', icon: <GitBranch size={20} />, href: '/estructura' },
-  { label: 'Programas', icon: <BookOpen size={20} />, href: '/programas' },
   { label: 'Calendario Académico', icon: <Calendar size={20} />, href: '/calendario' },
   { label: 'Cohortes', icon: <Layers size={20} />, href: '/cohortes' },
   { label: 'Gráfico de Cursos', icon: <BarChart2 size={20} />, href: '/grafico-cursos' },

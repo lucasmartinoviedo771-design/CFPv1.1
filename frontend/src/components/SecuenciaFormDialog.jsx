@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, IconButton, List, ListItem,
   ListItemText, Select, MenuItem, FormControl, InputLabel, Button, CircularProgress
-} from '@mui/material';import {
+} from '@mui/material'; import {
   AddRounded as AddRoundedIcon,
   DeleteOutlineRounded as DeleteOutlineRoundedIcon,
   ArrowUpward as ArrowUpwardIcon,
@@ -56,11 +56,15 @@ export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSucce
     if (!bloque) return;
     setLoading(true);
     try {
-      await api.post(`/bloques-de-fechas/${bloque.id}/guardar_secuencia`, { semanas });
+      console.log('Guardando secuencia:', { semanas });
+      const response = await api.post(`/bloques-de-fechas/${bloque.id}/guardar_secuencia`, { semanas });
+      console.log('Secuencia guardada:', response.data);
       onSaveSuccess();
       onClose();
     } catch (error) {
       console.error("Error guardando la secuencia", error);
+      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      alert(`Error al guardar secuencia: ${errorMsg}`);
     } finally {
       setLoading(false);
     }

@@ -15,7 +15,7 @@ router = Router(tags=["inscripciones"])
 @router.get("/cohortes", response=List[CohorteOut])
 @require_authenticated_group
 def listar_cohortes(request, programa_id: Optional[int] = None):
-    qs = Cohorte.objects.select_related("programa", "bloque_fechas").order_by("-bloque_fechas__fecha_inicio")
+    qs = Cohorte.objects.select_related("programa", "bloque_fechas").order_by("-fecha_inicio")
     if programa_id:
         qs = qs.filter(programa_id=programa_id)
     return [

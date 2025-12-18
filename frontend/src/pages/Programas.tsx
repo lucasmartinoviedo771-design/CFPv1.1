@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
@@ -20,16 +20,22 @@ import {
   Stack,
   Snackbar,
   Alert,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import { useDeletePrograma, useProgramas, useSavePrograma } from "../api/hooks";
 import type { Programa } from "../api/types";
+import api from "../api/client";
 
 type Feedback = { open: boolean; message: string; severity: "success" | "error" | "info" };
+type Resolucion = { id: number; numero: string; nombre: string; vigente: boolean };
 
-const initialForm: Partial<Programa> = { codigo: "", nombre: "", activo: true };
+const initialForm: Partial<Programa> = { codigo: "", nombre: "", activo: true, resolucion_id: undefined };
 
 export default function Programas() {
   const [form, setForm] = useState<Partial<Programa>>(initialForm);
@@ -37,10 +43,29 @@ export default function Programas() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [feedback, setFeedback] = useState<Feedback>({ open: false, message: "", severity: "success" });
+  const [resoluciones, setResoluciones] = useState<Resolucion[]>([]);
+  const [loadingResoluciones, setLoadingResoluciones] = useState(false);
 
   const { data: programas = [], isLoading, refetch } = useProgramas();
   const savePrograma = useSavePrograma();
   const deletePrograma = useDeletePrograma();
+
+  // Cargar resoluciones al montar el componente
+  useEffect(() => {
+    const fetchResoluciones = async () => {
+      setLoadingResoluciones(true);
+      try {
+        const { data } = await api.get('/resoluciones');
+        setResoluciones(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Error al cargar resoluciones:', error);
+        setFeedback({ open: true, message: 'Error al cargar resoluciones.', severity: 'error' });
+      } finally {
+        setLoadingResoluciones(false);
+      }
+    };
+    fetchResoluciones();
+  }, []);
 
   const paginatedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -73,7 +98,7 @@ export default function Programas() {
 
   const handleEdit = (row: Programa) => {
     setEditing(row);
-    setForm({ codigo: row.codigo, nombre: row.nombre, activo: row.activo });
+    setForm({ codigo: row.codigo, nombre: row.nombre, activo: row.activo, resolucion_id: row.resolucion_id });
   };
 
   const handleCancel = () => {
@@ -112,6 +137,25 @@ export default function Programas() {
         onSubmit={handleSubmit}
         sx={{ mb: 4, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}
       >
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel sx={{ color: 'white' }}>Resolución *</InputLabel>
+          <Select
+            name="resolucion_id"
+            value={form.resolucion_id || ""}
+            onChange={(e) => setForm(f => ({ ...f, resolucion_id: e.target.value as number }))}
+            label="Resolución *"
+            required
+            sx={{ color: 'white', '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' } }}
+            disabled={loadingResoluciones}
+          >
+            <MenuItem value="" disabled>Selecciona una resolución</MenuItem>
+            {resoluciones.map((res) => (
+              <MenuItem key={res.id} value={res.id}>
+                {res.numero} - {res.nombre}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <TextField
           label="Codigo"
           name="codigo"

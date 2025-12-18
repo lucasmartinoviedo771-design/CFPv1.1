@@ -10,15 +10,60 @@ class TimeStamped(models.Model):
     class Meta:
         abstract = True
 
+class Resolucion(TimeStamped):
+    """
+    Marco legal que habilita la oferta de capacitaciones.
+    Ejemplo: Resolución 3601/2023
+    """
+    numero = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="Número de resolución (Ej: 3601/2023)"
+    )
+    nombre = models.CharField(
+        max_length=200,
+        help_text="Nombre descriptivo de la resolución"
+    )
+    fecha_publicacion = models.DateField(
+        help_text="Fecha de publicación oficial"
+    )
+    vigente = models.BooleanField(
+        default=True,
+        help_text="Indica si la resolución está vigente"
+    )
+    observaciones = models.TextField(
+        blank=True,
+        help_text="Notas adicionales sobre la resolución"
+    )
+    
+    class Meta:
+        ordering = ['-fecha_publicacion']
+        verbose_name = "Resolución"
+        verbose_name_plural = "Resoluciones"
+    
+    def __str__(self):
+        return f"Resolución {self.numero}"
+
 class Programa(TimeStamped):
+    resolucion = models.ForeignKey(
+        Resolucion,
+        on_delete=models.PROTECT,
+        related_name="programas",
+        null=True,
+        blank=True,
+        help_text="Marco legal que habilita este programa"
+    )
     codigo = models.CharField(max_length=30, unique=True)
     nombre = models.CharField(max_length=200)
     activo = models.BooleanField(default=True)
-    def __str__(self): return f"{self.codigo} - {self.nombre}"
+    
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
 
 class BloqueDeFechas(TimeStamped):
-    nombre = models.CharField(max_length=150, unique=True)
-    fecha_inicio = models.DateField()
+    """Plantilla de calendario reutilizable (sin fecha fija)."""
+    nombre = models.CharField(max_length=150, unique=True, help_text="Nombre de la plantilla (ej: 'Estándar 8 semanas')")
+    descripcion = models.TextField(blank=True, help_text="Descripción de la secuencia de semanas")
 
     def __str__(self):
         return self.nombre
@@ -48,11 +93,12 @@ class SemanaConfig(TimeStamped):
 
 class Cohorte(TimeStamped):
     programa = models.ForeignKey(Programa, on_delete=models.CASCADE, related_name="cohortes")
-    bloque_fechas = models.ForeignKey(BloqueDeFechas, on_delete=models.PROTECT, related_name="cohortes")
+    bloque_fechas = models.ForeignKey(BloqueDeFechas, on_delete=models.PROTECT, related_name="cohortes", help_text="Plantilla de calendario a usar")
     nombre = models.CharField(max_length=100, unique=True)
+    fecha_inicio = models.DateField(help_text="Fecha de inicio de esta cohorte")
 
     class Meta:
-        ordering = ["-bloque_fechas__fecha_inicio"]
+        ordering = ["-fecha_inicio"]
 
     def __str__(self):
         return self.nombre
@@ -146,7 +192,6 @@ class Estudiante(TimeStamped):
 class Bloque(TimeStamped):
     programa = models.ForeignKey(Programa, on_delete=models.CASCADE, related_name="bloques")
     nombre = models.CharField(max_length=120)
-    orden = models.PositiveIntegerField(default=1)
     correlativas = models.ManyToManyField('self', symmetrical=False, blank=True, related_name='es_correlativa_de')
 
     def __str__(self):
@@ -154,12 +199,11 @@ class Bloque(TimeStamped):
 
     class Meta:
         unique_together = ("programa", "nombre")
-        ordering = ["programa_id", "orden", "id"]
+        ordering = ["id"]
 
 class Modulo(TimeStamped):
     bloque = models.ForeignKey(Bloque, on_delete=models.CASCADE, related_name="modulos")
     nombre = models.CharField(max_length=120)
-    orden = models.PositiveIntegerField(default=1)
     fecha_inicio = models.DateField(null=True, blank=True)
     fecha_fin = models.DateField(null=True, blank=True)
     es_practica = models.BooleanField(default=False)
@@ -170,7 +214,7 @@ class Modulo(TimeStamped):
 
     class Meta:
         unique_together = ("bloque", "nombre")
-        ordering = ["bloque_id", "orden", "id"]
+        ordering = ["id"]
 
 class Examen(TimeStamped):
     PARCIAL = "PARCIAL"
@@ -235,13 +279,36 @@ class Nota(TimeStamped):
     calificacion = models.DecimalField(max_digits=5, decimal_places=2)
     aprobado = models.BooleanField(default=False)
     fecha_calificacion = models.DateTimeField(null=True, blank=True)
+    
+    # Campos de equivalencia
     es_equivalencia = models.BooleanField(default=False)
     origen_equivalencia = models.CharField(max_length=255, blank=True)
     fecha_ref_equivalencia = models.DateField(null=True, blank=True)
+    
+    # Nuevos campos para control de secuencia de evaluación
+    intento = models.PositiveIntegerField(
+        default=1,
+        help_text="Número de intento para este examen (1, 2, 3...)"
+    )
+    es_nota_definitiva = models.BooleanField(
+        default=False,
+        help_text="True si es la nota final que cuenta para aprobar el bloque"
+    )
+    habilitado_por = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='habilita_a',
+        help_text="Nota de Final Virtual que habilitó este Final Sincrónico"
+    )
 
     class Meta:
+        ordering = ['-fecha_calificacion']
         indexes = [
             models.Index(fields=["examen", "estudiante"]),
+            models.Index(fields=["examen", "estudiante", "intento"]),
+            models.Index(fields=["estudiante", "es_nota_definitiva"]),
         ]
 
     def clean(self):

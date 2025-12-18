@@ -17,6 +17,7 @@ from core.api import (
     auth_endpoints_router,
     user_info_router,
     estructura_router,
+    resoluciones_router,
 )
 from core.api.auth import jwt_auth
 
@@ -30,6 +31,7 @@ api = NinjaAPI(
 
 # Routers registrados. Se completaran gradualmente con logica real.
 api.add_router("/health", health_router, auth=None)
+api.add_router("/resoluciones", resoluciones_router)
 api.add_router("/estudiantes", estudiantes_router)
 api.add_router("/programas", programas_router)
 api.add_router("/bloques", bloques_router)

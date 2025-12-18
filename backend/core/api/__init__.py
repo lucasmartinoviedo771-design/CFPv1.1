@@ -15,6 +15,7 @@ from .historicos import router as historicos_router
 from .auth_endpoints import router as auth_endpoints_router
 from .user_info import router as user_info_router
 from .estructura import router as estructura_router
+from .resoluciones import router as resoluciones_router
 
 __all__ = [
     "health_router",
@@ -33,4 +34,5 @@ __all__ = [
     "auth_endpoints_router",
     "user_info_router",
     "estructura_router",
+    "resoluciones_router",
 ]

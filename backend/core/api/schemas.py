@@ -4,23 +4,43 @@ from typing import List, Optional
 from ninja import Schema
 
 
+class ResolucionOut(Schema):
+    id: int
+    numero: str
+    nombre: str
+    fecha_publicacion: date
+    vigente: bool
+    observaciones: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ResolucionIn(Schema):
+    numero: str
+    nombre: str
+    fecha_publicacion: date
+    vigente: bool = True
+    observaciones: Optional[str] = None
+
+
 class ProgramaOut(Schema):
     id: int
     codigo: str
     nombre: str
     activo: bool
+    resolucion_id: Optional[int] = None
 
 
 class ProgramaIn(Schema):
     codigo: str
     nombre: str
     activo: bool = True
+    resolucion_id: Optional[int] = None
 
 
 class BloqueSimpleOut(Schema):
     id: int
     nombre: str
-    orden: int
 
 
 class ProgramaDetailOut(ProgramaOut):
@@ -31,14 +51,12 @@ class BloqueOut(Schema):
     id: int
     programa_id: int
     nombre: str
-    orden: int
     correlativas_ids: List[int] = []
 
 
 class BloqueIn(Schema):
     programa_id: int
     nombre: str
-    orden: int
     correlativas_ids: List[int] = []
 
 
@@ -46,7 +64,6 @@ class ModuloOut(Schema):
     id: int
     bloque_id: int
     nombre: str
-    orden: int
     fecha_inicio: Optional[date] = None
     fecha_fin: Optional[date] = None
     es_practica: bool
@@ -56,7 +73,6 @@ class ModuloOut(Schema):
 class ModuloIn(Schema):
     bloque_id: int
     nombre: str
-    orden: int
     fecha_inicio: Optional[date] = None
     fecha_fin: Optional[date] = None
     es_practica: bool

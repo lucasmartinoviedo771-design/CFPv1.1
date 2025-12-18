@@ -94,13 +94,13 @@ export default function Calendario() {
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <h1 className="text-3xl font-bold text-white">Gestión de Calendarios</h1>
+        <h1 className="text-3xl font-bold text-white">Plantillas de Calendario</h1>
         <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={handleAddBloque}>
-          Añadir Bloque de Fechas
+          Añadir Plantilla
         </Button>
       </Box>
       <p className="text-indigo-200 mb-6 font-medium">
-        Crea y gestiona los bloques de calendario que se asignarán a los cursos.
+        Crea plantillas de calendario reutilizables que definen la secuencia de semanas (clases, exámenes, etc.). Luego las asignas a cohortes con fechas específicas.
       </p>
 
       {loading ? (
@@ -112,7 +112,7 @@ export default function Calendario() {
               <div>
                 <Typography variant="h6" sx={{ color: 'white' }}>{bloque.nombre}</Typography>
                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                  Inicia el: {new Date(bloque.fecha_inicio).toLocaleDateString('es-AR', { timeZone: 'UTC' })}
+                  {bloque.descripcion || 'Sin descripción'}
                 </Typography>
               </div>
               <div>

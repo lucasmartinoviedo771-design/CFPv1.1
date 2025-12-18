@@ -13,18 +13,15 @@ router = Router(tags=["modulos"])
 
 @router.get("", response=List[ModuloOut])
 @require_authenticated_group
-def listar_modulos(request, bloque_id: Optional[int] = None, es_practica: Optional[bool] = None):
-    qs = Modulo.objects.select_related("bloque").order_by("bloque_id", "orden", "id")
+def listar_modulos(request, bloque_id: Optional[int] = None):
+    qs = Modulo.objects.select_related("bloque").order_by("id")
     if bloque_id:
         qs = qs.filter(bloque_id=bloque_id)
-    if es_practica is not None:
-        qs = qs.filter(es_practica=es_practica)
     return [
         ModuloOut(
             id=m.id,
             bloque_id=m.bloque_id,
             nombre=m.nombre,
-            orden=m.orden,
             fecha_inicio=m.fecha_inicio,
             fecha_fin=m.fecha_fin,
             es_practica=m.es_practica,
@@ -42,7 +39,6 @@ def detalle_modulo(request, modulo_id: int):
         id=m.id,
         bloque_id=m.bloque_id,
         nombre=m.nombre,
-        orden=m.orden,
         fecha_inicio=m.fecha_inicio,
         fecha_fin=m.fecha_fin,
         es_practica=m.es_practica,

@@ -23,6 +23,7 @@ import HistoricoEstudiante from './pages/HistoricoEstudiante.jsx';
 import GraficoCursos from './pages/GraficoCursos';
 import Egresados from './pages/Egresados.jsx';
 import Usuarios from './pages/Usuarios.jsx';
+import Resoluciones from './pages/Resoluciones.jsx';
 
 // Services
 import authService from "./services/authService";
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="/grafico-cursos" element={<PrivateRoute><WithLayout title="Gráfico de Cursos"><GraficoCursos /></WithLayout></PrivateRoute>} />
           <Route path="/egresados" element={<PrivateRoute><WithLayout title="Egresados"><Egresados /></WithLayout></PrivateRoute>} />
           <Route path="/usuarios" element={<PrivateRoute><WithLayout title="Usuarios"><Usuarios /></WithLayout></PrivateRoute>} />
+          <Route path="/resoluciones" element={<PrivateRoute><WithLayout title="Resoluciones"><Resoluciones /></WithLayout></PrivateRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

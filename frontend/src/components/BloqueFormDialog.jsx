@@ -4,13 +4,13 @@ import {
 } from '@mui/material';
 
 export default function BloqueFormDialog({ open, onClose, onSave, bloque }) {
-  const [form, setForm] = useState({ nombre: '', fecha_inicio: '' });
+  const [form, setForm] = useState({ nombre: '', descripcion: '' });
 
   useEffect(() => {
     if (bloque) {
-      setForm({ nombre: bloque.nombre, fecha_inicio: bloque.fecha_inicio || '' });
+      setForm({ nombre: bloque.nombre, descripcion: bloque.descripcion || '' });
     } else {
-      setForm({ nombre: '', fecha_inicio: '' });
+      setForm({ nombre: '', descripcion: '' });
     }
   }, [bloque, open]);
 
@@ -20,15 +20,21 @@ export default function BloqueFormDialog({ open, onClose, onSave, bloque }) {
   };
 
   const handleSave = () => {
+    // Validar campos
+    if (!form.nombre) {
+      alert('Por favor ingresa un nombre para la plantilla de calendario');
+      return;
+    }
+    console.log('Enviando datos:', form);
     onSave(form);
   };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{bloque ? 'Editar Bloque de Fechas' : 'Añadir Bloque de Fechas'}</DialogTitle>
+      <DialogTitle>{bloque ? 'Editar Plantilla de Calendario' : 'Añadir Plantilla de Calendario'}</DialogTitle>
       <DialogContent sx={{ pt: '20px !important' }}>
-        <TextField autoFocus margin="dense" name="nombre" label="Nombre del Bloque" type="text" fullWidth variant="outlined" value={form.nombre} onChange={handleChange} sx={{ mb: 2 }}/>
-        <TextField margin="dense" name="fecha_inicio" label="Fecha de Inicio del Bloque" type="date" fullWidth variant="outlined" InputLabelProps={{ shrink: true }} value={form.fecha_inicio} onChange={handleChange}/>
+        <TextField autoFocus margin="dense" name="nombre" label="Nombre de la Plantilla" type="text" fullWidth variant="outlined" value={form.nombre} onChange={handleChange} sx={{ mb: 2 }} placeholder="Ej: Estándar 8 semanas" />
+        <TextField margin="dense" name="descripcion" label="Descripción (opcional)" type="text" fullWidth variant="outlined" multiline rows={3} value={form.descripcion} onChange={handleChange} placeholder="Describe la secuencia de semanas..." />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
