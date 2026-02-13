@@ -10,8 +10,56 @@ from django.contrib.auth.models import User, Group
 from django.core.mail import send_mail
 from django.conf import settings
 from .roles import list_roles
+from .utils.estudiante_normalization import (
+    normalize_dni_digits,
+    normalize_country_with_other,
+    normalize_sexo,
+    normalize_spaces,
+    to_title_case,
+    to_upper,
+)
 
 class EstudianteSerializer(serializers.ModelSerializer):
+    def to_internal_value(self, data):
+        mutable = dict(data)
+
+        if "apellido" in mutable:
+            mutable["apellido"] = to_upper(mutable.get("apellido"))
+        if "nombre" in mutable:
+            mutable["nombre"] = to_title_case(mutable.get("nombre"))
+        if "dni" in mutable:
+            mutable["dni"] = normalize_dni_digits(mutable.get("dni"))
+        if "email" in mutable and mutable.get("email") is not None:
+            mutable["email"] = normalize_spaces(mutable.get("email")).lower()
+
+        if "sexo" in mutable:
+            mutable["sexo"] = normalize_sexo(mutable.get("sexo"))
+
+        if "pais_nacimiento" in mutable:
+            pais, otro = normalize_country_with_other(mutable.get("pais_nacimiento"))
+            mutable["pais_nacimiento"] = pais
+            if otro and not normalize_spaces(mutable.get("pais_nacimiento_otro")):
+                mutable["pais_nacimiento_otro"] = otro
+        if "nacionalidad" in mutable:
+            nac, otro = normalize_country_with_other(mutable.get("nacionalidad"))
+            mutable["nacionalidad"] = nac
+            if otro and not normalize_spaces(mutable.get("nacionalidad_otra")):
+                mutable["nacionalidad_otra"] = otro
+
+        for field in [
+            "pais_nacimiento_otro",
+            "nacionalidad_otra",
+            "lugar_nacimiento",
+            "domicilio",
+            "ciudad",
+            "barrio",
+            "lugar_trabajo",
+        ]:
+            if field in mutable:
+                mutable[field] = to_title_case(mutable.get(field))
+
+        return super().to_internal_value(mutable)
+
     class Meta:
         model = Estudiante
         fields = "__all__"

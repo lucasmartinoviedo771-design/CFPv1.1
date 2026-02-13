@@ -60,7 +60,7 @@ function ModuloFormDialog({ open, onClose, onSave, modulo, bloqueId }) {
         ...modulo,
         fecha_inicio: modulo.fecha_inicio || '',
         fecha_fin: modulo.fecha_fin || '',
-        bloque_id: modulo.bloque ? modulo.bloque.id : null
+        bloque_id: modulo.bloque_id || (modulo.bloque ? modulo.bloque.id : null)
       });
     } else {
       setForm({ ...initialModuloFormState, bloque_id: bloqueId });
@@ -285,7 +285,7 @@ function BloqueItem({ bloque, onAddModulo, onEdit, onDelete, onEditModulo, onDel
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontStyle: 'italic' }}>No hay módulos en este bloque.</Typography>
           ) : (
             bloque.modulos.map((modulo) => (
-              <ModuloItem key={modulo.id} modulo={modulo} onEdit={onEditModulo} onDelete={onDeleteModulo} />
+              <ModuloItem key={modulo.id} modulo={modulo} onEdit={(m) => onEditModulo(m, bloque.id)} onDelete={onDeleteModulo} />
             ))
           )}
         </List>
@@ -580,8 +580,9 @@ export default function Estructura() {
     setOpenModuloDialog(true);
   };
 
-  const handleEditModulo = (modulo) => {
+  const handleEditModulo = (modulo, bloqueId) => {
     setCurrentModulo(modulo);
+    setParentBloqueId(bloqueId);
     setOpenModuloDialog(true);
   };
 
