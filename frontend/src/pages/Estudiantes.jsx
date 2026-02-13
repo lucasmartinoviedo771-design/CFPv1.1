@@ -1,11 +1,12 @@
 import React, { useMemo, useRef, useState } from "react";
 import { useEstudiantes, useSaveEstudiante } from "../api/hooks";
+import { apiClientV2 } from "../api/client";
 import FileUpload from "../components/FileUpload"; // Asumiremos que FileUpload es compatible o lo ignoramos por ahora
 import { uploadFile } from "../services/uploadService";
 import { Card, Select, Button, Input } from '../components/UI';
 import {
     UserPlus, Edit2, Trash2, Search, Upload, Save, X, AlertCircle,
-    Check, ChevronDown, ChevronUp, User, MapPin, Briefcase
+    Check, Eye, User, MapPin, Briefcase
 } from 'lucide-react';
 
 // Custom Tabs
@@ -33,13 +34,13 @@ const SectionDivider = ({ title, icon: Icon }) => (
 );
 
 // Modal Custom
-const Modal = ({ isOpen, onClose, title, children, actions }) => {
+const Modal = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max-w-lg" }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-            <div className="bg-[#1e1b4b] border border-indigo-500/30 rounded-xl shadow-2xl w-full max-w-lg">
+            <div className={`bg-[#1e1b4b] border border-indigo-500/30 rounded-xl shadow-2xl w-full ${maxWidthClass}`}>
                 <div className="p-6 border-b border-indigo-500/20"><h3 className="text-xl font-bold text-white">{title}</h3></div>
-                <div className="p-6 text-gray-200">{children}</div>
+                <div className="p-6 text-gray-200 max-h-[75vh] overflow-y-auto">{children}</div>
                 <div className="p-4 border-t border-indigo-500/20 flex justify-end gap-3 bg-indigo-950/30 rounded-b-xl">{actions}</div>
             </div>
         </div>
@@ -63,6 +64,8 @@ export default function Estudiantes() {
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState(initialFormState);
     const [feedback, setFeedback] = useState({ open: false, message: "", severity: "success" });
+    const [viewStudentId, setViewStudentId] = useState(null);
+    const [viewData, setViewData] = useState({ loading: false, error: "", student: null, inscripciones: [], notas: [] });
     const [currentTab, setCurrentTab] = useState(0);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -134,6 +137,57 @@ export default function Estudiantes() {
         } catch (error) { setFeedback({ open: true, message: "Error al dar de baja", severity: "error" }); }
     };
 
+    const handleOpenDetail = async (student) => {
+        setViewStudentId(student.id);
+        setViewData({ loading: true, error: "", student: null, inscripciones: [], notas: [] });
+        try {
+            const [studentRes, inscripcionesRes, notasRes] = await Promise.all([
+                apiClientV2.get(`/estudiantes/${student.id}`),
+                apiClientV2.get(`/inscripciones`, { params: { estudiante_id: student.id } }),
+                apiClientV2.get(`/examenes/notas`, { params: { estudiante_id: student.id } }),
+            ]);
+            setViewData({
+                loading: false,
+                error: "",
+                student: studentRes.data,
+                inscripciones: Array.isArray(inscripcionesRes.data) ? inscripcionesRes.data : [],
+                notas: Array.isArray(notasRes.data) ? notasRes.data : [],
+            });
+        } catch (error) {
+            setViewData({ loading: false, error: "No se pudo cargar la información del estudiante.", student: null, inscripciones: [], notas: [] });
+        }
+    };
+
+    const trayectoria = useMemo(() => {
+        const inscripciones = viewData.inscripciones || [];
+        const notas = viewData.notas || [];
+
+        const inscripcionesActivas = inscripciones.filter(i => i.estado === "ACTIVO");
+        const modulosMap = new Map();
+        inscripcionesActivas.forEach(i => {
+            if (i?.modulo?.id && !modulosMap.has(i.modulo.id)) {
+                modulosMap.set(i.modulo.id, i.modulo);
+            }
+        });
+        const modulosInscriptos = Array.from(modulosMap.values());
+
+        const modulosAprobadosIds = new Set(
+            notas
+                .filter(n => n.aprobado && n.examen_modulo_id)
+                .map(n => n.examen_modulo_id)
+        );
+
+        const modulosAprobados = modulosInscriptos.filter(m => modulosAprobadosIds.has(m.id));
+        const modulosPendientes = modulosInscriptos.filter(m => !modulosAprobadosIds.has(m.id));
+
+        return {
+            inscripcionesActivas,
+            modulosAprobados,
+            modulosPendientes,
+            notasAprobadas: notas.filter(n => n.aprobado),
+        };
+    }, [viewData.inscripciones, viewData.notas]);
+
     return (
         <div className="space-y-6 animate-fade-in-up">
             <div>
@@ -170,23 +224,73 @@ export default function Estudiantes() {
                                     <div className="md:col-span-1"><Input name="fecha_nacimiento" label="Fecha Nacimiento" type="date" value={form.fecha_nacimiento} onChange={onChange} /></div>
                                 </div>
 
-                                <SectionDivider title="Ubicación" icon={MapPin} />
+                                <SectionDivider title="Origen" icon={MapPin} />
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <Select
+                                        name="pais_nacimiento"
+                                        label="País de Nacimiento"
+                                        value={form.pais_nacimiento}
+                                        onChange={onChange}
+                                        options={[
+                                            { value: '', label: 'Seleccionar...' },
+                                            { value: 'Argentina', label: 'Argentina' },
+                                            { value: 'Bolivia', label: 'Bolivia' },
+                                            { value: 'Brasil', label: 'Brasil' },
+                                            { value: 'Chile', label: 'Chile' },
+                                            { value: 'Paraguay', label: 'Paraguay' },
+                                            { value: 'Uruguay', label: 'Uruguay' },
+                                            { value: 'Otro', label: 'Otro' },
+                                        ]}
+                                    />
+                                    <Select
+                                        name="nacionalidad"
+                                        label="Nacionalidad"
+                                        value={form.nacionalidad}
+                                        onChange={onChange}
+                                        options={[
+                                            { value: '', label: 'Seleccionar...' },
+                                            { value: 'Argentina', label: 'Argentina' },
+                                            { value: 'Bolivia', label: 'Bolivia' },
+                                            { value: 'Brasil', label: 'Brasil' },
+                                            { value: 'Chile', label: 'Chile' },
+                                            { value: 'Paraguay', label: 'Paraguay' },
+                                            { value: 'Uruguay', label: 'Uruguay' },
+                                            { value: 'Otro', label: 'Otro' },
+                                        ]}
+                                    />
+                                    <Input name="lugar_nacimiento" label="Lugar de Nacimiento" value={form.lugar_nacimiento} onChange={onChange} />
+                                </div>
+
+                                <SectionDivider title="Domicilio Actual" icon={MapPin} />
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     <div className="md:col-span-2"><Input name="domicilio" label="Domicilio" value={form.domicilio} onChange={onChange} /></div>
                                     <Input name="ciudad" label="Ciudad" value={form.ciudad} onChange={onChange} />
                                     <Input name="barrio" label="Barrio" value={form.barrio} onChange={onChange} />
+                                    <Input name="telefono" label="Teléfono (10 dígitos)" value={form.telefono} onChange={onChange} />
                                 </div>
 
                                 <SectionDivider title="Datos Académicos y Laborales" icon={Briefcase} />
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                    <div className="md:col-span-2"><Select name="nivel_educativo" label="Nivel Educativo" value={form.nivel_educativo} onChange={onChange} options={[{ value: 'Primaria Completa', label: 'Primaria Completa' }, { value: 'Secundaria Completa', label: 'Secundaria Completa' }, { value: 'Terciaria/Universitaria', label: 'Terciaria' }]} /></div>
+                                    <div className="md:col-span-2"><Select name="nivel_educativo" label="Nivel Educativo" value={form.nivel_educativo} onChange={onChange} options={[
+                                        { value: '', label: 'Seleccionar...' },
+                                        { value: 'Primaria Completa', label: 'Primaria Completa' },
+                                        { value: 'Secundaria Incompleta', label: 'Secundaria Incompleta' },
+                                        { value: 'Secundaria Completa', label: 'Secundaria Completa' },
+                                        { value: 'Terciaria/Universitaria Incompleta', label: 'Terciaria/Universitaria Incompleta' },
+                                        { value: 'Terciaria/Universitaria Completa', label: 'Terciaria/Universitaria Completa' },
+                                        { value: 'Terciaria/Universitaria', label: 'Terciaria/Universitaria' },
+                                    ]} /></div>
                                     <div className="md:col-span-2"><Select name="estatus" label="Estatus" value={form.estatus} onChange={onChange} options={[{ value: 'Regular', label: 'Regular' }, { value: 'Libre', label: 'Libre' }, { value: 'Baja', label: 'Baja' }]} /></div>
                                 </div>
 
                                 <div className="flex flex-wrap gap-4 pt-2">
                                     <label className="flex items-center gap-2 text-indigo-200 text-sm cursor-pointer"><input type="checkbox" name="posee_pc" checked={form.posee_pc} onChange={onChange} className="rounded bg-indigo-900 border-indigo-500" /> Posee PC</label>
                                     <label className="flex items-center gap-2 text-indigo-200 text-sm cursor-pointer"><input type="checkbox" name="posee_conectividad" checked={form.posee_conectividad} onChange={onChange} className="rounded bg-indigo-900 border-indigo-500" /> Tiene Internet</label>
+                                    <label className="flex items-center gap-2 text-indigo-200 text-sm cursor-pointer"><input type="checkbox" name="puede_traer_pc" checked={form.puede_traer_pc} onChange={onChange} className="rounded bg-indigo-900 border-indigo-500" /> Puede asistir con PC personal</label>
                                     <label className="flex items-center gap-2 text-indigo-200 text-sm cursor-pointer"><input type="checkbox" name="trabaja" checked={form.trabaja} onChange={onChange} className="rounded bg-indigo-900 border-indigo-500" /> Trabaja</label>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Input name="lugar_trabajo" label="Lugar de trabajo" value={form.lugar_trabajo} onChange={onChange} disabled={!form.trabaja} />
                                 </div>
 
                                 <div className="flex justify-end pt-4 border-t border-indigo-500/20 mt-4">
@@ -233,6 +337,7 @@ export default function Estudiantes() {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-3 text-right flex justify-end gap-2">
+                                                    <button onClick={() => handleOpenDetail(r)} className="p-1 text-cyan-400 hover:text-cyan-200" title="Ver detalle"><Eye size={16} /></button>
                                                     <button onClick={() => handleStartEdit(r)} className="p-1 text-indigo-400 hover:text-white"><Edit2 size={16} /></button>
                                                     <button onClick={() => setDeleteTarget(r)} className="p-1 text-red-400 hover:text-red-200"><Trash2 size={16} /></button>
                                                 </td>
@@ -288,6 +393,88 @@ export default function Estudiantes() {
             >
                 <p>¿Estás seguro de que quieres dar de baja a <strong>{deleteTarget?.apellido}, {deleteTarget?.nombre}</strong>?</p>
                 <p className="text-sm text-gray-400 mt-2">El estudiante no aparecerá en las listas activas pero su historial se conservará.</p>
+            </Modal>
+
+            <Modal
+                isOpen={!!viewStudentId}
+                onClose={() => setViewStudentId(null)}
+                title={viewData.student ? `Detalle: ${viewData.student.apellido}, ${viewData.student.nombre}` : "Detalle del Estudiante"}
+                maxWidthClass="max-w-5xl"
+                actions={<Button variant="ghost" onClick={() => setViewStudentId(null)}>Cerrar</Button>}
+            >
+                {viewData.loading && <p className="text-indigo-200">Cargando detalle...</p>}
+                {!!viewData.error && <p className="text-red-300">{viewData.error}</p>}
+
+                {!viewData.loading && !viewData.error && viewData.student && (
+                    <div className="space-y-6">
+                        <div>
+                            <SectionDivider title="Datos Personales" icon={User} />
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                <p><span className="text-indigo-300">DNI:</span> {viewData.student.dni || "-"}</p>
+                                <p><span className="text-indigo-300">CUIT:</span> {viewData.student.cuit || "-"}</p>
+                                <p><span className="text-indigo-300">Email:</span> {viewData.student.email || "-"}</p>
+                                <p><span className="text-indigo-300">Sexo:</span> {viewData.student.sexo || "-"}</p>
+                                <p><span className="text-indigo-300">Fecha Nacimiento:</span> {viewData.student.fecha_nacimiento || "-"}</p>
+                                <p><span className="text-indigo-300">Estatus:</span> {viewData.student.estatus || "-"}</p>
+                                <p><span className="text-indigo-300">País Nacimiento:</span> {viewData.student.pais_nacimiento || "-"}</p>
+                                <p><span className="text-indigo-300">Nacionalidad:</span> {viewData.student.nacionalidad || "-"}</p>
+                                <p><span className="text-indigo-300">Lugar Nacimiento:</span> {viewData.student.lugar_nacimiento || "-"}</p>
+                                <p><span className="text-indigo-300">Domicilio:</span> {viewData.student.domicilio || "-"}</p>
+                                <p><span className="text-indigo-300">Ciudad:</span> {viewData.student.ciudad || "-"}</p>
+                                <p><span className="text-indigo-300">Barrio:</span> {viewData.student.barrio || "-"}</p>
+                                <p><span className="text-indigo-300">Teléfono:</span> {viewData.student.telefono || "-"}</p>
+                                <p><span className="text-indigo-300">Nivel Educativo:</span> {viewData.student.nivel_educativo || "-"}</p>
+                                <p><span className="text-indigo-300">Lugar de trabajo:</span> {viewData.student.lugar_trabajo || "-"}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <SectionDivider title="Trayectoria Académica" icon={Briefcase} />
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
+                                    <p className="text-xs text-indigo-300">Inscripciones activas</p>
+                                    <p className="text-xl font-bold text-white">{trayectoria.inscripcionesActivas.length}</p>
+                                </div>
+                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
+                                    <p className="text-xs text-indigo-300">Módulos aprobados</p>
+                                    <p className="text-xl font-bold text-green-400">{trayectoria.modulosAprobados.length}</p>
+                                </div>
+                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
+                                    <p className="text-xs text-indigo-300">Módulos pendientes</p>
+                                    <p className="text-xl font-bold text-amber-300">{trayectoria.modulosPendientes.length}</p>
+                                </div>
+                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
+                                    <p className="text-xs text-indigo-300">Notas aprobadas</p>
+                                    <p className="text-xl font-bold text-cyan-300">{trayectoria.notasAprobadas.length}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <Card className="bg-indigo-950/30 border-indigo-500/20">
+                                    <h4 className="text-white font-semibold mb-2">Inscripciones</h4>
+                                    <div className="space-y-2 text-sm">
+                                        {viewData.inscripciones.length ? viewData.inscripciones.map(i => (
+                                            <div key={i.id} className="border-b border-indigo-500/10 pb-2">
+                                                <p className="text-indigo-100">{i?.cohorte?.programa?.nombre || "Programa"} - {i?.cohorte?.nombre || "Cohorte"}</p>
+                                                <p className="text-indigo-300">Módulo: {i?.modulo?.nombre || "-"}</p>
+                                                <p className="text-indigo-300">Estado: {i.estado}</p>
+                                            </div>
+                                        )) : <p className="text-indigo-300">Sin inscripciones registradas.</p>}
+                                    </div>
+                                </Card>
+
+                                <Card className="bg-indigo-950/30 border-indigo-500/20">
+                                    <h4 className="text-white font-semibold mb-2">Qué le falta aprobar</h4>
+                                    <div className="space-y-2 text-sm">
+                                        {trayectoria.modulosPendientes.length ? trayectoria.modulosPendientes.map(m => (
+                                            <p key={m.id} className="text-amber-300">{m.nombre}</p>
+                                        )) : <p className="text-green-300">No tiene módulos pendientes en sus inscripciones activas.</p>}
+                                    </div>
+                                </Card>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </Modal>
 
             {/* Toast Feedback */}
