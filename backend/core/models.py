@@ -95,7 +95,7 @@ class Cohorte(TimeStamped):
     programa = models.ForeignKey(Programa, on_delete=models.CASCADE, related_name="cohortes")
     bloque_fechas = models.ForeignKey(BloqueDeFechas, on_delete=models.PROTECT, related_name="cohortes", help_text="Plantilla de calendario a usar")
     nombre = models.CharField(max_length=100, unique=True)
-    fecha_inicio = models.DateField(help_text="Fecha de inicio de esta cohorte")
+    fecha_inicio = models.DateField(help_text="Fecha de inicio de esta cohorte", default=timezone.now)
 
     class Meta:
         ordering = ["-fecha_inicio"]
@@ -144,6 +144,7 @@ class Estudiante(TimeStamped):
         ('Secundaria Completa', 'Secundaria Completa'),
         ('Terciaria/Universitaria Incompleta', 'Terciaria/Universitaria Incompleta'),
         ('Terciaria/Universitaria Completa', 'Terciaria/Universitaria Completa'),
+        ('Terciaria/Universitaria', 'Terciaria/Universitaria'),
     ]
     nivel_educativo = models.CharField(max_length=60, choices=NIVEL_EDUCATIVO_OPCIONES, blank=True, verbose_name="Nivel Alcanzado")
     
