@@ -168,8 +168,8 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-indigo-500/20">
-        <p className="text-xs text-center text-white">
-          soporte@cfp.edu.ar
+        <p className="text-sm text-center text-white font-medium">
+          lucasoviedodev@gmail.com
         </p>
       </div>
     </aside>

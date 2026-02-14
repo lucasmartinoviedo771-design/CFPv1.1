@@ -1,6 +1,7 @@
 import React from 'react';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
+import { ThemeModeContext } from '../App';
 
 const drawerWidth = 240;
 
@@ -8,9 +9,10 @@ export default function AppLayout({ children, title }) {
   // Estado para controlar sidebar en móvil si fuera necesario, 
   // por ahora asumimos layout desktop responsive básico con Tailwind
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const { mode } = React.useContext(ThemeModeContext);
 
   return (
-    <div className="flex h-screen bg-[#0a0033] overflow-hidden">
+    <div className={`app-shell flex h-screen overflow-hidden ${mode === 'light' ? 'theme-light' : ''} bg-[#0a0033]`}>
       {/* Background effects global for the app */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#0a0033] to-[#0a0033]"></div>

@@ -30,6 +30,7 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import api from '../api/client';
+import { formatDateDisplay } from '../utils/dateFormat';
 
 const initialFormState = {
     numero: '',
@@ -212,7 +213,7 @@ export default function Resoluciones() {
                                             </TableCell>
                                             <TableCell>{resolucion.nombre}</TableCell>
                                             <TableCell>
-                                                {new Date(resolucion.fecha_publicacion).toLocaleDateString('es-AR')}
+                                                {formatDateDisplay(resolucion.fecha_publicacion)}
                                             </TableCell>
                                             <TableCell>
                                                 <Chip

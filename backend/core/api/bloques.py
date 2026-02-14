@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from django.shortcuts import get_object_or_404
+from ninja.errors import HttpError
 from ninja import Router
 from core.api.permissions import require_authenticated_group
 
@@ -9,6 +10,30 @@ from core.serializers import BloqueSerializer
 from .schemas import BloqueOut, BloqueDetailOut, ModuloOut, BloqueIn
 
 router = Router(tags=["bloques"])
+
+
+def _payload_to_serializer_data(payload: BloqueIn, *, bloque_actual: Optional[Bloque] = None):
+    data = payload.dict()
+    correlativas_ids = data.pop("correlativas_ids", []) or []
+
+    if correlativas_ids:
+        # Todas las correlativas deben existir
+        correlativas_qs = Bloque.objects.filter(id__in=correlativas_ids)
+        if correlativas_qs.count() != len(set(correlativas_ids)):
+            raise HttpError(400, "Una o más correlatividades no existen.")
+
+        # Deben pertenecer al mismo programa
+        invalidas = correlativas_qs.exclude(programa_id=data["programa_id"]).values_list("id", flat=True)
+        invalidas = list(invalidas)
+        if invalidas:
+            raise HttpError(400, "Las correlatividades deben pertenecer al mismo programa.")
+
+        # No puede referenciarse a sí mismo
+        if bloque_actual and bloque_actual.id in correlativas_ids:
+            raise HttpError(400, "Un bloque no puede ser correlatividad de sí mismo.")
+
+    data["correlativas"] = correlativas_ids
+    return data
 
 
 @router.get("", response=List[BloqueOut])
@@ -63,7 +88,8 @@ def detalle_bloque(request, bloque_id: int):
 @router.post("", response=BloqueDetailOut)
 @require_authenticated_group
 def crear_bloque(request, payload: BloqueIn):
-    serializer = BloqueSerializer(data=payload.dict())
+    serializer_data = _payload_to_serializer_data(payload)
+    serializer = BloqueSerializer(data=serializer_data)
     serializer.is_valid(raise_exception=True)
     bloque = serializer.save()
     return detalle_bloque(request, bloque.id)
@@ -74,7 +100,8 @@ def crear_bloque(request, payload: BloqueIn):
 @require_authenticated_group
 def actualizar_bloque(request, bloque_id: int, payload: BloqueIn):
     bloque = get_object_or_404(Bloque, pk=bloque_id)
-    serializer = BloqueSerializer(instance=bloque, data=payload.dict(), partial=True)
+    serializer_data = _payload_to_serializer_data(payload, bloque_actual=bloque)
+    serializer = BloqueSerializer(instance=bloque, data=serializer_data, partial=True)
     serializer.is_valid(raise_exception=True)
     bloque = serializer.save()
     return detalle_bloque(request, bloque.id)

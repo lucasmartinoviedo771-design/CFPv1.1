@@ -13,6 +13,7 @@ import {
   listExamenes, createExamen, deleteExamen
 } from "../services/estructuraService";
 import { getCoursesGraph } from "../services/estructuraService";
+import { formatDateDisplay } from "../utils/dateFormat";
 
 // --- ModuloExamenManager (for Parcial/Recup) ---
 function ModuloExamenManager({ modulo }) {
@@ -88,7 +89,7 @@ function ModuloExamenManager({ modulo }) {
             {examenes.map(ex => (
               <TableRow key={ex.id}>
                 <TableCell>{ex.tipo_examen}</TableCell>
-                <TableCell>{ex.fecha || '-'}</TableCell>
+                <TableCell>{formatDateDisplay(ex.fecha)}</TableCell>
                 <TableCell align="right"><Button onClick={() => handleDelete(ex.id)} size="small" color="error">X</Button></TableCell>
               </TableRow>
             ))}
@@ -174,7 +175,7 @@ function BloqueExamenManager({ bloque }) {
             {examenes.map(ex => (
               <TableRow key={ex.id}>
                 <TableCell>{ex.tipo_examen}</TableCell>
-                <TableCell>{ex.fecha || '-'}</TableCell>
+                <TableCell>{formatDateDisplay(ex.fecha)}</TableCell>
                 <TableCell align="right"><Button onClick={() => handleDelete(ex.id)} size="small" color="error">X</Button></TableCell>
               </TableRow>
             ))}
@@ -376,7 +377,7 @@ function ModuloExamenPreview({ modulo }) {
             {examenes.map(ex => (
               <TableRow key={ex.id}>
                 <TableCell>{ex.tipo_examen}</TableCell>
-                <TableCell>{ex.fecha || '-'}</TableCell>
+                <TableCell>{formatDateDisplay(ex.fecha)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -447,7 +448,7 @@ function BloqueExamenPreview({ bloque }) {
             {examenes.map(ex => (
               <TableRow key={ex.id}>
                 <TableCell>{ex.tipo_examen}</TableCell>
-                <TableCell>{ex.fecha || '-'}</TableCell>
+                <TableCell>{formatDateDisplay(ex.fecha)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -593,7 +594,7 @@ export default function CursoDetail() {
                       <Box sx={{ pl: 2, pt: 1 }}>
                         <Typography variant="subtitle2">Finales del Bloque</Typography>
                         {blo.finales.map(fin => (
-                          <Typography key={`fin-${fin.id}`} variant="body2" color="text.secondary">- {fin.tipo_examen} {fin.fecha ? `(${fin.fecha})` : ''}</Typography>
+                          <Typography key={`fin-${fin.id}`} variant="body2" color="text.secondary">- {fin.tipo_examen} {fin.fecha ? `(${formatDateDisplay(fin.fecha)})` : ''}</Typography>
                         ))}
                       </Box>
                     )}

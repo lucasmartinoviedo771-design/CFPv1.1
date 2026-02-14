@@ -5,7 +5,7 @@ from django.utils.dateparse import parse_date
 from ninja import Router
 from core.api.permissions import require_authenticated_group
 
-from core.models import Inscripcion, Asistencia, Nota, Estudiante, Cohorte, Bloque, Examen
+from core.models import Inscripcion, Asistencia, Nota, Estudiante, Cohorte, Bloque, Examen, Programa
 
 router = Router(tags=["analytics"])
 
@@ -48,10 +48,20 @@ def equivalencias(request):
 
 @router.get("/enrollments", response=dict)
 @require_authenticated_group
-def analytics_enrollments(request, programa_id: int = None, cohorte_id: int = None, date_from: str = None, date_to: str = None, group_by: str = "month"):
+def analytics_enrollments(
+    request,
+    programa_id: int = None,
+    bloque_id: int = None,
+    cohorte_id: int = None,
+    date_from: str = None,
+    date_to: str = None,
+    group_by: str = "month",
+):
     qs = Inscripcion.objects.all()
     if programa_id:
         qs = qs.filter(cohorte__programa_id=programa_id)
+    if bloque_id:
+        qs = qs.filter(modulo__bloque_id=bloque_id)
     if cohorte_id:
         qs = qs.filter(cohorte_id=cohorte_id)
     if date_from:
@@ -285,10 +295,7 @@ def analytics_dropout(request, programa_id: int = None, cohorte_id: int = None, 
 
 @router.get("/graduates", response=dict)
 @require_authenticated_group
-def analytics_graduates(request, programa_id: int = None, cohorte_id: int = None):
-    if not programa_id and not cohorte_id:
-        return {"detail": "'programa_id' o 'cohorte_id' requerido"}, 400
-
+def analytics_graduates(request, programa_id: int = None, bloque_id: int = None, cohorte_id: int = None):
     programa = None
     if cohorte_id and not programa_id:
         try:
@@ -297,24 +304,46 @@ def analytics_graduates(request, programa_id: int = None, cohorte_id: int = None
             programa_id = programa.id
         except Cohorte.DoesNotExist:
             return {"detail": "Cohorte no encontrado"}, 404
-    if programa is None and programa_id:
+
+    if programa_id and programa is None:
         try:
-            programa = Cohorte.objects.filter(programa_id=programa_id).first()
-        except Cohorte.DoesNotExist:
-            programa = None
+            programa = Programa.objects.get(id=programa_id)
+        except Programa.DoesNotExist:
+            return {"detail": "Programa no encontrado"}, 404
 
-    bloques_req = list(Bloque.objects.filter(programa_id=programa_id).values_list("id", flat=True))
-    total_bloques = len(bloques_req)
-
+    inscripciones_qs = Inscripcion.objects.all()
+    if programa_id:
+        inscripciones_qs = inscripciones_qs.filter(cohorte__programa_id=programa_id)
     if cohorte_id:
-        estudiantes_qs = Estudiante.objects.filter(inscripciones__cohorte_id=cohorte_id)
-    else:
-        estudiantes_qs = Estudiante.objects.filter(inscripciones__cohorte__programa_id=programa_id)
-    estudiantes_qs = estudiantes_qs.distinct()
+        inscripciones_qs = inscripciones_qs.filter(cohorte_id=cohorte_id)
+    if bloque_id:
+        inscripciones_qs = inscripciones_qs.filter(modulo__bloque_id=bloque_id)
+
+    estudiantes_qs = Estudiante.objects.filter(inscripciones__id__in=inscripciones_qs.values_list("id", flat=True)).distinct()
     total_estudiantes = estudiantes_qs.count()
 
+    if bloque_id:
+        bloques_req = [bloque_id]
+    elif programa_id:
+        bloques_req = list(Bloque.objects.filter(programa_id=programa_id).values_list("id", flat=True))
+    else:
+        bloques_req = []
+    total_bloques = len(bloques_req)
     graduates_ids = []
-    if total_bloques > 0 and total_estudiantes > 0:
+    if bloque_id and total_estudiantes > 0:
+        finals_types = [Examen.FINAL_VIRTUAL, Examen.FINAL_SINC, Examen.EQUIVALENCIA]
+        aprobados_ids = (
+            Nota.objects.filter(
+                aprobado=True,
+                examen__tipo_examen__in=finals_types,
+                examen__bloque_id=bloque_id,
+                estudiante__in=estudiantes_qs,
+            )
+            .values_list("estudiante_id", flat=True)
+            .distinct()
+        )
+        graduates_ids = list(aprobados_ids)
+    elif programa_id and len(bloques_req) > 0 and total_estudiantes > 0:
         finals_types = [Examen.FINAL_VIRTUAL, Examen.FINAL_SINC, Examen.EQUIVALENCIA]
         aprobados_por_est = (
             Nota.objects.filter(
@@ -327,8 +356,12 @@ def analytics_graduates(request, programa_id: int = None, cohorte_id: int = None
             .annotate(bloques_aprobados=Count("examen__bloque", distinct=True))
         )
         graduates_ids = [r["estudiante_id"] for r in aprobados_por_est if r["bloques_aprobados"] >= total_bloques]
+    else:
+        graduates_ids = list(
+            inscripciones_qs.filter(estado=Inscripcion.EGRESADO).values_list("estudiante_id", flat=True).distinct()
+        )
 
-    graduates_count = len(graduates_ids) if total_bloques > 0 else 0
+    graduates_count = len(graduates_ids)
     rate = (graduates_count / total_estudiantes) if total_estudiantes else 0
     grads = list(
         Estudiante.objects.filter(id__in=graduates_ids).values("id", "apellido", "nombre", "dni")[:100]
@@ -336,7 +369,9 @@ def analytics_graduates(request, programa_id: int = None, cohorte_id: int = None
 
     return {
         "programa_id": programa_id,
+        "bloque_id": bloque_id,
         "cohorte_id": cohorte_id,
+        "programa": {"id": programa.id, "nombre": programa.nombre} if programa else None,
         "overall": {
             "total_estudiantes": total_estudiantes,
             "total_bloques_requeridos": total_bloques,
@@ -349,23 +384,99 @@ def analytics_graduates(request, programa_id: int = None, cohorte_id: int = None
 
 @router.get("/courses-graph", response=dict)
 @require_authenticated_group
-def courses_graph(request, programa_id: int, cohorte_id: int = None):
+def courses_graph(
+    request,
+    programa_id: int,
+    bloque_id: int = None,
+    cohorte_id: int = None,
+    anio: int = None,
+):
     try:
-        programa = Cohorte.objects.filter(programa_id=programa_id).first().programa
-    except Exception:
-        programa = None
-    try:
-        from core.models import Programa as ProgramaModel
-        programa = ProgramaModel.objects.get(id=programa_id)
-    except Exception:
-        if programa is None:
-            return {"detail": "Programa no encontrado"}, 404
+        programa = Programa.objects.get(id=programa_id)
+    except Programa.DoesNotExist:
+        return {"detail": "Programa no encontrado"}, 404
 
-    bloques = (
-        Bloque.objects.filter(programa=programa)
-        .order_by("id")
-        .prefetch_related("modulos")
+    cohortes_qs = (
+        Cohorte.objects.filter(programa=programa)
+        .select_related("bloque_fechas")
+        .prefetch_related("bloque_fechas__semanas_config")
+        .annotate(
+            estudiantes_total=Count("inscripciones__estudiante_id", distinct=True),
+            estatus_regular=Count(
+                "inscripciones__estudiante_id",
+                filter=Q(inscripciones__estudiante__estatus="Regular"),
+                distinct=True,
+            ),
+            estatus_libre=Count(
+                "inscripciones__estudiante_id",
+                filter=Q(inscripciones__estudiante__estatus="Libre"),
+                distinct=True,
+            ),
+            estatus_baja=Count(
+                "inscripciones__estudiante_id",
+                filter=Q(inscripciones__estudiante__estatus="Baja"),
+                distinct=True,
+            ),
+            estado_inscripto=Count(
+                "inscripciones__estudiante_id",
+                filter=Q(inscripciones__estado=Inscripcion.INSCRIPTO),
+                distinct=True,
+            ),
+            estado_activo=Count(
+                "inscripciones__estudiante_id",
+                filter=Q(inscripciones__estado=Inscripcion.ACTIVO),
+                distinct=True,
+            ),
+            estado_pausado=Count(
+                "inscripciones__estudiante_id",
+                filter=Q(inscripciones__estado=Inscripcion.PAUSADO),
+                distinct=True,
+            ),
+            estado_egresado=Count(
+                "inscripciones__estudiante_id",
+                filter=Q(inscripciones__estado=Inscripcion.EGRESADO),
+                distinct=True,
+            ),
+        )
+        .order_by("fecha_inicio", "id")
     )
+    if bloque_id:
+        cohortes_qs = cohortes_qs.filter(bloque_id=bloque_id)
+    if anio:
+        cohortes_qs = cohortes_qs.filter(fecha_inicio__year=anio)
+
+    cohortes_data = []
+    for coh in cohortes_qs:
+        semanas = sorted(coh.bloque_fechas.semanas_config.all(), key=lambda s: s.orden)
+        tipos = {}
+        for s in semanas:
+            tipos[s.tipo] = tipos.get(s.tipo, 0) + 1
+        cohortes_data.append(
+            {
+                "id": coh.id,
+                "nombre": coh.nombre,
+                "fecha_inicio": coh.fecha_inicio.isoformat() if coh.fecha_inicio else None,
+                "fecha_fin": coh.fecha_fin.isoformat() if coh.fecha_fin else None,
+                "bloque_fechas_id": coh.bloque_fechas_id,
+                "bloque_fechas_nombre": coh.bloque_fechas.nombre,
+                "bloque_fechas_descripcion": coh.bloque_fechas.descripcion,
+                "total_semanas": len(semanas),
+                "tipos_semana": tipos,
+                "estudiantes_total": coh.estudiantes_total,
+                "estatus_regular": coh.estatus_regular,
+                "estatus_libre": coh.estatus_libre,
+                "estatus_baja": coh.estatus_baja,
+                "estado_inscripto": coh.estado_inscripto,
+                "estado_activo": coh.estado_activo,
+                "estado_pausado": coh.estado_pausado,
+                "estado_egresado": coh.estado_egresado,
+            }
+        )
+
+    bloques_qs = Bloque.objects.filter(programa=programa)
+    if bloque_id:
+        bloques_qs = bloques_qs.filter(id=bloque_id)
+    bloques = bloques_qs.order_by("id").prefetch_related("modulos")
     tree = []
     for blo in bloques:
         blo_node = {"type": "bloque", "id": blo.id, "nombre": blo.nombre, "children": []}
@@ -392,19 +503,51 @@ def courses_graph(request, programa_id: int, cohorte_id: int = None):
     cohorte_data = None
     if cohorte_id:
         try:
-            coh = Cohorte.objects.select_related("programa", "bloque_fechas").get(id=cohorte_id)
+            coh_qs = Cohorte.objects.select_related("programa", "bloque_fechas").prefetch_related("bloque_fechas__semanas_config").filter(
+                id=cohorte_id, programa_id=programa_id
+            )
+            if bloque_id:
+                coh_qs = coh_qs.filter(bloque_id=bloque_id)
+            if anio:
+                coh_qs = coh_qs.filter(fecha_inicio__year=anio)
+            coh = coh_qs.get()
+            semanas = sorted(coh.bloque_fechas.semanas_config.all(), key=lambda s: s.orden)
+            secuencia = []
+            for semana in semanas:
+                fecha_semana = None
+                if coh.fecha_inicio:
+                    fecha_semana = (coh.fecha_inicio + timedelta(days=(semana.orden - 1) * 7)).isoformat()
+                secuencia.append(
+                    {
+                        "orden": semana.orden,
+                        "tipo": semana.tipo,
+                        "tipo_label": semana.get_tipo_display(),
+                        "fecha": fecha_semana,
+                    }
+                )
+
+            cohorte_stats = next((c for c in cohortes_data if c["id"] == coh.id), None)
             cohorte_data = {
                 "id": coh.id,
                 "nombre": coh.nombre,
                 "programa_id": coh.programa_id,
+                "fecha_inicio": coh.fecha_inicio.isoformat() if coh.fecha_inicio else None,
+                "fecha_fin": coh.fecha_fin.isoformat() if coh.fecha_fin else None,
                 "bloque_fechas_id": coh.bloque_fechas_id,
                 "bloque_fechas_nombre": coh.bloque_fechas.nombre,
+                "bloque_fechas_descripcion": coh.bloque_fechas.descripcion,
+                "secuencia": secuencia,
+                "stats": cohorte_stats,
             }
         except Cohorte.DoesNotExist:
-            cohorte_data = None
+            return {"detail": "Cohorte no encontrada para el programa seleccionado"}, 404
 
     return {
         "programa": {"id": programa.id, "codigo": programa.codigo, "nombre": programa.nombre},
+        "bloque_id": bloque_id,
+        "cohorte_id": cohorte_id,
+        "anio": anio,
+        "cohortes": cohortes_data,
         "cohorte": cohorte_data,
         "tree": tree,
     }

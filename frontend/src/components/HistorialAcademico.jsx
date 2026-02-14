@@ -165,17 +165,71 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
   // Memoized options
   const enrolledProgramIds = useMemo(() => new Set(studentEnrollments.map(e => e.cohorte?.programa?.id).filter(Boolean)), [studentEnrollments]);
   const filteredCursos = useMemo(() => cursos.filter(c => enrolledProgramIds.has(c.id)), [cursos, enrolledProgramIds]);
-  const enrolledBloqueIds = useMemo(() => new Set(studentEnrollments.map(e => e.modulo?.bloque?.id).filter(Boolean)), [studentEnrollments]);
-  const filteredBloquesOptions = useMemo(() => estructura?.bloques.filter(b => enrolledBloqueIds.has(b.id)) || [], [estructura, enrolledBloqueIds]);
+  const enrolledBloquesDetailed = useMemo(() => {
+    const map = new Map();
+    studentEnrollments.forEach((e) => {
+      const b = e.modulo?.bloque || e.cohorte?.bloque;
+      if (b?.id && !map.has(b.id)) map.set(b.id, b);
+    });
+    return Array.from(map.values());
+  }, [studentEnrollments]);
+  const enrolledBloqueIds = useMemo(() => new Set(
+    studentEnrollments
+      .map(e => e.modulo?.bloque?.id || e.cohorte?.bloque?.id)
+      .filter(Boolean)
+  ), [studentEnrollments]);
+  const enrolledModulosByBloque = useMemo(() => {
+    const map = new Map();
+    studentEnrollments.forEach((e) => {
+      const m = e.modulo;
+      const bId = m?.bloque?.id;
+      if (!m?.id || !bId) return;
+      if (!map.has(bId)) map.set(bId, new Map());
+      map.get(bId).set(m.id, m);
+    });
+    return map;
+  }, [studentEnrollments]);
+  const filteredBloquesOptions = useMemo(() => {
+    const all = estructura?.bloques || [];
+    const filtered = all.filter(b => enrolledBloqueIds.has(b.id));
+    if (filtered.length > 0) return filtered;
+    if (all.length > 0) return all;
+    return enrolledBloquesDetailed;
+  }, [estructura, enrolledBloqueIds, enrolledBloquesDetailed]);
   const enrolledModuloIds = useMemo(() => new Set(studentEnrollments.map(e => e.modulo?.id).filter(Boolean)), [studentEnrollments]);
   const filteredModulosOptions = useMemo(() => {
     if (!bloque) return [];
-    const mods = filteredBloquesOptions.find(b => b.id === Number(bloque))?.modulos || [];
-    return mods.filter(m => enrolledModuloIds.has(m.id));
-  }, [bloque, filteredBloquesOptions, enrolledModuloIds]);
+    const selectedBloque = filteredBloquesOptions.find(b => b.id === Number(bloque));
+    const mods = selectedBloque?.modulos || [];
+    const filtered = mods.filter(m => enrolledModuloIds.has(m.id));
+    if (filtered.length > 0) return filtered;
+    if (mods.length > 0) return mods;
+    const enrolledMap = enrolledModulosByBloque.get(Number(bloque));
+    return enrolledMap ? Array.from(enrolledMap.values()) : [];
+  }, [bloque, filteredBloquesOptions, enrolledModuloIds, enrolledModulosByBloque]);
+
+  const examenOptions = useMemo(() => {
+    if (!bloque) return [{ value: '', label: 'Selecciona bloque/módulo primero' }];
+    if (!examenes || examenes.length === 0) return [{ value: '', label: 'No hay exámenes disponibles' }];
+    return [
+      { value: '', label: 'Seleccionar examen...' },
+      ...examenes.map(ex => ({
+        value: ex.id,
+        label: `${ex.tipo_examen} - ${ex.fecha ? dayjs(ex.fecha).format('DD/MM/YYYY') : 'Sin fecha'}`
+      })),
+    ];
+  }, [bloque, examenes]);
+
+  useEffect(() => {
+    if (!curso && filteredCursos.length === 1) setCurso(String(filteredCursos[0].id));
+  }, [curso, filteredCursos]);
+
+  useEffect(() => {
+    if (!bloque && filteredBloquesOptions.length === 1) setBloque(String(filteredBloquesOptions[0].id));
+  }, [bloque, filteredBloquesOptions]);
 
   return (
-    <Modal open={open} onClose={onClose} title="Añadir Nueva Nota / Equivalencia"
+    <Modal isOpen={open} onClose={onClose} title="Añadir Nueva Nota / Equivalencia"
       actions={<><Button onClick={onClose} variant="ghost">Cancelar</Button><Button onClick={handleSave} disabled={!examen || !calificacion || existingNote || loading}>Guardar</Button></>}>
 
       <Select label="Curso" value={curso} onChange={e => setCurso(e.target.value)} options={filteredCursos.map(c => ({ value: c.id, label: c.nombre }))} />
@@ -185,7 +239,13 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
       </div>
       {allModulesInBlockApproved && <p className="text-sm text-green-400">Todos los módulos aprobados. Selecciona un Final.</p>}
 
-      <Select label="Examen" value={examen} onChange={e => setExamen(e.target.value)} disabled={!bloque} options={examenes.map(ex => ({ value: ex.id, label: `${ex.tipo_examen} - ${dayjs(ex.fecha).format('DD/MM/YYYY')}` }))} />
+      <Select
+        label="Examen"
+        value={examen}
+        onChange={e => setExamen(e.target.value)}
+        disabled={!bloque || !examenes || examenes.length === 0}
+        options={examenOptions}
+      />
       {existingNote && <div className="text-red-400 text-sm mt-1">Ya existe una nota aprobada para este examen.</div>}
 
       <div className="flex gap-4 mt-4">
@@ -263,9 +323,29 @@ export default function HistorialAcademico({ historial, setHistorial, selEstudia
 
         {/* Filtros */}
         <div className="p-4 bg-indigo-950/30 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Select label="Filtrar Programa" value={filterPrograma} onChange={e => setFilterPrograma(e.target.value)} options={programasOptions.map(p => ({ value: p, label: p }))} className="text-xs" />
-          <Select label="Filtrar Bloque" value={filterBloque} onChange={e => setFilterBloque(e.target.value)} disabled={!filterPrograma} options={bloquesOptions.map(b => ({ value: b, label: b }))} className="text-xs" />
-          <Select label="Filtrar Módulo" value={filterModulo} onChange={e => setFilterModulo(e.target.value)} disabled={!filterBloque} options={modulosOptions.map(m => ({ value: m, label: m }))} className="text-xs" />
+          <Select
+            label="Filtrar Programa"
+            value={filterPrograma}
+            onChange={e => setFilterPrograma(e.target.value)}
+            options={[{ value: '', label: 'Todos' }, ...programasOptions.map(p => ({ value: p, label: p }))]}
+            className="text-xs"
+          />
+          <Select
+            label="Filtrar Bloque"
+            value={filterBloque}
+            onChange={e => setFilterBloque(e.target.value)}
+            disabled={!filterPrograma}
+            options={[{ value: '', label: 'Todos' }, ...bloquesOptions.map(b => ({ value: b, label: b }))]}
+            className="text-xs"
+          />
+          <Select
+            label="Filtrar Módulo"
+            value={filterModulo}
+            onChange={e => setFilterModulo(e.target.value)}
+            disabled={!filterBloque}
+            options={[{ value: '', label: 'Todos' }, ...modulosOptions.map(m => ({ value: m, label: m }))]}
+            className="text-xs"
+          />
         </div>
 
         {/* Tabla */}

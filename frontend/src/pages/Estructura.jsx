@@ -11,20 +11,8 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import api from '../api/client';
 
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  const parts = dateString.split('-');
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1;
-  const day = parseInt(parts[2], 10);
-  const date = new Date(Date.UTC(year, month, day));
-  return date.toLocaleDateString('es-AR', { timeZone: 'UTC' });
-};
-
 const initialModuloFormState = {
   nombre: '',
-  fecha_inicio: '',
-  fecha_fin: '',
   es_practica: false,
   asistencia_requerida_practica: 80,
   bloque_id: null,
@@ -33,6 +21,7 @@ const initialModuloFormState = {
 const initialBloqueFormState = {
   nombre: '',
   programa_id: null,
+  correlativas_ids: [],
 };
 
 const initialProgramaFormState = {
@@ -58,8 +47,6 @@ function ModuloFormDialog({ open, onClose, onSave, modulo, bloqueId }) {
     if (modulo) {
       setForm({
         ...modulo,
-        fecha_inicio: modulo.fecha_inicio || '',
-        fecha_fin: modulo.fecha_fin || '',
         bloque_id: modulo.bloque_id || (modulo.bloque ? modulo.bloque.id : null)
       });
     } else {
@@ -85,8 +72,6 @@ function ModuloFormDialog({ open, onClose, onSave, modulo, bloqueId }) {
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={12}><TextField name="nombre" label="Nombre del Módulo" fullWidth value={form.nombre} onChange={handleChange} /></Grid>
-          <Grid item xs={12} sm={6}><TextField name="fecha_inicio" label="Fecha de Inicio" type="date" fullWidth InputLabelProps={{ shrink: true }} value={form.fecha_inicio} onChange={handleChange} /></Grid>
-          <Grid item xs={12} sm={6}><TextField name="fecha_fin" label="Fecha de Fin" type="date" fullWidth InputLabelProps={{ shrink: true }} value={form.fecha_fin} onChange={handleChange} /></Grid>
           <Grid item xs={12} sm={6}><FormControlLabel control={<Checkbox name="es_practica" checked={form.es_practica} onChange={handleChange} />} label="Es Práctica" /></Grid>
           {form.es_practica && (
             <Grid item xs={12}><TextField name="asistencia_requerida_practica" label="Asistencia Requerida (%)" type="number" fullWidth value={form.asistencia_requerida_practica} onChange={handleChange} /></Grid>
@@ -101,12 +86,17 @@ function ModuloFormDialog({ open, onClose, onSave, modulo, bloqueId }) {
   );
 }
 
-function BloqueFormDialog({ open, onClose, onSave, bloque, programaId }) {
+function BloqueFormDialog({ open, onClose, onSave, bloque, programaId, availableBloques = [] }) {
   const [form, setForm] = useState(initialBloqueFormState);
 
   useEffect(() => {
     if (bloque) {
-      setForm(bloque);
+      setForm({
+        ...initialBloqueFormState,
+        ...bloque,
+        programa_id: bloque.programa_id || programaId,
+        correlativas_ids: Array.isArray(bloque.correlativas_ids) ? bloque.correlativas_ids : [],
+      });
     } else {
       setForm({ ...initialBloqueFormState, programa_id: programaId });
     }
@@ -114,6 +104,11 @@ function BloqueFormDialog({ open, onClose, onSave, bloque, programaId }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'correlativas_ids') {
+      const list = Array.isArray(value) ? value : [];
+      setForm(prev => ({ ...prev, correlativas_ids: list.map((id) => Number(id)) }));
+      return;
+    }
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
@@ -127,6 +122,35 @@ function BloqueFormDialog({ open, onClose, onSave, bloque, programaId }) {
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={12}><TextField name="nombre" label="Nombre del Bloque" fullWidth value={form.nombre} onChange={handleChange} /></Grid>
+          <Grid item xs={12}>
+            <FormControl fullWidth>
+              <InputLabel id="correlativas-label">Correlativas (requisitos previos)</InputLabel>
+              <Select
+                labelId="correlativas-label"
+                multiple
+                name="correlativas_ids"
+                value={Array.isArray(form.correlativas_ids) ? form.correlativas_ids : []}
+                label="Correlativas (requisitos previos)"
+                onChange={handleChange}
+                renderValue={(selected) => {
+                  const selectedSet = new Set(selected.map((id) => Number(id)));
+                  return availableBloques
+                    .filter((b) => selectedSet.has(Number(b.id)))
+                    .map((b) => b.nombre)
+                    .join(', ');
+                }}
+              >
+                {availableBloques
+                  .filter((b) => Number(b.id) !== Number(form.id))
+                  .map((b) => (
+                    <MenuItem key={b.id} value={b.id}>
+                      <Checkbox checked={(form.correlativas_ids || []).includes(Number(b.id))} />
+                      {b.nombre}
+                    </MenuItem>
+                  ))}
+              </Select>
+            </FormControl>
+          </Grid>
         </Grid>
       </DialogContent>
       <DialogActions>
@@ -239,9 +263,7 @@ function ModuloItem({ modulo, onEdit, onDelete }) {
         primary={modulo.nombre}
         secondary={
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-            {modulo.es_practica && '(Práctica) '}
-            {modulo.fecha_inicio && `${formatDate(modulo.fecha_inicio)}`}
-            {modulo.fecha_fin && ` a ${formatDate(modulo.fecha_fin)}`}
+            {modulo.es_practica ? '(Práctica)' : ''}
           </Typography>
         }
         sx={{ '& .MuiListItemText-primary': { color: 'white' } }}
@@ -250,7 +272,11 @@ function ModuloItem({ modulo, onEdit, onDelete }) {
   );
 }
 
-function BloqueItem({ bloque, onAddModulo, onEdit, onDelete, onEditModulo, onDeleteModulo, expandedBloque, handleBloqueChange }) {
+function BloqueItem({ bloque, programaBloques = [], onAddModulo, onEdit, onDelete, onEditModulo, onDeleteModulo, expandedBloque, handleBloqueChange }) {
+  const correlativasNombres = (bloque.correlativas_ids || [])
+    .map((id) => programaBloques.find((b) => Number(b.id) === Number(id))?.nombre)
+    .filter(Boolean);
+
   return (
     <Accordion expanded={expandedBloque === `bloque-${bloque.id}`} onChange={handleBloqueChange(`bloque-${bloque.id}`)}
       sx={{
@@ -261,7 +287,12 @@ function BloqueItem({ bloque, onAddModulo, onEdit, onDelete, onEditModulo, onDel
       }}>
       <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}>
         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>Bloque: {bloque.nombre}</Typography>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6">Bloque: {bloque.nombre}</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.72)' }}>
+              Correlatividades: {correlativasNombres.length ? correlativasNombres.join(', ') : 'Sin correlatividades'}
+            </Typography>
+          </Box>
           <Tooltip title="Añadir Módulo">
             <IconButton size="small" onClick={(e) => { e.stopPropagation(); onAddModulo(bloque.id); }}>
               <AddRoundedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
@@ -333,6 +364,7 @@ function ProgramaItem({ programa, onAddBloque, onEdit, onDelete, onAddModulo, on
             <BloqueItem
               key={bloque.id}
               bloque={bloque}
+              programaBloques={programa.bloques}
               onAddModulo={onAddModulo}
               onEdit={onEditBloque}
               onDelete={onDeleteBloque}
@@ -535,6 +567,7 @@ export default function Estructura() {
 
   const handleEditBloque = (bloque) => {
     setCurrentBloque(bloque);
+    setParentProgramaId(bloque.programa_id || bloque.programa?.id || null);
     setOpenBloqueDialog(true);
   };
 
@@ -625,6 +658,18 @@ export default function Estructura() {
     setFeedback({ ...feedback, open: false });
   };
 
+  const getBloquesByProgramaId = (programaId) => {
+    if (!programaId) return [];
+    for (const resolucion of resoluciones) {
+      for (const programa of (resolucion.programas || [])) {
+        if (Number(programa.id) === Number(programaId)) {
+          return programa.bloques || [];
+        }
+      }
+    }
+    return [];
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -711,7 +756,14 @@ export default function Estructura() {
       {/* Dialogs */}
       <ResolucionFormDialog open={openResolucionDialog} onClose={handleCloseResolucionDialog} onSave={handleSaveResolucion} resolucion={currentResolucion} />
       <ProgramaFormDialog open={openProgramaDialog} onClose={handleCloseProgramaDialog} onSave={handleSavePrograma} programa={currentPrograma} resolucionId={parentResolucionId} />
-      <BloqueFormDialog open={openBloqueDialog} onClose={handleCloseBloqueDialog} onSave={handleSaveBloque} bloque={currentBloque} programaId={parentProgramaId} />
+      <BloqueFormDialog
+        open={openBloqueDialog}
+        onClose={handleCloseBloqueDialog}
+        onSave={handleSaveBloque}
+        bloque={currentBloque}
+        programaId={parentProgramaId}
+        availableBloques={getBloquesByProgramaId(parentProgramaId)}
+      />
       <ModuloFormDialog open={openModuloDialog} onClose={handleCloseModuloDialog} onSave={handleSaveModulo} modulo={currentModulo} bloqueId={parentBloqueId} />
 
       {/* Feedback */}

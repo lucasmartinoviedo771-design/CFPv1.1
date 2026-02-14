@@ -1,12 +1,13 @@
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, KeyRound } from 'lucide-react';
+import { LogOut, KeyRound, Moon, Sun } from 'lucide-react';
 import authService from '../services/authService';
-import { UserContext } from '../App';
+import { ThemeModeContext, UserContext } from '../App';
 
 export default function Topbar({ title }) {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
+  const { mode, toggleMode } = useContext(ThemeModeContext);
 
   const handleLogout = () => {
     authService.logout();
@@ -31,6 +32,15 @@ export default function Topbar({ title }) {
             </span>
           )}
         </div>
+
+        {/* Change Password Button (Icon only on mobile) */}
+        <button
+          onClick={toggleMode}
+          className="p-2 text-indigo-300 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+          title={mode === 'dark' ? 'Cambiar a vista clara' : 'Cambiar a vista oscura'}
+        >
+          {mode === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
 
         {/* Change Password Button (Icon only on mobile) */}
         <button

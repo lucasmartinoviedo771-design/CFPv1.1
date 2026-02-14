@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Trash2, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { useCohortes, useDeleteInscripcion, useInscripciones, useProgramas, useSaveInscripcion, useEstudiantes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
-import { Card, Select, Button } from '../components/UI';
+import { Card, Select, Button, Input } from '../components/UI';
+import { formatDateDisplay } from '../utils/dateFormat';
 
 // Custom Accordion Component
 const Accordion = ({ title, children, defaultOpen = false }) => {
@@ -35,6 +36,7 @@ const Checkbox = ({ checked, onChange, disabled, label }) => (
 
 export default function Inscripciones() {
     const [selectedStudent, setSelectedStudent] = useState("");
+    const [studentSearch, setStudentSearch] = useState("");
     const [selectedCohortes, setSelectedCohortes] = useState([]);
     const [selectedModulos, setSelectedModulos] = useState({});
     const [cohorteBloques, setCohorteBloques] = useState({});
@@ -43,6 +45,12 @@ export default function Inscripciones() {
     const [rowsPerPage, setRowsPerPage] = useState(25);
     const [feedback, setFeedback] = useState({ open: false, message: "", severity: "success" });
     const [loadingBloques, setLoadingBloques] = useState({});
+    const [allBloques, setAllBloques] = useState([]);
+    const [filterProgramaId, setFilterProgramaId] = useState("");
+    const [filterBloqueId, setFilterBloqueId] = useState("");
+    const [filterCohorteId, setFilterCohorteId] = useState("");
+    const [filterInicio, setFilterInicio] = useState("");
+    const [filterPeriodo, setFilterPeriodo] = useState("ACTUAL_O_PROXIMO");
 
     const { data: estudiantes = [] } = useEstudiantes();
     const { data: cohortes = [] } = useCohortes();
@@ -52,6 +60,7 @@ export default function Inscripciones() {
     const deleteInscripcion = useDeleteInscripcion();
 
     const programaMap = useMemo(() => Object.fromEntries(programas.map((p) => [p.id, p])), [programas]);
+    const bloquesMap = useMemo(() => Object.fromEntries(allBloques.map((b) => [b.id, b])), [allBloques]);
 
     const inscripcionesAlumnoSet = useMemo(() => {
         if (!selectedStudent) return new Set();
@@ -83,13 +92,28 @@ export default function Inscripciones() {
         fetchApproved();
     }, [selectedStudent]);
 
+    useEffect(() => {
+        const loadBloques = async () => {
+            try {
+                const { data } = await apiClientV2.get("/bloques");
+                setAllBloques(Array.isArray(data) ? data : []);
+            } catch (error) {
+                setAllBloques([]);
+            }
+        };
+        loadBloques();
+    }, []);
+
     const loadBloquesForCohorte = async (cohorteId) => {
         const cohorte = cohortes.find((c) => c.id === cohorteId);
         if (!cohorte) return;
         setLoadingBloques((prev) => ({ ...prev, [cohorteId]: true }));
         try {
             const bloquesRes = await apiClientV2.get("/bloques", { params: { programa_id: cohorte.programa_id } });
-            const bloques = bloquesRes.data || [];
+            const bloquesPrograma = Array.isArray(bloquesRes.data) ? bloquesRes.data : [];
+            const bloques = cohorte.bloque_id
+                ? bloquesPrograma.filter((b) => String(b.id) === String(cohorte.bloque_id))
+                : bloquesPrograma;
             const bloquesConModulos = await Promise.all(
                 bloques.map(async (b) => {
                     const modRes = await apiClientV2.get("/modulos", { params: { bloque_id: b.id } });
@@ -111,6 +135,10 @@ export default function Inscripciones() {
         setSelectedCohortes([]);
         setSelectedModulos({});
         setApprovedModuleIds(new Set());
+        setFilterProgramaId("");
+        setFilterBloqueId("");
+        setFilterCohorteId("");
+        setFilterInicio("");
     };
 
     const handleCohorteToggle = async (cohorteId) => {
@@ -195,7 +223,134 @@ export default function Inscripciones() {
         return inscripciones.slice(start, end);
     }, [inscripciones, page, rowsPerPage]);
 
-    const studentOptions = estudiantes.map(s => ({ value: s.id, label: `${s.apellido}, ${s.nombre} (${s.dni})` }));
+    const filteredEstudiantes = useMemo(() => {
+        const needle = studentSearch.trim().toLowerCase();
+        if (!needle) return estudiantes;
+        return estudiantes.filter((s) => {
+            const apellido = (s.apellido || "").toLowerCase();
+            const nombre = (s.nombre || "").toLowerCase();
+            const dni = String(s.dni || "").toLowerCase();
+            const full = `${apellido} ${nombre}`;
+            return apellido.includes(needle) || nombre.includes(needle) || full.includes(needle) || dni.includes(needle);
+        });
+    }, [estudiantes, studentSearch]);
+
+    const studentOptions = filteredEstudiantes.map(s => ({ value: s.id, label: `${s.apellido}, ${s.nombre} (${s.dni})` }));
+
+    const todayIso = useMemo(() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+    }, []);
+
+    const isVigenteHoy = (c) => {
+        if (!c?.fecha_inicio || !c?.fecha_fin) return false;
+        return c.fecha_inicio <= todayIso && c.fecha_fin >= todayIso;
+    };
+
+    const applyPeriodoFilter = (items) => {
+        if (filterPeriodo === "TODAS") return items;
+        if (filterPeriodo === "VIGENTE_HOY") return items.filter(isVigenteHoy);
+
+        // ACTUAL_O_PROXIMO (default):
+        // 1) si hay vigentes hoy, mostrar esas
+        // 2) si no hay vigentes, mostrar la/s cohorte/s del próximo inicio más cercano
+        const vigentes = items.filter(isVigenteHoy);
+        if (vigentes.length > 0) return vigentes;
+
+        const futuras = items.filter((c) => c?.fecha_inicio && c.fecha_inicio > todayIso);
+        if (futuras.length === 0) return [];
+        const proximaFecha = futuras.reduce((min, c) => (c.fecha_inicio < min ? c.fecha_inicio : min), futuras[0].fecha_inicio);
+        return futuras.filter((c) => c.fecha_inicio === proximaFecha);
+    };
+
+    const cohortesFiltered = useMemo(() => {
+        const base = applyPeriodoFilter(cohortes);
+        return base.filter((c) => {
+            if (filterProgramaId && String(c.programa_id) !== String(filterProgramaId)) return false;
+            if (filterBloqueId && String(c.bloque_id || "") !== String(filterBloqueId)) return false;
+            if (filterCohorteId && String(c.id) !== String(filterCohorteId)) return false;
+            if (filterInicio && String(c.fecha_inicio || "") !== String(filterInicio)) return false;
+            return true;
+        });
+    }, [cohortes, filterPeriodo, filterProgramaId, filterBloqueId, filterCohorteId, filterInicio, todayIso]);
+
+    const bloquesOptions = useMemo(() => {
+        const cohortesBase = applyPeriodoFilter(cohortes).filter((c) => {
+            if (filterProgramaId && String(c.programa_id) !== String(filterProgramaId)) return false;
+            return true;
+        });
+        const allowedBloqueIds = new Set(cohortesBase.map((c) => c.bloque_id).filter(Boolean));
+        const arr = (filterProgramaId
+            ? allBloques.filter((b) => String(b.programa_id) === String(filterProgramaId))
+            : allBloques
+        ).filter((b) => allowedBloqueIds.has(b.id));
+        return [{ value: "", label: "Todos" }, ...arr.map((b) => ({ value: b.id, label: b.nombre }))];
+    }, [allBloques, cohortes, filterPeriodo, filterProgramaId, todayIso]);
+
+    const cohortesOptions = useMemo(() => {
+        const base = applyPeriodoFilter(cohortes).filter((c) => {
+            if (filterProgramaId && String(c.programa_id) !== String(filterProgramaId)) return false;
+            if (filterBloqueId && String(c.bloque_id || "") !== String(filterBloqueId)) return false;
+            return true;
+        });
+        return [{ value: "", label: "Todas" }, ...base.map((c) => ({ value: c.id, label: c.nombre }))];
+    }, [cohortes, filterPeriodo, filterProgramaId, filterBloqueId, todayIso]);
+
+    const inicioOptions = useMemo(() => {
+        const base = applyPeriodoFilter(cohortes).filter((c) => {
+            if (filterProgramaId && String(c.programa_id) !== String(filterProgramaId)) return false;
+            if (filterBloqueId && String(c.bloque_id || "") !== String(filterBloqueId)) return false;
+            if (filterCohorteId && String(c.id) !== String(filterCohorteId)) return false;
+            return true;
+        });
+        const uniq = Array.from(new Set(base.map((c) => c.fecha_inicio).filter(Boolean))).sort((a, b) => (a < b ? 1 : -1));
+        return [{ value: "", label: "Todos" }, ...uniq.map((d) => ({ value: d, label: formatDateDisplay(d) }))];
+    }, [cohortes, filterPeriodo, filterProgramaId, filterBloqueId, filterCohorteId, todayIso]);
+
+    const getModuloNivel = (modulo, all = []) => {
+        const nombre = String(modulo?.nombre || "").toUpperCase();
+        const match = nombre.match(/M[ÓO]DULO\s*([0-9]+|[IVXLCDM]+)/i);
+        if (match?.[1]) {
+            const token = match[1].toUpperCase();
+            if (/^\d+$/.test(token)) return Number(token);
+            const vals = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+            let total = 0;
+            let prev = 0;
+            for (let i = token.length - 1; i >= 0; i -= 1) {
+                const v = vals[token[i]] || 0;
+                if (v < prev) total -= v;
+                else {
+                    total += v;
+                    prev = v;
+                }
+            }
+            if (total > 0) return total;
+        }
+        const ids = all.map((m) => m.id);
+        const idx = ids.indexOf(modulo.id);
+        return idx >= 0 ? idx + 1 : 1;
+    };
+
+    const visibleModulosByProgression = (modulos) => {
+        const base = [...(modulos || [])];
+        const sorted = base.sort((a, b) => {
+            const na = getModuloNivel(a, base);
+            const nb = getModuloNivel(b, base);
+            if (na !== nb) return na - nb;
+            return (a.id || 0) - (b.id || 0);
+        });
+        return sorted.filter((modulo, index) => {
+            const alreadyEnrolled = inscripcionesAlumnoSet.has(modulo.id);
+            const isApproved = approvedModuleIds.has(modulo.id);
+            if (alreadyEnrolled || isApproved) return true;
+            if (index === 0) return true;
+            const prevs = sorted.slice(0, index);
+            return prevs.every((p) => approvedModuleIds.has(p.id));
+        });
+    };
 
     return (
         <div className="space-y-8 animate-fade-in-up">
@@ -209,6 +364,13 @@ export default function Inscripciones() {
             <Card className="bg-indigo-900/20 border-indigo-500/30">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="max-w-md">
+                        <Input
+                            label="Buscar estudiante (DNI / Apellido / Nombre)"
+                            value={studentSearch}
+                            onChange={(e) => setStudentSearch(e.target.value)}
+                            placeholder="Ej: 3497, andrade, martin..."
+                            className="mb-2 bg-indigo-950/50 border-indigo-500/30 text-white"
+                        />
                         <Select
                             label="Estudiante"
                             value={selectedStudent}
@@ -216,21 +378,83 @@ export default function Inscripciones() {
                             options={[{ value: '', label: 'Seleccionar estudiante...' }, ...studentOptions]}
                             className="bg-indigo-950/50 border-indigo-500/30 text-white"
                         />
+                        <p className="mt-2 text-xs text-indigo-300">
+                            {filteredEstudiantes.length} resultado(s)
+                        </p>
                     </div>
 
                     {selectedStudent && (
                         <div className="space-y-4 pt-4 border-t border-indigo-500/20">
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                <Select
+                                    label="Periodo"
+                                    value={filterPeriodo}
+                                    onChange={(e) => {
+                                        setFilterPeriodo(e.target.value);
+                                        setFilterProgramaId("");
+                                        setFilterBloqueId("");
+                                        setFilterCohorteId("");
+                                        setFilterInicio("");
+                                    }}
+                                    options={[
+                                        { value: "ACTUAL_O_PROXIMO", label: "Periodo vigente" },
+                                        { value: "TODAS", label: "Todas las cohortes" },
+                                    ]}
+                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
+                                />
+                                <Select
+                                    label="Programa"
+                                    value={filterProgramaId}
+                                    onChange={(e) => {
+                                        setFilterProgramaId(e.target.value);
+                                        setFilterBloqueId("");
+                                        setFilterCohorteId("");
+                                        setFilterInicio("");
+                                    }}
+                                    options={[{ value: "", label: "Todos" }, ...programas.map((p) => ({ value: p.id, label: p.nombre }))]}
+                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
+                                />
+                                <Select
+                                    label="Bloque"
+                                    value={filterBloqueId}
+                                    onChange={(e) => {
+                                        setFilterBloqueId(e.target.value);
+                                        setFilterCohorteId("");
+                                        setFilterInicio("");
+                                    }}
+                                    options={bloquesOptions}
+                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
+                                />
+                                <Select
+                                    label="Cohorte"
+                                    value={filterCohorteId}
+                                    onChange={(e) => {
+                                        setFilterCohorteId(e.target.value);
+                                        setFilterInicio("");
+                                    }}
+                                    options={cohortesOptions}
+                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
+                                />
+                                <Select
+                                    label="Inicio"
+                                    value={filterInicio}
+                                    onChange={(e) => setFilterInicio(e.target.value)}
+                                    options={inicioOptions}
+                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
+                                />
+                            </div>
                             <h3 className="text-lg font-semibold text-white mb-2">Selecciona Cohortes:</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {cohortes.map((cohorte) => (
+                                {cohortesFiltered.map((cohorte) => (
                                     <Checkbox
                                         key={cohorte.id}
-                                        label={`${programaMap[cohorte.programa_id]?.nombre || "Programa"} - ${cohorte.nombre}`}
+                                        label={`${programaMap[cohorte.programa_id]?.nombre || "Programa"} - ${bloquesMap[cohorte.bloque_id]?.nombre || "Bloque"} - ${cohorte.nombre}`}
                                         checked={selectedCohortes.includes(cohorte.id)}
                                         onChange={() => handleCohorteToggle(cohorte.id)}
                                     />
                                 ))}
                             </div>
+                            <p className="text-xs text-indigo-300">{cohortesFiltered.length} cohorte(s) visibles</p>
                         </div>
                     )}
 
@@ -246,7 +470,7 @@ export default function Inscripciones() {
                             {cohorteBloques[cohorteId]?.map((bloque) => (
                                 <Accordion key={bloque.id} title={bloque.nombre} defaultExpanded>
                                     <div className="space-y-1 pl-2">
-                                        {[...bloque.modulos].sort((a, b) => a.orden - b.orden).map((modulo) => {
+                                        {visibleModulosByProgression(bloque.modulos).map((modulo) => {
                                             const isApproved = approvedModuleIds.has(modulo.id);
                                             const alreadyEnrolled = inscripcionesAlumnoSet.has(modulo.id);
                                             const checked = isApproved || alreadyEnrolled || (selectedModulos[cohorteId]?.includes(modulo.id) ?? false);
@@ -296,7 +520,7 @@ export default function Inscripciones() {
                                 <thead className="bg-indigo-950/40 text-indigo-300 uppercase text-xs">
                                     <tr>
                                         <th className="px-6 py-3">Estudiante</th>
-                                        <th className="px-6 py-3">Cohorte</th>
+                                        <th className="px-6 py-3">Detalle Inscripción</th>
                                         <th className="px-6 py-3">Módulo</th>
                                         <th className="px-6 py-3">Estado</th>
                                         <th className="px-6 py-3 text-right">Acciones</th>
@@ -308,8 +532,29 @@ export default function Inscripciones() {
                                             <td className="px-6 py-3 font-medium text-white">
                                                 {r.estudiante ? `${r.estudiante.apellido}, ${r.estudiante.nombre}` : r.estudiante_id}
                                             </td>
-                                            <td className="px-6 py-3 text-gray-400">
-                                                {r.cohorte ? `${programaMap[r.cohorte.programa_id]?.nombre || ""} - ${r.cohorte.nombre}` : r.cohorte_id}
+                                            <td className="px-6 py-3 text-gray-300">
+                                                {r.cohorte ? (
+                                                    <div className="space-y-1">
+                                                        <div>
+                                                            <span className="text-indigo-200">Programa:</span>{" "}
+                                                            <span>{r.cohorte.programa?.nombre || "-"}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-indigo-200">Bloque:</span>{" "}
+                                                            <span>{r.cohorte.bloque?.nombre || "-"}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-indigo-200">Cohorte:</span>{" "}
+                                                            <span>{r.cohorte.nombre || "-"}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-indigo-200">Periodo:</span>{" "}
+                                                            <span>{formatDateDisplay(r.cohorte.fecha_inicio)} a {formatDateDisplay(r.cohorte.fecha_fin)}</span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    r.cohorte_id
+                                                )}
                                             </td>
                                             <td className="px-6 py-3 text-gray-300">{r.modulo?.nombre || r.modulo_id || "N/A"}</td>
                                             <td className="px-6 py-3">

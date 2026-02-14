@@ -47,8 +47,20 @@ export default function Usuarios() {
   const handleRegenerate = async (targetUser) => {
     if (window.confirm(`¿Regenerar contraseña para ${targetUser.username}?\n\nSeguridad: Esto creará una contraseña nueva aleatoria y se la enviará por correo. El usuario deberá cambiarla al ingresar.`)) {
       try {
-        await api.post(`/users/${targetUser.id}/regenerate-password`);
-        setFeedback({ open: true, message: 'Contraseña regenerada y enviada por correo', severity: 'success' });
+        const { data } = await api.post(`/users/${targetUser.id}/regenerate-password`);
+        if (data?.email_sent === false) {
+          setFeedback({
+            open: true,
+            message: data?.message || 'Contraseña regenerada, pero no se pudo enviar el correo.',
+            severity: 'error'
+          });
+        } else {
+          setFeedback({
+            open: true,
+            message: data?.message || 'Contraseña regenerada y enviada por correo',
+            severity: 'success'
+          });
+        }
         // remove alert quickly
         setTimeout(() => setFeedback({ ...feedback, open: false }), 4000);
       } catch (err) {
@@ -131,7 +143,7 @@ export default function Usuarios() {
                     </td>
                   </tr>
                 ))}
-              </tbody> (
+              </tbody>
             </table>
           </div>
         </Card>

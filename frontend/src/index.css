@@ -1,14 +1,149 @@
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 body {
   margin: 0;
   background-color: #0a0033;
   color: white;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.font-bold {
+  font-weight: 600 !important;
+}
+
+.font-semibold {
+  font-weight: 500 !important;
+}
+
+.app-shell.theme-light {
+  background: #e8f6ff !important;
+  color: #0b1324;
+}
+
+.app-shell.theme-light .font-bold {
+  font-weight: 600 !important;
+}
+
+.app-shell.theme-light .text-white {
+  color: #0b1324 !important;
+}
+
+.app-shell.theme-light [class*="text-indigo-"] {
+  color: #1e40af !important;
+}
+
+.app-shell.theme-light [class*="text-gray-"] {
+  color: #334155 !important;
+}
+
+.app-shell.theme-light [class*="bg-indigo"] {
+  background-color: rgba(190, 230, 255, 0.6) !important;
+}
+
+.app-shell.theme-light [class*="bg-[#0a0033]"],
+.app-shell.theme-light [class*="bg-[#1e1b4b]"],
+.app-shell.theme-light [class*="from-indigo-900/20"],
+.app-shell.theme-light [class*="via-[#0a0033]"],
+.app-shell.theme-light [class*="to-[#0a0033]"] {
+  background: #e8f6ff !important;
+}
+
+.app-shell.theme-light [class*="border-indigo"] {
+  border-color: rgba(14, 116, 144, 0.35) !important;
+}
+
+.app-shell.theme-light .MuiPaper-root,
+.app-shell.theme-light .MuiCard-root {
+  background-color: rgba(219, 240, 255, 0.7) !important;
+  border-color: rgba(14, 116, 144, 0.25) !important;
+}
+
+.app-shell.theme-light .MuiBox-root,
+.app-shell.theme-light .MuiTypography-root,
+.app-shell.theme-light .MuiIconButton-root,
+.app-shell.theme-light .MuiSvgIcon-root {
+  color: #0b1324 !important;
+}
+
+.app-shell.theme-light .MuiButton-outlined {
+  color: #0b1324 !important;
+  border-color: rgba(14, 116, 144, 0.35) !important;
+}
+
+.app-shell.theme-light .MuiButton-outlined:hover {
+  background-color: rgba(14, 116, 144, 0.08) !important;
+}
+
+.app-shell.theme-light .MuiTableCell-root,
+.app-shell.theme-light .MuiTablePagination-root,
+.app-shell.theme-light .MuiTablePagination-selectLabel,
+.app-shell.theme-light .MuiTablePagination-displayedRows {
+  color: #0b1324 !important;
+}
+
+.app-shell.theme-light .MuiTableCell-root {
+  border-bottom-color: rgba(14, 116, 144, 0.18) !important;
+}
+
+.app-shell.theme-light .MuiInputLabel-root,
+.app-shell.theme-light .MuiSelect-select,
+.app-shell.theme-light .MuiInputBase-input,
+.app-shell.theme-light .MuiMenuItem-root,
+.app-shell.theme-light .MuiFormLabel-root {
+  color: #0b1324 !important;
+}
+
+.app-shell.theme-light .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(14, 116, 144, 0.35) !important;
+}
+
+.app-shell.theme-light .MuiSelect-icon,
+.app-shell.theme-light .MuiTablePagination-selectIcon {
+  color: #0b1324 !important;
+}
+
+.app-shell.theme-light .Mui-disabled {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+  opacity: 1 !important;
+}
+
+.app-shell.theme-light .bg-indigo-500\/20.text-indigo-300,
+.app-shell.theme-light .bg-indigo-500\/20.text-indigo-300.border-indigo-500\/30 {
+  background-color: rgba(59, 130, 246, 0.16) !important;
+  color: #1e3a8a !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+}
+
+.app-shell.theme-light .bg-purple-500\/20.text-purple-300,
+.app-shell.theme-light .bg-purple-500\/20.text-purple-300.border-purple-500\/30 {
+  background-color: rgba(168, 85, 247, 0.16) !important;
+  color: #6d28d9 !important;
+  border-color: rgba(168, 85, 247, 0.35) !important;
+}
+
+.app-shell.theme-light input,
+.app-shell.theme-light select,
+.app-shell.theme-light textarea {
+  color: #0b1324 !important;
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(14, 116, 144, 0.35) !important;
+}
+
+.app-shell.theme-light .scrollbar-thumb-indigo-900::-webkit-scrollbar-thumb,
+.app-shell.theme-light ::-webkit-scrollbar-thumb {
+  background: #94a3b8 !important;
 }
 
 /* Custom scrollbar */
@@ -142,7 +277,7 @@ body {
   --color-brand-accent: #FF6600;
   --color-brand-cyan: #00ccff;
   --color-brand-purple: #aa00ff;
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: 'Source Sans 3', sans-serif;
   --animate-fade-in-up: fade-in-up 0.8s ease-out forwards;
   --animate-bounce-slow: bounce-slow 4s ease-in-out infinite;
   --animate-bounce-slow-delay: bounce-slow-delay 5s ease-in-out infinite 1s;

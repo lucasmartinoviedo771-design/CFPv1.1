@@ -342,14 +342,22 @@ Link: {getattr(settings, 'FRONTEND_URL', 'https://cfp.lucasoviedodev.org')}/logi
         profile.credentials_sent_at = timezone.now()
         profile.save()
         print(f"✅ Email de regeneración enviado a {user.email}")
-        
+        return {
+            "success": True,
+            "email_sent": True,
+            "message": f"Contraseña regenerada y enviada a {user.email}",
+            "email": user.email,
+            "sent_at": profile.credentials_sent_at.isoformat(),
+        }
     except Exception as e:
         print(f"Error enviando email regeración a {user.email}: {e}")
-
-    return {
-        "success": True,
-        "message": f"Contraseña regenerada y enviada a {user.email}"
-    }
+        return {
+            "success": True,
+            "email_sent": False,
+            "message": f"Contraseña regenerada, pero no se pudo enviar el correo a {user.email}.",
+            "email": user.email,
+            "error": str(e),
+        }
 
 
 @router.put("/user/change-password", response=dict)

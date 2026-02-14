@@ -2,9 +2,15 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../api/client';
 import { Card, Select, Button } from '../components/UI';
 import { Search, AlertCircle } from 'lucide-react';
+import { formatDateDisplay } from '../utils/dateFormat';
+import { listProgramas } from '../services/programasService';
 
 export default function HistoricoCursos() {
+  const [programas, setProgramas] = useState([]);
+  const [bloques, setBloques] = useState([]);
   const [cohortes, setCohortes] = useState([]);
+  const [selectedPrograma, setSelectedPrograma] = useState('');
+  const [selectedBloque, setSelectedBloque] = useState('');
   const [selectedCohorte, setSelectedCohorte] = useState('');
   const [tipoDato, setTipoDato] = useState('notas');
 
@@ -13,28 +19,46 @@ export default function HistoricoCursos() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Cargar las cohortes para el selector
-    apiClient.get('/inscripciones/cohortes')
-      .then(response => {
-        setCohortes(Array.isArray(response.data) ? response.data : []);
-      })
-      .catch(err => {
-        console.error("Error al cargar cohortes:", err);
-        setError("No se pudieron cargar las cohortes. Verifica la conexión.");
-      });
+    (async () => {
+      try {
+        const progs = await listProgramas();
+        setProgramas(Array.isArray(progs) ? progs : []);
+      } catch (err) {
+        console.error("Error al cargar programas:", err);
+        setError("No se pudieron cargar los programas.");
+      }
+    })();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const [cohortesRes, bloquesRes] = await Promise.all([
+          apiClient.get('/inscripciones/cohortes', { params: { programa_id: selectedPrograma || undefined } }),
+          apiClient.get('/bloques', { params: { programa_id: selectedPrograma || undefined } }),
+        ]);
+        setCohortes(Array.isArray(cohortesRes.data) ? cohortesRes.data : []);
+        setBloques(Array.isArray(bloquesRes.data) ? bloquesRes.data : []);
+      } catch (err) {
+        console.error("Error al cargar cohortes/bloques:", err);
+        setError("No se pudieron cargar cohortes y bloques.");
+      }
+    })();
+  }, [selectedPrograma]);
+
   const handleBuscar = () => {
-    if (!selectedCohorte) {
-      setError("Por favor, selecciona una cohorte.");
-      return;
-    }
     setLoading(true);
     setError(null);
     setData(null);
 
-    const token = authService.getAccessToken();
-    apiClient.get(`/historico-cursos/?cohorte_id=${selectedCohorte}&tipo_dato=${tipoDato}`)
+    apiClient.get('/historico-cursos', {
+      params: {
+        tipo_dato: tipoDato,
+        programa_id: selectedPrograma || undefined,
+        bloque_id: selectedBloque || undefined,
+        cohorte_id: selectedCohorte || undefined,
+      },
+    })
       .then(response => {
         setData(response.data);
       })
@@ -47,12 +71,28 @@ export default function HistoricoCursos() {
       });
   };
 
-  // Convertir cohortes a formato {value, label} para el Select
+  const programasOptions = programas.map(p => ({ value: p.id, label: p.nombre }));
+  const bloquesOptions = bloques.map(b => ({ value: b.id, label: b.nombre }));
   const cohorteOptions = cohortes.map(c => ({ value: c.id, label: c.nombre }));
   const tipoOptions = [
     { value: 'notas', label: 'Notas' },
     { value: 'asistencia', label: 'Asistencia' }
   ];
+  const looksLikeDate = (value) => typeof value === 'string'
+    && (
+      /^\d{4}-\d{2}-\d{2}$/.test(value)
+      || /^\d{4}-\d{2}-\d{2}T/.test(value)
+      || /^\d{2}\/\d{2}\/\d{4}$/.test(value)
+    );
+
+  const renderCellValue = (header, rawValue) => {
+    if (rawValue === null || rawValue === undefined) return '-';
+    if (looksLikeDate(rawValue)) return formatDateDisplay(rawValue);
+    if (typeof header === 'string' && header.toLowerCase().includes('fecha') && typeof rawValue === 'string') {
+      return formatDateDisplay(rawValue);
+    }
+    return String(rawValue);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -68,11 +108,35 @@ export default function HistoricoCursos() {
         <div className="flex flex-col md:flex-row gap-4 items-end">
           <div className="w-full md:w-64">
             <Select
+              label="Programa"
+              id="programa-select"
+              value={selectedPrograma}
+              onChange={e => {
+                setSelectedPrograma(e.target.value);
+                setSelectedBloque('');
+                setSelectedCohorte('');
+              }}
+              options={[{ value: '', label: 'Todos' }, ...programasOptions]}
+              className="bg-indigo-950/50 border-indigo-500/30 text-white"
+            />
+          </div>
+          <div className="w-full md:w-64">
+            <Select
+              label="Bloque"
+              id="bloque-select"
+              value={selectedBloque}
+              onChange={e => setSelectedBloque(e.target.value)}
+              options={[{ value: '', label: 'Todos' }, ...bloquesOptions]}
+              className="bg-indigo-950/50 border-indigo-500/30 text-white"
+            />
+          </div>
+          <div className="w-full md:w-64">
+            <Select
               label="Cohorte"
               id="cohorte-select"
               value={selectedCohorte}
               onChange={e => setSelectedCohorte(e.target.value)}
-              options={[{ value: '', label: 'Seleccionar...' }, ...cohorteOptions]}
+              options={[{ value: '', label: 'Todos' }, ...cohorteOptions]}
               className="bg-indigo-950/50 border-indigo-500/30 text-white"
             />
           </div>
@@ -128,7 +192,7 @@ export default function HistoricoCursos() {
                   <tr key={idx} className="hover:bg-white/5 transition-colors">
                     {data.headers.map(header => (
                       <td key={`${row.ID}-${header}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {row[header] !== null && row[header] !== undefined ? String(row[header]) : '-'}
+                        {renderCellValue(header, row[header])}
                       </td>
                     ))}
                   </tr>

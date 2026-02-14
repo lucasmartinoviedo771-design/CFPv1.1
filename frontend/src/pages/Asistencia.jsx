@@ -1,31 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import FileUpload from "../components/FileUpload";
-import ResultPanel from "../components/ResultPanel";
-import { uploadFile } from "../services/uploadService";
 import { listAsistencias, createAsistencia, updateAsistencia } from "../services/asistenciasService";
 import api from '../api/client';
 import { Card, Select, Button, Input } from '../components/UI';
-import { Check, X, Upload, Save, Calendar, CheckSquare, AlertCircle, Loader } from 'lucide-react';
-
-// Tailwind Tabs Component
-const Tabs = ({ activeTab, onChange, tabs }) => (
-  <div className="flex border-b border-indigo-500/30 mb-6">
-    {tabs.map((tab, idx) => (
-      <button
-        key={idx}
-        onClick={() => onChange(idx)}
-        className={`px-6 py-3 font-medium text-sm transition-colors relative ${activeTab === idx ? 'text-white' : 'text-indigo-400 hover:text-indigo-200'}`}
-      >
-        {tab.label}
-        {activeTab === idx && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-accent shadow-[0_0_10px_#FF6600]"></div>}
-      </button>
-    ))}
-  </div>
-);
+import { Check, X, Save, CheckSquare, AlertCircle, Loader } from 'lucide-react';
 
 export default function Asistencia() {
-  const [tabValue, setTabValue] = useState(0);
-  const [uploadResult, setUploadResult] = useState(null);
   const [programas, setProgramas] = useState([]);
   const [cohortes, setCohortes] = useState([]);
   const [selectedCohorteId, setSelectedCohorteId] = useState('');
@@ -172,110 +151,78 @@ export default function Asistencia() {
     <div className="space-y-6 animate-fade-in-up">
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">Gestión de Asistencias</h1>
-        <p className="text-indigo-300">Control de asistencia por clase y carga masiva.</p>
+        <p className="text-indigo-300">Control de asistencia por clase.</p>
       </div>
 
-      <Tabs activeTab={tabValue} onChange={setTabValue} tabs={[{ label: 'Tomar Asistencia' }, { label: 'Carga por Archivo' }]} />
+      <Card className="bg-indigo-900/20 border-indigo-500/30 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <Select label="Programa" value={selectedProgramaId} onChange={handleProgramaChange} options={[{ value: '', label: 'Seleccionar...' }, ...programas.map(p => ({ value: p.id, label: p.nombre }))]} className="bg-indigo-950/50" />
+          <Select label="Bloque" value={selectedBloqueId} onChange={e => setSelectedBloqueId(e.target.value)} disabled={!selectedProgramaId} options={[{ value: '', label: 'Seleccionar...' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]} className="bg-indigo-950/50" />
+          <Select label="Cohorte" value={selectedCohorteId} onChange={handleCohorteChange} disabled={!selectedProgramaId} options={[{ value: '', label: 'Seleccionar...' }, ...cohortes.map(c => ({ value: c.id, label: c.nombre }))]} className="bg-indigo-950/50" />
+          <Input label="Fecha" type="date" value={selectedClaseDate} onChange={e => setSelectedClaseDate(e.target.value)} disabled={!selectedCohorteId} className="bg-indigo-950/50" />
+        </div>
+      </Card>
 
-      {tabValue === 0 && (
-        <>
-          <Card className="bg-indigo-900/20 border-indigo-500/30 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <Select label="Programa" value={selectedProgramaId} onChange={handleProgramaChange} options={[{ value: '', label: 'Seleccionar...' }, ...programas.map(p => ({ value: p.id, label: p.nombre }))]} className="bg-indigo-950/50" />
-              <Select label="Cohorte" value={selectedCohorteId} onChange={handleCohorteChange} disabled={!selectedProgramaId} options={[{ value: '', label: 'Seleccionar...' }, ...cohortes.map(c => ({ value: c.id, label: c.nombre }))]} className="bg-indigo-950/50" />
-              <Select label="Bloque" value={selectedBloqueId} onChange={e => setSelectedBloqueId(e.target.value)} disabled={!selectedProgramaId} options={[{ value: '', label: 'Seleccionar...' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]} className="bg-indigo-950/50" />
-              <Input label="Fecha" type="date" value={selectedClaseDate} onChange={e => setSelectedClaseDate(e.target.value)} disabled={!selectedCohorteId} className="bg-indigo-950/50" />
-            </div>
-          </Card>
+      {loadingData && <div className="p-8 flex justify-center"><Loader className="animate-spin text-brand-accent h-8 w-8" /></div>}
 
-          {loadingData && <div className="p-8 flex justify-center"><Loader className="animate-spin text-brand-accent h-8 w-8" /></div>}
+      {!loadingData && selectedBloqueId && students.length > 0 && modulos.length > 0 && (
+        <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-xl overflow-hidden shadow-xl animate-fade-in">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-[#1e1b4b] text-indigo-300 uppercase text-xs">
+                <tr>
+                  <th className="px-4 py-3 sticky left-0 bg-[#1e1b4b] z-10 w-48">Estudiante</th>
+                  {modulos.map(mod => <th key={mod.id} className="px-4 py-3 text-center min-w-[120px]">{mod.nombre}</th>)}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-indigo-500/10">
+                {students.map(student => (
+                  <tr key={student.id} className="hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-3 font-medium text-white sticky left-0 bg-[#0a0033]/90 md:bg-transparent z-10">
+                      {student.apellido}, {student.nombre}
+                    </td>
+                    {modulos.map(mod => {
+                      const isEnrolled = studentEnrolledModules[student.id]?.includes(mod.id);
+                      const status = attendanceGrid[student.id]?.[mod.id]?.status || 'none';
+                      if (!isEnrolled) return <td key={mod.id} className="px-4 py-3 text-center text-gray-700 bg-black/20">-</td>;
 
-          {!loadingData && selectedBloqueId && students.length > 0 && modulos.length > 0 && (
-            <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-xl overflow-hidden shadow-xl animate-fade-in">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-[#1e1b4b] text-indigo-300 uppercase text-xs">
-                    <tr>
-                      <th className="px-4 py-3 sticky left-0 bg-[#1e1b4b] z-10 w-48">Estudiante</th>
-                      {modulos.map(mod => <th key={mod.id} className="px-4 py-3 text-center min-w-[120px]">{mod.nombre}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-indigo-500/10">
-                    {students.map(student => (
-                      <tr key={student.id} className="hover:bg-white/5 transition-colors">
-                        <td className="px-4 py-3 font-medium text-white sticky left-0 bg-[#0a0033]/90 md:bg-transparent z-10">
-                          {student.apellido}, {student.nombre}
+                      return (
+                        <td key={mod.id} className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleStatusChange(student.id, mod.id, 'present')}
+                              className={`p-1 rounded transition-all ${status === 'present' ? 'bg-green-500 text-white shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-indigo-950 text-gray-500 hover:text-green-400'}`}
+                            >
+                              <Check size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(student.id, mod.id, 'absent')}
+                              className={`p-1 rounded transition-all ${status === 'absent' ? 'bg-red-500 text-white shadow-[0_0_8px_rgba(239,68,68,0.6)]' : 'bg-indigo-950 text-gray-500 hover:text-red-400'}`}
+                            >
+                              <X size={18} />
+                            </button>
+                          </div>
                         </td>
-                        {modulos.map(mod => {
-                          const isEnrolled = studentEnrolledModules[student.id]?.includes(mod.id);
-                          const status = attendanceGrid[student.id]?.[mod.id]?.status || 'none';
-                          if (!isEnrolled) return <td key={mod.id} className="px-4 py-3 text-center text-gray-700 bg-black/20">-</td>;
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-                          return (
-                            <td key={mod.id} className="px-4 py-3 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  onClick={() => handleStatusChange(student.id, mod.id, 'present')}
-                                  className={`p-1 rounded transition-all ${status === 'present' ? 'bg-green-500 text-white shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-indigo-950 text-gray-500 hover:text-green-400'}`}
-                                >
-                                  <Check size={18} />
-                                </button>
-                                <button
-                                  onClick={() => handleStatusChange(student.id, mod.id, 'absent')}
-                                  className={`p-1 rounded transition-all ${status === 'absent' ? 'bg-red-500 text-white shadow-[0_0_8px_rgba(239,68,68,0.6)]' : 'bg-indigo-950 text-gray-500 hover:text-red-400'}`}
-                                >
-                                  <X size={18} />
-                                </button>
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="p-4 border-t border-indigo-500/20 bg-indigo-950/30 flex justify-end">
-                <Button onClick={handleSaveAttendance} disabled={loadingData} startIcon={<Save size={18} />} className="bg-brand-accent hover:bg-orange-600 border-none shadow-lg">
-                  Guardar Asistencias
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {!loadingData && selectedBloqueId && students.length === 0 && (
-            <div className="text-center py-10 text-indigo-300 bg-indigo-900/10 rounded-xl border border-indigo-500/20">
-              No hay estudiantes inscriptos para los filtros seleccionados.
-            </div>
-          )}
-        </>
+          <div className="p-4 border-t border-indigo-500/20 bg-indigo-950/30 flex justify-end">
+            <Button onClick={handleSaveAttendance} disabled={loadingData} startIcon={<Save size={18} />} className="bg-brand-accent hover:bg-orange-600 border-none shadow-lg">
+              Guardar Asistencias
+            </Button>
+          </div>
+        </div>
       )}
 
-      {tabValue === 1 && (
-        <Card className="bg-indigo-900/20 border-indigo-500/30">
-          {/* 
-                Mantengo los componentes FileUpload y ResultPanel originales dentro de un wrapper oscuro
-                aunque ellos internamente puedan tener estilos MUI aún, el contenedor ayuda. 
-                Idealmente refactorizarlos también.
-            */}
-          <div className="p-4 bg-white/5 rounded-lg border border-dashed border-indigo-500/40 text-center">
-            <Upload className="mx-auto text-indigo-400 mb-2" size={32} />
-            <h3 className="text-white font-bold mb-2">Carga Masiva de Asistencia</h3>
-            <p className="text-indigo-300 text-sm mb-4">Compatible con reportes de Moodle (.csv, .xlsx)</p>
-
-            {/* Fallback to original component logic wrapper if needed, or reimplement UI */}
-            <FileUpload
-              title="" // Hide title as we rendered custom one
-              endpoint="/import-asistencia"
-              doUpload={(file, onProgress) => uploadFile("/import-asistencia", file, onProgress)}
-              onUpload={setUploadResult}
-            />
-          </div>
-          <div className="mt-6">
-            <ResultPanel result={uploadResult} />
-          </div>
-        </Card>
+      {!loadingData && selectedBloqueId && students.length === 0 && (
+        <div className="text-center py-10 text-indigo-300 bg-indigo-900/10 rounded-xl border border-indigo-500/20">
+          No hay estudiantes inscriptos para los filtros seleccionados.
+        </div>
       )}
 
       {feedback.open && (

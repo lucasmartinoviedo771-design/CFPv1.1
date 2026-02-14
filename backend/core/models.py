@@ -73,11 +73,13 @@ class SemanaConfig(TimeStamped):
     PARCIAL = "PARCIAL"
     FINAL_VIRTUAL = "FINAL_VIRTUAL"
     FINAL_SINC = "FINAL_SINC"
+    SIN_ACTIVIDADES = "SIN_ACTIVIDADES"
     TIPOS_SEMANA = [
         (CLASE, "Clase"),
         (PARCIAL, "Parcial"),
         (FINAL_VIRTUAL, "Final Virtual"),
         (FINAL_SINC, "Final Sincrónico"),
+        (SIN_ACTIVIDADES, "Sin Actividades"),
     ]
 
     bloque = models.ForeignKey(BloqueDeFechas, on_delete=models.CASCADE, related_name='semanas_config')
@@ -93,12 +95,27 @@ class SemanaConfig(TimeStamped):
 
 class Cohorte(TimeStamped):
     programa = models.ForeignKey(Programa, on_delete=models.CASCADE, related_name="cohortes")
+    bloque = models.ForeignKey(
+        "Bloque",
+        on_delete=models.PROTECT,
+        related_name="cohortes",
+        null=True,
+        blank=True,
+        help_text="Bloque académico al que aplica esta cohorte",
+    )
     bloque_fechas = models.ForeignKey(BloqueDeFechas, on_delete=models.PROTECT, related_name="cohortes", help_text="Plantilla de calendario a usar")
-    nombre = models.CharField(max_length=100, unique=True)
+    nombre = models.CharField(max_length=100)
     fecha_inicio = models.DateField(help_text="Fecha de inicio de esta cohorte", default=timezone.now)
+    fecha_fin = models.DateField(null=True, blank=True, help_text="Fecha de fin calculada o definida para la cohorte")
 
     class Meta:
         ordering = ["-fecha_inicio"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["programa", "bloque", "nombre"],
+                name="uniq_cohorte_programa_bloque_nombre",
+            )
+        ]
 
     def __str__(self):
         return self.nombre

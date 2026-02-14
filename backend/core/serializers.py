@@ -1,4 +1,5 @@
 # backend/core/serializers.py
+import re
 from rest_framework import serializers
 from django.db.models import Q, Avg, Count
 from .models import (
@@ -98,11 +99,21 @@ class ProgramaSerializer(serializers.ModelSerializer):
         model = Programa
         fields = ['id', 'codigo', 'nombre', 'activo', 'resolucion', 'resolucion_id']
 
+
+class CohorteBloqueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bloque
+        fields = ['id', 'nombre']
+
 class CohorteSerializer(serializers.ModelSerializer):
     programa = ProgramaSerializer(read_only=True)
+    bloque = CohorteBloqueSerializer(read_only=True)
     bloque_fechas = BloqueDeFechasSerializer(read_only=True)
     programa_id = serializers.PrimaryKeyRelatedField(
         queryset=Programa.objects.all(), source='programa', write_only=True
+    )
+    bloque_id = serializers.PrimaryKeyRelatedField(
+        queryset=Bloque.objects.all(), source='bloque', write_only=True, required=False, allow_null=True
     )
     bloque_fechas_id = serializers.PrimaryKeyRelatedField(
         queryset=BloqueDeFechas.objects.all(), source='bloque_fechas', write_only=True
@@ -110,7 +121,18 @@ class CohorteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cohorte
-        fields = ['id', 'nombre', 'programa', 'bloque_fechas', 'programa_id', 'bloque_fechas_id']
+        fields = [
+            'id',
+            'nombre',
+            'fecha_inicio',
+            'fecha_fin',
+            'programa',
+            'bloque',
+            'bloque_fechas',
+            'programa_id',
+            'bloque_id',
+            'bloque_fechas_id',
+        ]
 
 class ExamenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -127,6 +149,15 @@ class ModuloSerializer(serializers.ModelSerializer):
     bloque_id = serializers.PrimaryKeyRelatedField(
         queryset=Bloque.objects.all(), source='bloque', write_only=True
     )
+
+    def validate(self, attrs):
+        # Blindaje adicional: no aceptar fechas en módulos por ninguna vía de escritura.
+        if hasattr(self, "initial_data"):
+            if "fecha_inicio" in self.initial_data or "fecha_fin" in self.initial_data:
+                raise serializers.ValidationError(
+                    "No se permite definir fechas en módulos. Use Cohortes/Calendario."
+                )
+        return super().validate(attrs)
 
     class Meta:
         model = Modulo
@@ -180,6 +211,81 @@ class InscripcionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Inscripcion
         fields = ['id', 'estudiante', 'cohorte', 'modulo', 'estudiante_id', 'cohorte_id', 'modulo_id', 'estado', 'created_at', 'updated_at']
+
+    @staticmethod
+    def _modulo_nivel(modulo: Modulo, modulos_bloque):
+        """
+        Determina nivel de módulo:
+        1) intenta parsear del nombre (Módulo 1 / Módulo I / Modulo II)
+        2) fallback al orden por id dentro del bloque (1-based)
+        """
+        nombre = (modulo.nombre or "").strip().upper()
+        # Captura "MODULO 2", "MÓDULO II", etc.
+        m = re.search(r"M[ÓO]DULO\s*([0-9]+|[IVXLCDM]+)\b", nombre)
+        if m:
+            token = m.group(1)
+            if token.isdigit():
+                return int(token)
+            roman_map = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+            total = 0
+            prev = 0
+            for ch in reversed(token):
+                val = roman_map.get(ch, 0)
+                if val < prev:
+                    total -= val
+                else:
+                    total += val
+                    prev = val
+            if total > 0:
+                return total
+
+        ids = [m.id for m in modulos_bloque]
+        try:
+            return ids.index(modulo.id) + 1
+        except ValueError:
+            return 1
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+
+        estudiante = attrs.get("estudiante") or getattr(self.instance, "estudiante", None)
+        modulo = attrs.get("modulo") or getattr(self.instance, "modulo", None)
+
+        # Si la inscripción no apunta a módulo, no aplica correlatividad de módulos.
+        if not estudiante or not modulo:
+            return attrs
+
+        modulos_bloque = list(Modulo.objects.filter(bloque_id=modulo.bloque_id).order_by("id"))
+        nivel_actual = self._modulo_nivel(modulo, modulos_bloque)
+        if nivel_actual <= 1:
+            return attrs
+
+        # Módulos aprobados por el estudiante en este bloque (según notas aprobadas).
+        aprobados = set(
+            Nota.objects.filter(
+                estudiante=estudiante,
+                examen__modulo__bloque_id=modulo.bloque_id,
+                aprobado=True,
+            ).values_list("examen__modulo_id", flat=True)
+        )
+
+        faltantes = []
+        for m in modulos_bloque:
+            nivel_m = self._modulo_nivel(m, modulos_bloque)
+            if nivel_m < nivel_actual and m.id not in aprobados:
+                faltantes.append(m.nombre)
+
+        if faltantes:
+            raise serializers.ValidationError(
+                {
+                    "modulo_id": (
+                        f"No se puede inscribir en '{modulo.nombre}' sin aprobar antes: "
+                        f"{', '.join(faltantes)}."
+                    )
+                }
+            )
+
+        return attrs
 
 class NotaSerializer(serializers.ModelSerializer):
     examen_modulo_nombre = serializers.CharField(source="examen.modulo.nombre", read_only=True, allow_null=True)

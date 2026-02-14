@@ -4,6 +4,8 @@ import { Select, Button } from '../components/UI';
 import { Users, BookOpen, UserCheck } from 'lucide-react';
 import { getDashboardStats } from '../services/dashboardService';
 import { getEnrollments } from '../services/analyticsService';
+import { listProgramas } from '../services/programasService';
+import api from '../api/client';
 
 const KPICard = ({ title, value, icon: Icon, color }) => (
   <div className="relative overflow-hidden rounded-xl bg-indigo-900/20 border border-indigo-500/30 backdrop-blur-sm p-6">
@@ -45,19 +47,56 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [trendData, setTrendData] = useState([]);
   const [error, setError] = useState(null);
+  const [programas, setProgramas] = useState([]);
+  const [bloques, setBloques] = useState([]);
+  const [cohortes, setCohortes] = useState([]);
+  const [programaId, setProgramaId] = useState('');
+  const [bloqueId, setBloqueId] = useState('');
+  const [cohorteId, setCohorteId] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const progs = await listProgramas();
+        setProgramas(Array.isArray(progs) ? progs : []);
+      } catch (err) {
+        console.error('Error cargando programas para dashboard', err);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [bloquesRes, cohortesRes] = await Promise.all([
+          api.get('/bloques', { params: { programa_id: programaId || undefined } }),
+          api.get('/inscripciones/cohortes', { params: { programa_id: programaId || undefined } }),
+        ]);
+        setBloques(Array.isArray(bloquesRes.data) ? bloquesRes.data : []);
+        setCohortes(Array.isArray(cohortesRes.data) ? cohortesRes.data : []);
+      } catch (err) {
+        console.error('Error cargando bloques/cohortes para dashboard', err);
+      }
+    })();
+  }, [programaId]);
 
   useEffect(() => {
     let mounted = true;
-
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
       try {
+        const params = {
+          programa_id: programaId || undefined,
+          bloque_id: bloqueId || undefined,
+          cohorte_id: cohorteId || undefined,
+        };
         const [statsResponse, enrollmentResponse] = await Promise.all([
-          getDashboardStats(),
-          getEnrollments({ group_by: 'month' }),
+          getDashboardStats(params),
+          getEnrollments({ ...params, group_by: 'month' }),
         ]);
 
         if (!mounted) return;
-
         setStats(statsResponse);
 
         const parsedTrend = (enrollmentResponse?.series || []).map((item) => {
@@ -65,13 +104,8 @@ export default function Dashboard() {
           const monthLabel = parsedDate && !Number.isNaN(parsedDate.getTime())
             ? parsedDate.toLocaleString('es-AR', { month: 'short' })
             : item.period || 'N/D';
-
-          return {
-            month: monthLabel,
-            inscritos: item.count,
-          };
+          return { month: monthLabel, inscritos: item.count };
         });
-
         setTrendData(parsedTrend);
       } catch (err) {
         console.error('Error cargando metricas del dashboard', err);
@@ -80,13 +114,9 @@ export default function Dashboard() {
         if (mounted) setLoading(false);
       }
     };
-
     fetchData();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    return () => { mounted = false; };
+  }, [programaId, bloqueId, cohorteId]);
 
   if (loading) {
     return (
@@ -107,20 +137,41 @@ export default function Dashboard() {
   const chartAxisStroke = "#818cf8";
   const chartGridStroke = "#312e81";
   const tooltipStyle = { backgroundColor: '#1e1b4b', border: '1px solid #4f46e5', borderRadius: '8px', color: '#fff' };
+  const programasOptions = [{ value: '', label: 'Todos' }, ...programas.map((p) => ({ value: p.id, label: p.nombre }))];
+  const bloquesOptions = [{ value: '', label: 'Todos' }, ...bloques.map((b) => ({ value: b.id, label: b.nombre }))];
+  const cohortesOptions = [{ value: '', label: 'Todos' }, ...cohortes.map((c) => ({ value: c.id, label: c.nombre }))];
 
   return (
     <div className="space-y-8 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Dashboard General</h1>
-          <p className="text-indigo-300 mt-1">Resumen de actividad academica y metricas clave.</p>
-        </div>
-        <div className="flex space-x-3">
+      <div>
+        <h1 className="text-3xl font-bold text-white tracking-tight">Dashboard General</h1>
+        <p className="text-indigo-300 mt-1">Resumen de actividad academica y metricas clave.</p>
+      </div>
+
+      <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-end">
           <Select
-            options={[{ value: '2025', label: 'Ciclo 2025' }, { value: '2024', label: 'Ciclo 2024' }]}
-            className="w-40 bg-indigo-900/50 border-indigo-500/50 text-white"
+            label="Programa"
+            options={programasOptions}
+            value={programaId}
+            onChange={(e) => { setProgramaId(e.target.value); setBloqueId(''); setCohorteId(''); }}
+            className="bg-indigo-900/50 border-indigo-500/50 text-white"
           />
-          <Button className="bg-brand-accent hover:bg-orange-600 border-none shadow-[0_0_15px_rgba(255,102,0,0.4)]">
+          <Select
+            label="Bloque"
+            options={bloquesOptions}
+            value={bloqueId}
+            onChange={(e) => setBloqueId(e.target.value)}
+            className="bg-indigo-900/50 border-indigo-500/50 text-white"
+          />
+          <Select
+            label="Cohorte"
+            options={cohortesOptions}
+            value={cohorteId}
+            onChange={(e) => setCohorteId(e.target.value)}
+            className="bg-indigo-900/50 border-indigo-500/50 text-white"
+          />
+          <Button className="h-11 bg-brand-accent hover:bg-orange-600 border-none shadow-[0_0_15px_rgba(255,102,0,0.4)]">
             Exportar Reporte
           </Button>
         </div>

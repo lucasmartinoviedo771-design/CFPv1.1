@@ -1,7 +1,7 @@
 from typing import Dict, List
-from ninja import Router
+from ninja import Router, Schema
 from django.shortcuts import get_object_or_404
-from django.db.models import Prefetch
+from django.db.models import Q
 
 from core.models import Cohorte, Nota, Asistencia, Inscripcion, Examen, Modulo, Bloque
 from core.api.permissions import require_authenticated_group
@@ -10,27 +10,50 @@ from core.serializers import NotaSerializer
 router = Router(tags=["historicos"])
 
 
-def _cohorte_programa(cohorte_id: int):
-    cohorte = get_object_or_404(Cohorte.objects.select_related("programa"), pk=cohorte_id)
-    return cohorte, cohorte.programa
+class HistoricoCursosResponse(Schema):
+    headers: List[str]
+    rows: List[dict]
 
 
-@router.get("/historico-cursos", response=Dict[str, List[dict]])
+@router.get("/historico-cursos", response=HistoricoCursosResponse)
 @require_authenticated_group
-def historico_cursos(request, cohorte_id: int, tipo_dato: str = "notas"):
-    """Devuelve historial de notas o asistencia para una cohorte.
+def historico_cursos(
+    request,
+    tipo_dato: str = "notas",
+    programa_id: int = None,
+    bloque_id: int = None,
+    cohorte_id: int = None,
+):
+    """Devuelve historial de notas o asistencia con filtros opcionales por programa/bloque/cohorte.
 
     Respuesta: {"headers": [...], "rows": [ {header: valor, ...}, ... ]}
     """
-    cohorte, programa = _cohorte_programa(cohorte_id)
+    inscripciones_qs = Inscripcion.objects.select_related("cohorte", "cohorte__programa", "modulo", "modulo__bloque")
+    if programa_id:
+        inscripciones_qs = inscripciones_qs.filter(cohorte__programa_id=programa_id)
+    if cohorte_id:
+        inscripciones_qs = inscripciones_qs.filter(cohorte_id=cohorte_id)
+    if bloque_id:
+        inscripciones_qs = inscripciones_qs.filter(modulo__bloque_id=bloque_id)
+
+    student_ids = list(inscripciones_qs.values_list("estudiante_id", flat=True).distinct())
+    student_cohortes_map = {}
+    for ins in inscripciones_qs:
+        student_cohortes_map.setdefault(ins.estudiante_id, set()).add(ins.cohorte.nombre)
+
     tipo = (tipo_dato or "notas").lower()
 
     if tipo == "asistencia":
         qs = (
-            Asistencia.objects.filter(estudiante__inscripciones__cohorte_id=cohorte_id)
+            Asistencia.objects.filter(estudiante_id__in=student_ids)
             .select_related("estudiante", "modulo", "modulo__bloque", "modulo__bloque__programa")
             .order_by("fecha")
         )
+        if programa_id:
+            qs = qs.filter(modulo__bloque__programa_id=programa_id)
+        if bloque_id:
+            qs = qs.filter(modulo__bloque_id=bloque_id)
+
         headers = ["ID", "Estudiante", "DNI", "Programa", "Cohorte", "Bloque", "Módulo", "Fecha", "Presente"]
         rows = []
         for a in qs:
@@ -39,8 +62,8 @@ def historico_cursos(request, cohorte_id: int, tipo_dato: str = "notas"):
                 "ID": a.id,
                 "Estudiante": f"{a.estudiante.apellido}, {a.estudiante.nombre}",
                 "DNI": a.estudiante.dni,
-                "Programa": bloque.programa.nombre if bloque and bloque.programa else programa.nombre,
-                "Cohorte": cohorte.nombre,
+                "Programa": bloque.programa.nombre if bloque and bloque.programa else "",
+                "Cohorte": ", ".join(sorted(student_cohortes_map.get(a.estudiante_id, set()))),
                 "Bloque": bloque.nombre if bloque else "",
                 "Módulo": a.modulo.nombre if a.modulo else "",
                 "Fecha": a.fecha.isoformat() if a.fecha else "",
@@ -50,7 +73,7 @@ def historico_cursos(request, cohorte_id: int, tipo_dato: str = "notas"):
 
     # default: notas
     qs = (
-        Nota.objects.filter(estudiante__inscripciones__cohorte_id=cohorte_id)
+        Nota.objects.filter(estudiante_id__in=student_ids)
         .select_related(
             "estudiante",
             "examen",
@@ -61,6 +84,15 @@ def historico_cursos(request, cohorte_id: int, tipo_dato: str = "notas"):
         )
         .order_by("fecha_calificacion")
     )
+    if programa_id:
+        qs = qs.filter(
+            Q(examen__bloque__programa_id=programa_id) | Q(examen__modulo__bloque__programa_id=programa_id)
+        )
+    if bloque_id:
+        qs = qs.filter(
+            Q(examen__bloque_id=bloque_id) | Q(examen__modulo__bloque_id=bloque_id)
+        )
+
     headers = ["ID", "Estudiante", "DNI", "Programa", "Cohorte", "Bloque", "Módulo", "Examen", "Calificación", "Aprobado", "Fecha"]
     rows = []
     for n in qs:
@@ -70,8 +102,8 @@ def historico_cursos(request, cohorte_id: int, tipo_dato: str = "notas"):
             "ID": n.id,
             "Estudiante": f"{n.estudiante.apellido}, {n.estudiante.nombre}",
             "DNI": n.estudiante.dni,
-            "Programa": bloque.programa.nombre if bloque and bloque.programa else programa.nombre,
-            "Cohorte": cohorte.nombre,
+            "Programa": bloque.programa.nombre if bloque and bloque.programa else "",
+            "Cohorte": ", ".join(sorted(student_cohortes_map.get(n.estudiante_id, set()))),
             "Bloque": bloque.nombre if bloque else "",
             "Módulo": modulo.nombre if modulo else "",
             "Examen": n.examen.tipo_examen,

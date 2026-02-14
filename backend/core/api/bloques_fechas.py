@@ -18,6 +18,16 @@ class SecuenciaPayload(Schema):
     semanas: List[SemanaInput]
 
 
+class BloqueFechasCreatePayload(Schema):
+    nombre: str
+    descripcion: str = ""
+
+
+class BloqueFechasUpdatePayload(Schema):
+    nombre: str | None = None
+    descripcion: str | None = None
+
+
 @router.get("", response=List[dict])
 @require_authenticated_group
 def listar_bloques_fechas(request):
@@ -34,8 +44,8 @@ def detalle_bloque_fechas(request, bloque_id: int):
 
 @router.post("", response=dict)
 @require_authenticated_group
-def crear_bloque_fechas(request, payload: dict):
-    serializer = BloqueDeFechasSerializer(data=payload)
+def crear_bloque_fechas(request, payload: BloqueFechasCreatePayload):
+    serializer = BloqueDeFechasSerializer(data=payload.dict())
     serializer.is_valid(raise_exception=True)
     bloque = serializer.save()
     return detalle_bloque_fechas(request, bloque.id)
@@ -44,9 +54,9 @@ def crear_bloque_fechas(request, payload: dict):
 @router.put("/{bloque_id}", response=dict)
 @router.patch("/{bloque_id}", response=dict)
 @require_authenticated_group
-def actualizar_bloque_fechas(request, bloque_id: int, payload: dict):
+def actualizar_bloque_fechas(request, bloque_id: int, payload: BloqueFechasUpdatePayload):
     bloque = get_object_or_404(BloqueDeFechas, pk=bloque_id)
-    serializer = BloqueDeFechasSerializer(instance=bloque, data=payload, partial=True)
+    serializer = BloqueDeFechasSerializer(instance=bloque, data=payload.dict(exclude_none=True), partial=True)
     serializer.is_valid(raise_exception=True)
     bloque = serializer.save()
     return detalle_bloque_fechas(request, bloque.id)

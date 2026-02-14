@@ -15,6 +15,7 @@ const SEMANA_TIPOS = [
   { id: 'PARCIAL', label: 'Parcial' },
   { id: 'FINAL_VIRTUAL', label: 'Final Virtual' },
   { id: 'FINAL_SINC', label: 'Final Sincrónico' },
+  { id: 'SIN_ACTIVIDADES', label: 'Sin Actividades' },
 ];
 
 export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSuccess }) {

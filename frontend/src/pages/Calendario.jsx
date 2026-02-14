@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import {
   Box, Typography, Button, CircularProgress, Snackbar, Alert, Tooltip, IconButton
 } from '@mui/material';
@@ -10,9 +10,11 @@ import {
 import api from '../api/client';
 import SecuenciaFormDialog from '../components/SecuenciaFormDialog';
 import BloqueFormDialog from '../components/BloqueFormDialog';
+import { ThemeModeContext } from '../App';
 
 // --- Main Calendario Page Component ---
 export default function Calendario() {
+  const { mode } = useContext(ThemeModeContext);
   const [bloques, setBloques] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openBloqueDialog, setOpenBloqueDialog] = useState(false);
@@ -108,17 +110,45 @@ export default function Calendario() {
       ) : (
         <Box>
           {bloques.map(bloque => (
-            <Box key={bloque.id} sx={{ mb: 2, p: 2, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.05)', color: 'white' }}>
+            <Box
+              key={bloque.id}
+              sx={{
+                mb: 2,
+                p: 2,
+                border: mode === 'light' ? '1px solid rgba(14,116,144,0.35)' : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 1,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                bgcolor: mode === 'light' ? 'rgba(190,230,255,0.6)' : 'rgba(255,255,255,0.05)',
+                color: mode === 'light' ? '#0b1324' : 'white',
+                boxShadow: mode === 'light' ? '0 1px 0 rgba(14,116,144,0.12), 0 6px 18px rgba(14,116,144,0.08)' : 'none',
+              }}
+            >
               <div>
-                <Typography variant="h6" sx={{ color: 'white' }}>{bloque.nombre}</Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography variant="h6" sx={{ color: mode === 'light' ? '#0b1324' : 'white' }}>{bloque.nombre}</Typography>
+                <Typography variant="body2" sx={{ color: mode === 'light' ? 'rgba(11,19,36,0.8)' : 'rgba(255,255,255,0.7)' }}>
                   {bloque.descripcion || 'Sin descripción'}
                 </Typography>
               </div>
               <div>
-                <Button sx={{ mr: 1, color: 'white', borderColor: 'rgba(255,255,255,0.3)' }} variant="outlined" onClick={() => handleOpenSecuencia(bloque)}>Gestionar Secuencia</Button>
-                <Tooltip title="Editar Bloque"><IconButton onClick={() => handleEditBloque(bloque)}><EditOutlinedIcon sx={{ color: 'white' }} /></IconButton></Tooltip>
-                <Tooltip title="Eliminar Bloque"><IconButton onClick={() => handleDeleteBloque(bloque.id)}><DeleteOutlineRoundedIcon sx={{ color: 'white' }} /></IconButton></Tooltip>
+                <Button
+                  sx={{
+                    mr: 1,
+                    color: mode === 'light' ? '#0b1324' : 'white',
+                    borderColor: mode === 'light' ? 'rgba(14,116,144,0.45)' : 'rgba(255,255,255,0.3)',
+                    bgcolor: mode === 'light' ? 'rgba(190,230,255,0.6)' : 'transparent',
+                    '&:hover': {
+                      bgcolor: mode === 'light' ? 'rgba(173,220,249,0.75)' : 'rgba(255,255,255,0.08)',
+                    },
+                  }}
+                  variant="outlined"
+                  onClick={() => handleOpenSecuencia(bloque)}
+                >
+                  Gestionar Secuencia
+                </Button>
+                <Tooltip title="Editar Bloque"><IconButton onClick={() => handleEditBloque(bloque)}><EditOutlinedIcon sx={{ color: mode === 'light' ? '#0b1324' : 'white' }} /></IconButton></Tooltip>
+                <Tooltip title="Eliminar Bloque"><IconButton onClick={() => handleDeleteBloque(bloque.id)}><DeleteOutlineRoundedIcon sx={{ color: mode === 'light' ? '#0b1324' : 'white' }} /></IconButton></Tooltip>
               </div>
             </Box>
           ))}

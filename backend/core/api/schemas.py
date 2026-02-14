@@ -73,8 +73,6 @@ class ModuloOut(Schema):
 class ModuloIn(Schema):
     bloque_id: int
     nombre: str
-    fecha_inicio: Optional[date] = None
-    fecha_fin: Optional[date] = None
     es_practica: bool
     asistencia_requerida_practica: int
 
@@ -86,20 +84,26 @@ class BloqueDetailOut(BloqueOut):
 class BloqueDeFechasOut(Schema):
     id: int
     nombre: str
-    fecha_inicio: date
+    descripcion: Optional[str] = None
 
 
 class CohorteOut(Schema):
     id: int
     nombre: str
     programa_id: int
+    bloque_id: Optional[int] = None
     bloque_fechas_id: int
+    fecha_inicio: Optional[date] = None
+    fecha_fin: Optional[date] = None
 
 
 class CohorteIn(Schema):
     nombre: str
     programa_id: int
+    bloque_id: Optional[int] = None
     bloque_fechas_id: int
+    fecha_inicio: Optional[date] = None
+    fecha_fin: Optional[date] = None
 
 
 # --- Inputs ---
@@ -228,4 +232,3 @@ class UserOut(Schema):
     @staticmethod
     def resolve_groups(obj):
         return [g.name for g in obj.groups.all()]
-
