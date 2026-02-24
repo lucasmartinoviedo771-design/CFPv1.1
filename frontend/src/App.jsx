@@ -25,6 +25,7 @@ import GraficoCursos from './pages/GraficoCursos';
 import Egresados from './pages/Egresados.jsx';
 import Usuarios from './pages/Usuarios.jsx';
 import Resoluciones from './pages/Resoluciones.jsx';
+import PreinscripcionPublica from './pages/PreinscripcionPublica.jsx';
 
 // Services
 import authService from "./services/authService";
@@ -104,6 +105,7 @@ export default function App() {
             {/* Public Routes */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/preinscripcion" element={<PreinscripcionPublica />} />
 
             {/* Protected Routes */}
             <Route path="/set-password" element={<PrivateRoute><WithLayout title="Actualizar Contraseña"><SetPassword /></WithLayout></PrivateRoute>} />
