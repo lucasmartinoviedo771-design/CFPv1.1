@@ -326,19 +326,19 @@ export default function PreinscripcionPublica() {
                   );
                 })}
               </div>
-              <div className="rounded-xl border border-emerald-500/40 bg-emerald-900/15 p-4">
-                <h3 className="font-bold text-emerald-300 mb-2">Resumen de inscripción</h3>
+              <div className="rounded-xl border border-indigo-400/40 bg-indigo-950/30 p-4">
+                <h3 className="font-bold text-indigo-100 mb-2">Resumen de inscripción</h3>
                 {!resumenSeleccion.length ? (
-                  <p className="text-sm text-emerald-100/80">Todavía no seleccionaste una oferta formativa.</p>
+                  <p className="text-sm text-indigo-200/80">Todavía no seleccionaste una oferta formativa.</p>
                 ) : (
-                  <div className="text-sm text-emerald-100 space-y-2">
+                  <div className="text-sm text-indigo-100 space-y-2">
                     {resumenSeleccion.map(({ programa, bloques }) => (
                       <div key={programa.programa_id} className="space-y-1">
                         <p><strong>Programa:</strong> {programa.programa_nombre}</p>
                         <p><strong>Bloques seleccionados:</strong> {bloques.length}</p>
                         <ul className="space-y-1">
                           {bloques.map((b) => (
-                            <li key={b.bloque_id} className="rounded bg-emerald-700/20 px-2 py-1">
+                            <li key={b.bloque_id} className="rounded bg-indigo-700/20 px-2 py-1">
                               {b.bloque_nombre} - cohorte automática: {b.cohorte_nombre}
                             </li>
                           ))}
