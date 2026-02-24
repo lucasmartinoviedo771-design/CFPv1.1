@@ -3,6 +3,22 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+import os
+
+def _documento_upload_path(instance, filename, carpeta):
+    _, ext = os.path.splitext(filename or "")
+    ext = (ext or "").lower()
+    dni = str(instance.dni or "sin_dni")
+    return f"preinscripciones/{dni}/{carpeta}{ext}"
+
+
+def dni_upload_path(instance, filename):
+    return _documento_upload_path(instance, filename, "dni")
+
+
+def titulo_upload_path(instance, filename):
+    return _documento_upload_path(instance, filename, "titulo_secundario")
+
 
 class TimeStamped(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -181,12 +197,16 @@ class Estudiante(TimeStamped):
     trabaja = models.BooleanField(default=False)
     lugar_trabajo = models.CharField(max_length=120, blank=True, verbose_name="Lugar de Trabajo")
 
-    # --- Documentación (Links) ---
-    dni_digitalizado = models.URLField(max_length=500, blank=True, verbose_name="DNI digitalizado (Link)")
-    titulo_secundario_digitalizado = models.URLField(
-        max_length=500,
+    # --- Documentación (Archivos) ---
+    dni_digitalizado = models.FileField(
+        upload_to=dni_upload_path,
         blank=True,
-        verbose_name="Título secundario digitalizado (Link)",
+        verbose_name="DNI digitalizado (Archivo)",
+    )
+    titulo_secundario_digitalizado = models.FileField(
+        upload_to=titulo_upload_path,
+        blank=True,
+        verbose_name="Título secundario digitalizado (Archivo)",
     )
 
     def get_approved_bloques(self):

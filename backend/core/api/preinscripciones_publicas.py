@@ -69,6 +69,11 @@ class PreinscripcionOut(Schema):
     mensaje: str
 
 
+MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024
+ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_CONTENT_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
+
+
 def _bloques_aprobados_ids(estudiante_id: int) -> set[int]:
     return set(
         Bloque.objects.filter(
@@ -117,6 +122,53 @@ def _cohortes_habilitadas() -> List[Cohorte]:
         elif actual:
             habilitadas.append(actual)
     return habilitadas
+
+
+def _as_bool(value, default=False):
+    if value is None:
+        return default
+    text = str(value).strip().lower()
+    return text in {"1", "true", "on", "yes", "si", "sí"}
+
+
+def _as_optional_date(value):
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError:
+        raise HttpError(400, "Formato de fecha inválido. Use YYYY-MM-DD.")
+
+
+def _parse_bloque_ids(request) -> List[int]:
+    raw = request.POST.getlist("bloque_ids")
+    if not raw:
+        csv = request.POST.get("bloque_ids", "")
+        if csv:
+            raw = [x.strip() for x in csv.split(",") if x.strip()]
+    bloque_ids = []
+    for value in raw:
+        try:
+            bloque_ids.append(int(value))
+        except ValueError:
+            raise HttpError(400, "bloque_ids contiene valores inválidos.")
+    return bloque_ids
+
+
+def _validar_archivo_documento(file_obj, field_label: str):
+    if not file_obj:
+        return
+    if file_obj.size > MAX_FILE_SIZE_BYTES:
+        raise HttpError(400, f"{field_label}: tamaño máximo permitido 3MB.")
+
+    name = (file_obj.name or "").lower()
+    ext = "." + name.split(".")[-1] if "." in name else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HttpError(400, f"{field_label}: formato no permitido. Use PDF o imagen.")
+
+    content_type = (getattr(file_obj, "content_type", "") or "").lower()
+    if content_type and content_type not in ALLOWED_CONTENT_TYPES:
+        raise HttpError(400, f"{field_label}: tipo de archivo no permitido.")
 
 
 def _validar_correlativas(estudiante_id: int, cohortes: List[Cohorte]):
@@ -169,12 +221,31 @@ def listar_oferta_preinscripcion(request, programa_id: Optional[int] = None):
 
 
 @router.post("", response=PreinscripcionOut, auth=None)
-def crear_preinscripcion_publica(request, payload: PreinscripcionIn):
-    dni = normalize_dni_digits(payload.dni)
+def crear_preinscripcion_publica(request):
+    post = request.POST
+    files = request.FILES
+
+    dni = normalize_dni_digits(post.get("dni", ""))
     if len(dni) != 8:
         raise HttpError(400, "El DNI debe tener 8 dígitos.")
-    if not payload.dni_digitalizado:
-        raise HttpError(400, "Debe adjuntar la copia digitalizada del DNI.")
+
+    try:
+        programa_id = int(post.get("programa_id", "0"))
+    except ValueError:
+        raise HttpError(400, "programa_id inválido.")
+    if not programa_id:
+        raise HttpError(400, "Debe seleccionar un programa.")
+
+    bloque_ids = _parse_bloque_ids(request)
+    if not bloque_ids:
+        raise HttpError(400, "Debe seleccionar al menos un bloque.")
+
+    dni_file = files.get("dni_digitalizado")
+    titulo_file = files.get("titulo_secundario_digitalizado")
+    if not dni_file:
+        raise HttpError(400, "Debe adjuntar archivo de DNI.")
+    _validar_archivo_documento(dni_file, "DNI")
+    _validar_archivo_documento(titulo_file, "Título secundario")
 
     with transaction.atomic():
         estudiante = Estudiante.objects.filter(dni=dni).first()
@@ -182,47 +253,43 @@ def crear_preinscripcion_publica(request, payload: PreinscripcionIn):
             estudiante = Estudiante(dni=dni)
 
         serializer_data = {
-            "email": payload.email,
-            "apellido": payload.apellido,
-            "nombre": payload.nombre,
+            "email": post.get("email", ""),
+            "apellido": post.get("apellido", ""),
+            "nombre": post.get("nombre", ""),
             "dni": dni,
-            "cuit": payload.cuit,
-            "sexo": payload.sexo,
-            "fecha_nacimiento": payload.fecha_nacimiento,
-            "pais_nacimiento": payload.pais_nacimiento,
-            "pais_nacimiento_otro": payload.pais_nacimiento_otro,
-            "nacionalidad": payload.nacionalidad,
-            "nacionalidad_otra": payload.nacionalidad_otra,
-            "lugar_nacimiento": payload.lugar_nacimiento,
-            "domicilio": payload.domicilio,
-            "barrio": payload.barrio,
-            "ciudad": payload.ciudad,
-            "telefono": payload.telefono,
-            "nivel_educativo": payload.nivel_educativo,
-            "posee_pc": payload.posee_pc,
-            "posee_conectividad": payload.posee_conectividad,
-            "puede_traer_pc": payload.puede_traer_pc,
-            "trabaja": payload.trabaja,
-            "lugar_trabajo": payload.lugar_trabajo,
-            "dni_digitalizado": payload.dni_digitalizado,
+            "cuit": post.get("cuit", ""),
+            "sexo": post.get("sexo", ""),
+            "fecha_nacimiento": _as_optional_date(post.get("fecha_nacimiento")),
+            "pais_nacimiento": post.get("pais_nacimiento", ""),
+            "pais_nacimiento_otro": post.get("pais_nacimiento_otro", ""),
+            "nacionalidad": post.get("nacionalidad", ""),
+            "nacionalidad_otra": post.get("nacionalidad_otra", ""),
+            "lugar_nacimiento": post.get("lugar_nacimiento", ""),
+            "domicilio": post.get("domicilio", ""),
+            "barrio": post.get("barrio", ""),
+            "ciudad": post.get("ciudad", ""),
+            "telefono": post.get("telefono", ""),
+            "nivel_educativo": post.get("nivel_educativo", ""),
+            "posee_pc": _as_bool(post.get("posee_pc"), False),
+            "posee_conectividad": _as_bool(post.get("posee_conectividad"), False),
+            "puede_traer_pc": _as_bool(post.get("puede_traer_pc"), False),
+            "trabaja": _as_bool(post.get("trabaja"), False),
+            "lugar_trabajo": post.get("lugar_trabajo", ""),
         }
-
-        if payload.titulo_secundario_digitalizado:
-            serializer_data["titulo_secundario_digitalizado"] = payload.titulo_secundario_digitalizado
 
         serializer = EstudianteSerializer(instance=estudiante, data=serializer_data, partial=True)
         serializer.is_valid(raise_exception=True)
         estudiante = serializer.save()
 
         cohortes_habilitadas = [
-            c for c in _cohortes_habilitadas() if c.programa_id == payload.programa_id
+            c for c in _cohortes_habilitadas() if c.programa_id == programa_id
         ]
         if not cohortes_habilitadas:
             raise HttpError(400, "El programa seleccionado no tiene cohortes habilitadas.")
 
         cohortes_por_bloque = {c.bloque_id: c for c in cohortes_habilitadas}
         bloques_disponibles = set(cohortes_por_bloque.keys())
-        bloques_seleccionados = payload.bloque_ids or sorted(list(bloques_disponibles))
+        bloques_seleccionados = bloque_ids or sorted(list(bloques_disponibles))
         bloques_seleccionados = [int(b) for b in bloques_seleccionados]
 
         if not bloques_seleccionados:
@@ -234,19 +301,22 @@ def crear_preinscripcion_publica(request, payload: PreinscripcionIn):
 
         _validar_correlativas(estudiante.id, cohortes)
         requiere_titulo = any(c.programa.requiere_titulo_secundario for c in cohortes)
-        if requiere_titulo and not (payload.titulo_secundario_digitalizado or estudiante.titulo_secundario_digitalizado):
+        if requiere_titulo and not (titulo_file or estudiante.titulo_secundario_digitalizado):
             raise HttpError(
                 400,
-                "Al menos una preinscripción seleccionada requiere título secundario digitalizado.",
+                "Al menos un bloque seleccionado requiere archivo de título secundario.",
             )
 
-        if requiere_titulo and payload.titulo_secundario_digitalizado:
-            estudiante.titulo_secundario_digitalizado = payload.titulo_secundario_digitalizado
+        estudiante.dni_digitalizado = dni_file
+        if titulo_file:
+            estudiante.titulo_secundario_digitalizado = titulo_file
 
-        if estudiante.estatus in ("", "Preinscripto"):
-            estudiante.estatus = "Preinscripto"
+        estudiante.estatus = "Preinscripto"
 
-        estudiante.save(update_fields=["dni_digitalizado", "titulo_secundario_digitalizado", "estatus", "updated_at"])
+        update_fields = ["dni_digitalizado", "estatus", "updated_at"]
+        if titulo_file:
+            update_fields.append("titulo_secundario_digitalizado")
+        estudiante.save(update_fields=update_fields)
 
         inscripciones_creadas = []
         inscripciones_existentes = []
