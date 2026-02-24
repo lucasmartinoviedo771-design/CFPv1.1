@@ -14,6 +14,18 @@ function validateFile(file, label) {
   return "";
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isProgramacionII(bloqueNombre) {
+  return normalizeText(bloqueNombre).includes("programacion ii");
+}
+
 export default function PreinscripcionPublica() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,10 +96,18 @@ export default function PreinscripcionPublica() {
 
   const openPrograma = (p) => {
     const id = String(p.programa_id);
-    setProgramaId(id);
+    const isSame = String(programaId) === id;
     setExpandedProgramaId((curr) => (curr === id ? "" : id));
+
+    if (isSame) {
+      setProgramaId("");
+      setBloqueIds([]);
+      return;
+    }
+
+    setProgramaId(id);
     const defaultBloques = (p.bloques || [])
-      .filter((b) => (b.correlativas_ids || []).length === 0)
+      .filter((b) => (b.correlativas_ids || []).length === 0 && !isProgramacionII(b.bloque_nombre))
       .map((b) => b.bloque_id);
     setBloqueIds(defaultBloques);
   };
@@ -164,7 +184,7 @@ export default function PreinscripcionPublica() {
       <div className="lines-bg"><div className="line"></div><div className="line"></div><div className="line"></div></div>
 
       <div className="flex-grow pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className="max-w-[1500px] mx-auto space-y-6">
           <div className="animate-fade-in-up">
             <div className="inline-block px-4 py-1 rounded-full border border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan text-xs font-bold tracking-wider uppercase mb-3">
               Inscripciones Abiertas
@@ -181,11 +201,16 @@ export default function PreinscripcionPublica() {
           <form onSubmit={onSubmit} className="space-y-6 bg-brand-primary/20 backdrop-blur-sm border border-white/10 rounded-2xl p-6 md:p-8">
             <section className="space-y-3">
               <h2 className="text-xl font-bold">Oferta Formativa</h2>
-              <p className="text-sm text-indigo-200">Seleccioná un programa. Sus bloques se marcan por defecto excepto los que tienen correlativas.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <p className="text-sm text-indigo-200">Primero seleccioná una oferta. Al seleccionarla se tildan sus bloques por defecto (excepto correlativas).</p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {oferta.map((p) => {
                   const active = String(p.programa_id) === String(programaId);
                   const expanded = String(p.programa_id) === String(expandedProgramaId);
+                  const bloquesOrdenados = [...(p.bloques || [])].sort((a, b) => {
+                    const aLast = isProgramacionII(a.bloque_nombre) ? 1 : 0;
+                    const bLast = isProgramacionII(b.bloque_nombre) ? 1 : 0;
+                    return aLast - bLast;
+                  });
                   return (
                     <div key={p.programa_id} className={`rounded-xl border p-4 ${active ? "border-brand-cyan bg-indigo-950/50" : "border-white/10 bg-black/30"}`}>
                       <button
@@ -202,19 +227,24 @@ export default function PreinscripcionPublica() {
 
                       {expanded ? (
                         <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
-                          {(p.bloques || []).map((b) => {
+                          {bloquesOrdenados.map((b) => {
                             const hasCorrelativas = (b.correlativas_ids || []).length > 0;
+                            const programacionIILocked = isProgramacionII(b.bloque_nombre);
                             const checked = bloqueIds.includes(b.bloque_id);
                             return (
                               <label key={b.bloque_id} className="flex items-start gap-2 text-sm text-indigo-100">
                                 <input
                                   type="checkbox"
                                   checked={checked}
+                                  disabled={programacionIILocked}
                                   onChange={() => toggleBloque(b.bloque_id)}
                                 />
                                 <span>
                                   <strong>{b.bloque_nombre}</strong> - cohorte automática: {b.cohorte_nombre}
-                                  {hasCorrelativas ? <em className="block text-amber-300">No se selecciona por defecto (requiere correlativas)</em> : null}
+                                  {programacionIILocked ? (
+                                    <em className="block text-amber-300">Requiere Programación I y Base de Datos aprobada.</em>
+                                  ) : null}
+                                  {hasCorrelativas && !programacionIILocked ? <em className="block text-amber-300">No se selecciona por defecto (requiere correlativas)</em> : null}
                                 </span>
                               </label>
                             );
