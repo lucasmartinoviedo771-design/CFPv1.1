@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 import json
 from typing import List, Optional
+import unicodedata
 
 from django.db import transaction
 from ninja import Router, Schema
@@ -73,6 +74,16 @@ class PreinscripcionOut(Schema):
 MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_CONTENT_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
+
+
+def _normalize_text(value: str) -> str:
+    text = unicodedata.normalize("NFD", str(value or ""))
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+    return text.strip().lower()
+
+
+def _programa_requiere_titulo(programa) -> bool:
+    return bool(programa.requiere_titulo_secundario) or _normalize_text(programa.nombre) == "programador de nivel iii"
 
 
 def _bloques_aprobados_ids(estudiante_id: int) -> set[int]:
@@ -234,7 +245,7 @@ def listar_oferta_preinscripcion(request, programa_id: Optional[int] = None):
             items_map[c.programa_id] = {
                 "programa_id": c.programa_id,
                 "programa_nombre": c.programa.nombre,
-                "requiere_titulo_secundario": c.programa.requiere_titulo_secundario,
+                "requiere_titulo_secundario": _programa_requiere_titulo(c.programa),
                 "bloques": [],
             }
         items_map[c.programa_id]["bloques"].append(
@@ -333,7 +344,7 @@ def crear_preinscripcion_publica(request):
             cohortes.extend([cohortes_por_bloque[b] for b in bloques_seleccionados])
 
         _validar_correlativas(estudiante.id, cohortes)
-        requiere_titulo = any(c.programa.requiere_titulo_secundario for c in cohortes)
+        requiere_titulo = any(_programa_requiere_titulo(c.programa) for c in cohortes)
         if requiere_titulo and not (titulo_file or estudiante.titulo_secundario_digitalizado):
             raise HttpError(
                 400,

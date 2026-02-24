@@ -34,6 +34,10 @@ function isProgramacionII(bloqueNombre) {
   return normalizeText(bloqueNombre).includes("programacion ii");
 }
 
+function isProgramadorNivelIII(programaNombre) {
+  return normalizeText(programaNombre) === "programador de nivel iii";
+}
+
 function DropFileField({ label, required, file, onFileChange, isDark }) {
   const [dragOver, setDragOver] = useState(false);
 
@@ -167,7 +171,9 @@ export default function PreinscripcionPublica() {
       }),
     [oferta]
   );
-  const requiereTitulo = selectedProgramas.some((p) => Boolean(p.requiere_titulo_secundario));
+  const requiereTitulo = selectedProgramas.some(
+    (p) => Boolean(p.requiere_titulo_secundario) || isProgramadorNivelIII(p.programa_nombre)
+  );
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -177,14 +183,20 @@ export default function PreinscripcionPublica() {
   const openPrograma = (p) => {
     const id = String(p.programa_id);
     const isSelected = selectedProgramaIds.includes(id);
-    setExpandedProgramaId((curr) => (curr === id ? "" : id));
 
     if (isSelected) {
       setSelectedProgramaIds((prev) => prev.filter((x) => x !== id));
+      setBloquesPorPrograma((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setExpandedProgramaId((curr) => (curr === id ? "" : curr));
       return;
     }
 
     setSelectedProgramaIds((prev) => [...prev, id]);
+    setExpandedProgramaId(id);
     const prevSeleccion = bloquesPorPrograma[id];
     if (Array.isArray(prevSeleccion)) return;
     const defaultBloques = (p.bloques || [])
@@ -195,6 +207,7 @@ export default function PreinscripcionPublica() {
 
   const toggleBloque = (programaId, bloqueId) => {
     const key = String(programaId);
+    if (!selectedProgramaSet.has(key)) return;
     const actuales = bloquesPorPrograma[key] || [];
     const next = (() => {
       const exists = actuales.includes(bloqueId);
@@ -301,7 +314,17 @@ export default function PreinscripcionPublica() {
 
   return (
     <div className={`flex flex-col min-h-screen ${theme.page}`}>
-      <Navbar />
+      <Navbar
+        rightSlot={
+          <button
+            type="button"
+            onClick={() => setIsDark((v) => !v)}
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${isDark ? "border-indigo-400/40 bg-indigo-900/30 text-indigo-100" : "border-slate-300 bg-white text-slate-700"}`}
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />} {isDark ? "Vista clara" : "Vista oscura"}
+          </button>
+        }
+      />
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className={`absolute top-0 left-0 w-full h-full ${isDark ? "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#0a0033] to-[#0a0033]" : "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-200 via-slate-100 to-slate-100"}`}></div>
       </div>
@@ -309,11 +332,6 @@ export default function PreinscripcionPublica() {
       <div className="relative z-10 flex-grow pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1500px] mx-auto space-y-6">
           <div className="animate-fade-in-up">
-            <div className="flex justify-end mb-3">
-              <button type="button" onClick={() => setIsDark((v) => !v)} className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${isDark ? "border-indigo-400/40 bg-indigo-900/30 text-indigo-100" : "border-slate-300 bg-white text-slate-700"}`}>
-                {isDark ? <Sun size={16} /> : <Moon size={16} />} {isDark ? "Vista clara" : "Vista oscura"}
-              </button>
-            </div>
             <div className="inline-block px-4 py-1 rounded-full border border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan text-xs font-bold tracking-wider uppercase mb-3">
               Inscripciones Abiertas
             </div>
@@ -326,7 +344,7 @@ export default function PreinscripcionPublica() {
           {error ? <div className="rounded-lg bg-red-500/20 border border-red-400/30 px-4 py-3">{error}</div> : null}
           {ok ? <div className="rounded-lg bg-emerald-500/20 border border-emerald-400/30 px-4 py-3">{ok}</div> : null}
 
-          <form onSubmit={onSubmit} className={`space-y-6 border rounded-2xl p-6 md:p-8 ${theme.section}`}>
+          <form onSubmit={onSubmit} className={`preins-form ${isDark ? "preins-dark" : "preins-light"} space-y-6 border rounded-2xl p-6 md:p-8 ${theme.section}`}>
             <section className="space-y-3">
               <h2 className={`text-xl font-bold ${theme.title}`}>Oferta Formativa</h2>
               <p className={`text-sm ${theme.help}`}>Primero seleccioná una oferta. Al seleccionarla se tildan sus bloques por defecto (excepto correlativas).</p>
@@ -334,7 +352,7 @@ export default function PreinscripcionPublica() {
                 {ofertaView.map((p) => {
                   const pid = String(p.programa_id);
                   const active = selectedProgramaSet.has(pid);
-                  const expanded = String(p.programa_id) === String(expandedProgramaId);
+                  const expanded = active && String(p.programa_id) === String(expandedProgramaId);
                   return (
                     <div key={p.programa_id} className={`rounded-xl border p-4 transition-none ${active ? theme.cardActive : theme.card}`}>
                       <button
@@ -354,9 +372,9 @@ export default function PreinscripcionPublica() {
                           {p.bloquesOrdenados.map((b) => {
                             const hasCorrelativas = (b.correlativas_ids || []).length > 0;
                             const programacionIILocked = isProgramacionII(b.bloque_nombre);
-                            const checked = (bloquesPorPrograma[pid] || []).includes(b.bloque_id);
+                            const checked = active && (bloquesPorPrograma[pid] || []).includes(b.bloque_id);
                             return (
-                              <label key={b.bloque_id} className={`flex items-start gap-2 text-sm rounded-lg px-2 py-1 ${checked ? "bg-emerald-500/15 text-emerald-300" : theme.help}`}>
+                              <label key={b.bloque_id} className={`flex items-start gap-2 text-sm rounded-lg px-2 py-1 ${checked ? (isDark ? "bg-emerald-500/15 text-emerald-300" : "bg-emerald-100 text-emerald-900") : theme.help}`}>
                                 <input
                                   type="checkbox"
                                   checked={checked}

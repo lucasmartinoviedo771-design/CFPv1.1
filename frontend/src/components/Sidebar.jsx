@@ -16,7 +16,8 @@ import {
   ChevronDown,
   ChevronRight,
   Database,
-  FileCheck
+  FileCheck,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from './UI'; // Asumimos que podemos usar cn de UI o directamente
 
@@ -118,15 +119,31 @@ export default function Sidebar() {
       <div className="p-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <span className="text-xl font-bold text-white">CFP</span>
+            <span className="text-2xl font-bold text-white">CFP</span>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white leading-tight">Gestión Académica</h1>
+            <h1 className="text-lg font-bold text-white leading-tight">Malvinas Argentinas</h1>
+            <p className="text-sm font-semibold text-indigo-300 leading-tight">Gestión Académica</p>
           </div>
         </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-2 scrollbar-thin scrollbar-thumb-indigo-900">
+        <Link
+          to="/preinscripcion"
+          className={cn(
+            "flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors",
+            location.pathname === '/preinscripcion'
+              ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
+              : "bg-indigo-900/30 text-indigo-100 hover:bg-indigo-900/45"
+          )}
+        >
+          <span className="inline-flex items-center gap-2">
+            <FileCheck size={18} />
+            Preinscripción Pública
+          </span>
+          <ExternalLink size={14} />
+        </Link>
         <MenuSection
           title="Datos"
           icon={<Database size={20} />}

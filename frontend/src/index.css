@@ -146,6 +146,24 @@ h1, h2, h3, h4, h5, h6 {
   background: #94a3b8 !important;
 }
 
+.preins-form.preins-light input:-webkit-autofill,
+.preins-form.preins-light select:-webkit-autofill,
+.preins-form.preins-light textarea:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a;
+  -webkit-box-shadow: 0 0 0 1000px #a8cce3 inset;
+  box-shadow: 0 0 0 1000px #a8cce3 inset;
+  border-color: #6ba3c7;
+}
+
+.preins-form.preins-dark input:-webkit-autofill,
+.preins-form.preins-dark select:-webkit-autofill,
+.preins-form.preins-dark textarea:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff;
+  -webkit-box-shadow: 0 0 0 1000px rgba(49, 46, 129, 0.35) inset;
+  box-shadow: 0 0 0 1000px rgba(49, 46, 129, 0.35) inset;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

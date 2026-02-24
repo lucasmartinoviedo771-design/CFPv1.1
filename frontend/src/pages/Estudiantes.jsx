@@ -53,6 +53,7 @@ export default function Estudiantes() {
     const [viewData, setViewData] = useState({ loading: false, error: "", student: null, inscripciones: [], notas: [] });
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [loadingEditId, setLoadingEditId] = useState(null);
     const formCardRef = useRef(null);
 
     const { data: estudiantes = [], isLoading, refetch } = useEstudiantes({
@@ -105,10 +106,22 @@ export default function Estudiantes() {
         }
     };
 
-    const handleStartEdit = (student) => {
-        setEditId(student.id);
-        setForm({ ...initialFormState, ...student });
-        formCardRef.current?.scrollIntoView({ behavior: "smooth" });
+    const handleStartEdit = async (student) => {
+        setLoadingEditId(student.id);
+        try {
+            const { data } = await apiClientV2.get(`/estudiantes/${student.id}`);
+            setEditId(student.id);
+            setForm({ ...initialFormState, ...data });
+            formCardRef.current?.scrollIntoView({ behavior: "smooth" });
+        } catch {
+            setFeedback({
+                open: true,
+                message: "No se pudieron cargar todos los datos del estudiante para edición.",
+                severity: "error",
+            });
+        } finally {
+            setLoadingEditId(null);
+        }
     };
 
     const handleConfirmDelete = async () => {
@@ -326,7 +339,14 @@ export default function Estudiantes() {
                                         </td>
                                         <td className="px-6 py-3 text-right flex justify-end gap-2">
                                             <button onClick={() => handleOpenDetail(r)} className="p-1 text-cyan-400 hover:text-cyan-200" title="Ver detalle"><Eye size={16} /></button>
-                                            <button onClick={() => handleStartEdit(r)} className="p-1 text-indigo-400 hover:text-white"><Edit2 size={16} /></button>
+                                            <button
+                                                onClick={() => handleStartEdit(r)}
+                                                className="p-1 text-indigo-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                disabled={loadingEditId === r.id}
+                                                title={loadingEditId === r.id ? "Cargando datos completos..." : "Editar"}
+                                            >
+                                                <Edit2 size={16} />
+                                            </button>
                                             <button onClick={() => setDeleteTarget(r)} className="p-1 text-red-400 hover:text-red-200"><Trash2 size={16} /></button>
                                         </td>
                                     </tr>
