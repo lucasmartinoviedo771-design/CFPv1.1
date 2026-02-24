@@ -9,7 +9,7 @@ from core.api.permissions import require_authenticated_group
 
 from core.models import Resolucion
 from core.serializers import ResolucionSerializer
-from .schemas import ResolucionOut, ResolucionIn
+from .schemas import ResolucionOut, ResolucionIn, ResolucionStructureOut
 
 router = Router(tags=["resoluciones"])
 
@@ -22,6 +22,21 @@ def listar_resoluciones(request, vigente: Optional[bool] = None):
     if vigente is not None:
         qs = qs.filter(vigente=vigente)
     return qs
+
+
+@router.get("/estructura_completa", response=List[ResolucionStructureOut])
+@require_authenticated_group
+def estructura_completa(request):
+    """
+    Retorna toda la estructura académica (Resoluciones -> Programas -> Bloques -> Módulos)
+    de forma optimizada en una sola solicitud.
+    """
+    resoluciones = Resolucion.objects.all().prefetch_related(
+        "programas",
+        "programas__bloques",
+        "programas__bloques__modulos"
+    ).order_by("-fecha_publicacion")
+    return resoluciones
 
 
 @router.get("/{resolucion_id}", response=ResolucionOut)

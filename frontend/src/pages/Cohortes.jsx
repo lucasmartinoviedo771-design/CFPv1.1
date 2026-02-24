@@ -27,7 +27,7 @@ export default function Cohortes() {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [filterProgramaId, setFilterProgramaId] = useState('');
   const [filterBloqueId, setFilterBloqueId] = useState('');
-  const [filterCohorteId, setFilterCohorteId] = useState('');
+  const [filterCohorteNombre, setFilterCohorteNombre] = useState('');
   const [filterInicio, setFilterInicio] = useState('');
   const [openDetalle, setOpenDetalle] = useState(false);
   const [detalleCohorte, setDetalleCohorte] = useState(null);
@@ -175,24 +175,31 @@ export default function Cohortes() {
   }, [cohortes, filterProgramaId, filterBloqueId]);
 
   const cohortesOptions = useMemo(() => {
-    return [{ value: '', label: 'Todas' }, ...cohortesForFilters.map((c) => ({ value: c.id, label: c.nombre }))];
+    const uniqueNames = Array.from(
+      new Set(cohortesForFilters.map((c) => (c.nombre || '').trim()).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b, 'es'));
+    return [{ value: '', label: 'Todas' }, ...uniqueNames.map((nombre) => ({ value: nombre, label: nombre }))];
   }, [cohortesForFilters]);
 
   const inicioOptions = useMemo(() => {
-    const values = Array.from(new Set(cohortesForFilters.map((c) => c.fecha_inicio).filter(Boolean)));
+    const base = cohortesForFilters.filter((c) => {
+      if (filterCohorteNombre && String(c.nombre) !== String(filterCohorteNombre)) return false;
+      return true;
+    });
+    const values = Array.from(new Set(base.map((c) => c.fecha_inicio).filter(Boolean)));
     values.sort((a, b) => (a < b ? 1 : -1));
     return [{ value: '', label: 'Todos' }, ...values.map((v) => ({ value: v, label: formatDateDisplay(v) }))];
-  }, [cohortesForFilters]);
+  }, [cohortesForFilters, filterCohorteNombre]);
 
   const cohortesFiltradas = useMemo(() => {
     return cohortes.filter((c) => {
       if (filterProgramaId && String(c.programa_id) !== String(filterProgramaId)) return false;
       if (filterBloqueId && String(c.bloque_id) !== String(filterBloqueId)) return false;
-      if (filterCohorteId && String(c.id) !== String(filterCohorteId)) return false;
+      if (filterCohorteNombre && String(c.nombre) !== String(filterCohorteNombre)) return false;
       if (filterInicio && String(c.fecha_inicio) !== String(filterInicio)) return false;
       return true;
     });
-  }, [cohortes, filterProgramaId, filterBloqueId, filterCohorteId, filterInicio]);
+  }, [cohortes, filterProgramaId, filterBloqueId, filterCohorteNombre, filterInicio]);
 
   return (
     <>
@@ -220,7 +227,7 @@ export default function Cohortes() {
                 onChange={(e) => {
                   setFilterProgramaId(e.target.value);
                   setFilterBloqueId('');
-                  setFilterCohorteId('');
+                  setFilterCohorteNombre('');
                   setFilterInicio('');
                   setPage(0);
                 }}
@@ -232,7 +239,7 @@ export default function Cohortes() {
                 value={filterBloqueId}
                 onChange={(e) => {
                   setFilterBloqueId(e.target.value);
-                  setFilterCohorteId('');
+                  setFilterCohorteNombre('');
                   setFilterInicio('');
                   setPage(0);
                 }}
@@ -241,9 +248,9 @@ export default function Cohortes() {
               />
               <AppSelect
                 label="Cohorte"
-                value={filterCohorteId}
+                value={filterCohorteNombre}
                 onChange={(e) => {
-                  setFilterCohorteId(e.target.value);
+                  setFilterCohorteNombre(e.target.value);
                   setPage(0);
                 }}
                 options={cohortesOptions}

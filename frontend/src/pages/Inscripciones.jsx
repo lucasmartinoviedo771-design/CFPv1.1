@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Trash2, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { ChevronDown, ChevronRight, Trash2, CheckCircle, AlertCircle, Loader, Edit2, X, Save, Search } from 'lucide-react';
+
 import { useCohortes, useDeleteInscripcion, useInscripciones, useProgramas, useSaveInscripcion, useEstudiantes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
 import { Card, Select, Button, Input } from '../components/UI';
@@ -43,6 +44,9 @@ export default function Inscripciones() {
     const [approvedModuleIds, setApprovedModuleIds] = useState(new Set());
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [inscripcionSearch, setInscripcionSearch] = useState("");
+    const [editingInscripcionId, setEditingInscripcionId] = useState(null);
+    const [editingEstado, setEditingEstado] = useState("");
     const [feedback, setFeedback] = useState({ open: false, message: "", severity: "success" });
     const [loadingBloques, setLoadingBloques] = useState({});
     const [allBloques, setAllBloques] = useState([]);
@@ -109,21 +113,21 @@ export default function Inscripciones() {
         if (!cohorte) return;
         setLoadingBloques((prev) => ({ ...prev, [cohorteId]: true }));
         try {
-            const bloquesRes = await apiClientV2.get("/bloques", { params: { programa_id: cohorte.programa_id } });
-            const bloquesPrograma = Array.isArray(bloquesRes.data) ? bloquesRes.data : [];
-            const bloques = cohorte.bloque_id
-                ? bloquesPrograma.filter((b) => String(b.id) === String(cohorte.bloque_id))
-                : bloquesPrograma;
-            const bloquesConModulos = await Promise.all(
-                bloques.map(async (b) => {
-                    const modRes = await apiClientV2.get("/modulos", { params: { bloque_id: b.id } });
-                    return { ...b, modulos: modRes.data || [] };
-                })
-            );
-            setCohorteBloques((prev) => ({ ...prev, [cohorteId]: bloquesConModulos }));
+            // Optimización: Usar endpoint de estructura completa
+            const { data } = await apiClientV2.get("/estructura", { params: { programa: cohorte.programa_id } });
+
+            let bloques = data.bloques || [];
+
+            // Si la cohorte es de un bloque especifico, filtrar
+            if (cohorte.bloque_id) {
+                bloques = bloques.filter((b) => String(b.id) === String(cohorte.bloque_id));
+            }
+
+            // Los modulos ya vienen anidados en data.bloques
+            setCohorteBloques((prev) => ({ ...prev, [cohorteId]: bloques }));
         } catch (error) {
             const msg = error?.response?.data ? JSON.stringify(error.response.data) : error?.message || "Error";
-            setFeedback({ open: true, message: `Error cargando bloques/modulos: ${msg}`, severity: "error" });
+            setFeedback({ open: true, message: `Error cargando estructura: ${msg}`, severity: "error" });
         } finally {
             setLoadingBloques((prev) => ({ ...prev, [cohorteId]: false }));
         }
@@ -217,11 +221,33 @@ export default function Inscripciones() {
         }
     };
 
+    const filteredInscripciones = useMemo(() => {
+        const needle = inscripcionSearch.trim().toLowerCase();
+        if (!needle) return inscripciones;
+        return inscripciones.filter((r) => {
+            const apellido = (r.estudiante?.apellido || "").toLowerCase();
+            const nombre = (r.estudiante?.nombre || "").toLowerCase();
+            const dni = String(r.estudiante?.dni || "").toLowerCase();
+            const full = `${apellido} ${nombre}`;
+            const modulo = (r.modulo?.nombre || "").toLowerCase();
+            const cohorte = (r.cohorte?.nombre || "").toLowerCase();
+            return apellido.includes(needle) || nombre.includes(needle) || full.includes(needle) || dni.includes(needle) || modulo.includes(needle) || cohorte.includes(needle);
+        });
+    }, [inscripciones, inscripcionSearch]);
+
+    const totalPages = Math.ceil(filteredInscripciones.length / rowsPerPage);
+
     const paginatedInscripciones = useMemo(() => {
         const start = page * rowsPerPage;
         const end = start + rowsPerPage;
-        return inscripciones.slice(start, end);
-    }, [inscripciones, page, rowsPerPage]);
+        return filteredInscripciones.slice(start, end);
+    }, [filteredInscripciones, page, rowsPerPage]);
+
+    useEffect(() => {
+        if (page > 0 && page >= totalPages) {
+            setPage(Math.max(0, totalPages - 1));
+        }
+    }, [totalPages, page]);
 
     const filteredEstudiantes = useMemo(() => {
         const needle = studentSearch.trim().toLowerCase();
@@ -508,84 +534,192 @@ export default function Inscripciones() {
             </Card>
 
             {/* Tabla de Inscripciones */}
-            <div className="space-y-4">
-                <h2 className="text-xl font-bold text-white">Inscripciones Existentes</h2>
+            <div className="space-y-4 pt-4 border-t border-indigo-500/20">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <h2 className="text-xl font-bold text-white">Inscripciones Existentes</h2>
+                    <div className="relative w-full sm:w-64">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-400">
+                            <Search size={16} />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Buscar inscripción..."
+                            value={inscripcionSearch}
+                            onChange={(e) => setInscripcionSearch(e.target.value)}
+                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded w-full pl-9 pr-3 py-1.5 focus:outline-none focus:border-brand-accent transition-colors"
+                        />
+                    </div>
+                </div>
 
                 <Card className="bg-indigo-900/10 border-indigo-500/20 overflow-hidden">
                     <div className="overflow-x-auto">
                         {loadingInscripciones ? (
                             <div className="p-8 flex justify-center"><Loader className="animate-spin text-brand-accent" /></div>
                         ) : (
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-indigo-950/40 text-indigo-300 uppercase text-xs">
-                                    <tr>
-                                        <th className="px-6 py-3">Estudiante</th>
-                                        <th className="px-6 py-3">Detalle Inscripción</th>
-                                        <th className="px-6 py-3">Módulo</th>
-                                        <th className="px-6 py-3">Estado</th>
-                                        <th className="px-6 py-3 text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-indigo-500/10">
-                                    {paginatedInscripciones.map((r) => (
-                                        <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                                            <td className="px-6 py-3 font-medium text-white">
-                                                {r.estudiante ? `${r.estudiante.apellido}, ${r.estudiante.nombre}` : r.estudiante_id}
-                                            </td>
-                                            <td className="px-6 py-3 text-gray-300">
-                                                {r.cohorte ? (
-                                                    <div className="space-y-1">
-                                                        <div>
-                                                            <span className="text-indigo-200">Programa:</span>{" "}
-                                                            <span>{r.cohorte.programa?.nombre || "-"}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-indigo-200">Bloque:</span>{" "}
-                                                            <span>{r.cohorte.bloque?.nombre || "-"}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-indigo-200">Cohorte:</span>{" "}
-                                                            <span>{r.cohorte.nombre || "-"}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-indigo-200">Periodo:</span>{" "}
-                                                            <span>{formatDateDisplay(r.cohorte.fecha_inicio)} a {formatDateDisplay(r.cohorte.fecha_fin)}</span>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    r.cohorte_id
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-3 text-gray-300">{r.modulo?.nombre || r.modulo_id || "N/A"}</td>
-                                            <td className="px-6 py-3">
-                                                <span className={`px-2 py-1 rounded text-xs font-bold ${r.estado === 'ACTIVO' ? 'bg-green-500/20 text-green-400' : 'bg-gray-700 text-gray-400'}`}>
-                                                    {r.estado}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-3 text-right">
-                                                <button onClick={() => handleDelete(r.id)} className="text-red-400 hover:text-red-200 transition-colors">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
+                            <>
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-indigo-950/40 text-indigo-300 uppercase text-xs">
+                                        <tr>
+                                            <th className="px-6 py-3">Estudiante</th>
+                                            <th className="px-6 py-3">Detalle Inscripción</th>
+                                            <th className="px-6 py-3">Módulo</th>
+                                            <th className="px-6 py-3">Estado</th>
+                                            <th className="px-6 py-3 text-right">Acciones</th>
                                         </tr>
-                                    ))}
-                                    {!paginatedInscripciones.length && (
-                                        <tr><td colSpan={5} className="text-center py-6 text-gray-500">No hay inscripciones cargadas.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-indigo-500/10">
+                                        {paginatedInscripciones.map((r) => (
+                                            <tr key={r.id} className="hover:bg-white/5 transition-colors">
+                                                <td className="px-6 py-3 font-medium text-white">
+                                                    {r.estudiante ? `${r.estudiante.apellido}, ${r.estudiante.nombre}` : r.estudiante_id}
+                                                </td>
+                                                <td className="px-6 py-3 text-gray-300">
+                                                    {r.cohorte ? (
+                                                        <div className="space-y-1">
+                                                            <div>
+                                                                <span className="text-indigo-200">Programa:</span>{" "}
+                                                                <span>{r.cohorte.programa?.nombre || "-"}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-indigo-200">Bloque:</span>{" "}
+                                                                <span>{r.cohorte.bloque?.nombre || "-"}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-indigo-200">Cohorte:</span>{" "}
+                                                                <span>{r.cohorte.nombre || "-"}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-indigo-200">Periodo:</span>{" "}
+                                                                <span>{formatDateDisplay(r.cohorte.fecha_inicio)} a {formatDateDisplay(r.cohorte.fecha_fin)}</span>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        r.cohorte_id
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-3 text-gray-300">{r.modulo?.nombre || r.modulo_id || "N/A"}</td>
+                                                <td className="px-6 py-3">
+                                                    {editingInscripcionId === r.id ? (
+                                                        <select
+                                                            value={editingEstado}
+                                                            onChange={(e) => setEditingEstado(e.target.value)}
+                                                            className="bg-indigo-900 border border-indigo-500/50 text-white text-sm rounded px-2 py-1 w-full"
+                                                        >
+                                                            <option value="ACTIVO">ACTIVO</option>
+                                                            <option value="INACTIVO">INACTIVO</option>
+                                                            <option value="LIBRE">LIBRE</option>
+                                                        </select>
+                                                    ) : (
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${r.estado === 'ACTIVO' ? 'bg-green-500/20 text-green-400' :
+                                                            r.estado === 'INACTIVO' ? 'bg-red-500/20 text-red-400' :
+                                                                r.estado === 'LIBRE' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                                    'bg-gray-700 text-gray-400'
+                                                            }`}>
+                                                            {r.estado}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-3 text-right">
+                                                    <div className="flex justify-end gap-3 text-indigo-300">
+                                                        {editingInscripcionId === r.id ? (
+                                                            <>
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        try {
+                                                                            await saveInscripcion.mutateAsync({ id: r.id, estado: editingEstado, estudiante_id: r.estudiante?.id ?? r.estudiante_id, cohorte_id: r.cohorte?.id ?? r.cohorte_id, modulo_id: r.modulo?.id ?? r.modulo_id });
+                                                                            setEditingInscripcionId(null);
+                                                                            setFeedback({ open: true, message: "Estado actualizado", severity: "success" });
+                                                                            refetchInscripciones();
+                                                                        } catch (err) {
+                                                                            setFeedback({ open: true, message: "Error al actualizar estado", severity: "error" });
+                                                                        }
+                                                                    }}
+                                                                    className="text-green-400 hover:text-green-300 transition-colors"
+                                                                    title="Guardar"
+                                                                >
+                                                                    <Save size={18} />
+                                                                </button>
+                                                                <button onClick={() => setEditingInscripcionId(null)} className="text-gray-400 hover:text-gray-300 transition-colors" title="Cancelar">
+                                                                    <X size={18} />
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => { setEditingInscripcionId(r.id); setEditingEstado(r.estado || 'ACTIVO'); }}
+                                                                    className="hover:text-blue-400 transition-colors"
+                                                                    title="Editar estado"
+                                                                >
+                                                                    <Edit2 size={18} />
+                                                                </button>
+                                                                <button onClick={() => handleDelete(r.id)} className="hover:text-red-400 transition-colors" title="Eliminar">
+                                                                    <Trash2 size={18} />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {!paginatedInscripciones.length && (
+                                            <tr><td colSpan={5} className="text-center py-6 text-gray-500">No hay inscripciones para mostrar.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                                {filteredInscripciones.length > 0 && (
+                                    <div className="p-4 border-t border-indigo-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 bg-indigo-950/20">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-indigo-300">Mostrar</span>
+                                            <select
+                                                value={rowsPerPage}
+                                                onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
+                                                className="bg-indigo-900 border border-indigo-500/30 text-white text-sm rounded px-2 py-1 outline-none"
+                                            >
+                                                <option value={10}>10</option>
+                                                <option value={25}>25</option>
+                                                <option value={50}>50</option>
+                                                <option value={100}>100</option>
+                                            </select>
+                                            <span className="text-sm text-indigo-300">por página (Total: {filteredInscripciones.length})</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                onClick={() => setPage(p => Math.max(0, p - 1))}
+                                                disabled={page === 0}
+                                                className={`text-xs px-3 py-1 ${page === 0 ? 'bg-indigo-900 text-gray-500 opacity-50 cursor-not-allowed border-none' : 'bg-indigo-800 hover:bg-indigo-700 border-none'}`}
+                                            >
+                                                Anterior
+                                            </Button>
+                                            <span className="text-sm text-white py-1 px-3 border border-indigo-500/30 rounded bg-indigo-950">
+                                                {page + 1} de {totalPages || 1}
+                                            </span>
+                                            <Button
+                                                type="button"
+                                                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                                                disabled={page >= totalPages - 1}
+                                                className={`text-xs px-3 py-1 ${page >= totalPages - 1 ? 'bg-indigo-900 text-gray-500 opacity-50 cursor-not-allowed border-none' : 'bg-indigo-800 hover:bg-indigo-700 border-none'}`}
+                                            >
+                                                Siguiente
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </Card>
-            </div>
+            </div >
 
-            {feedback.open && (
-                <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-green-900/90 border-green-500 text-white'}`}>
-                    {feedback.severity === 'error' ? <AlertCircle /> : <CheckCircle />}
-                    {feedback.message}
-                    <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><Trash2 size={14} /></button>
-                </div>
-            )}
-        </div>
+            {
+                feedback.open && (
+                    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-green-900/90 border-green-500 text-white'}`}>
+                        {feedback.severity === 'error' ? <AlertCircle /> : <CheckCircle />}
+                        {feedback.message}
+                        <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><Trash2 size={14} /></button>
+                    </div>
+                )
+            }
+        </div >
     );
 }

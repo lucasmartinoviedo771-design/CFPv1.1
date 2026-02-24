@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { listAsistencias, createAsistencia, updateAsistencia } from "../services/asistenciasService";
 import api from '../api/client';
 import { Card, Select, Button, Input } from '../components/UI';
@@ -7,17 +7,25 @@ import { Check, X, Save, CheckSquare, AlertCircle, Loader } from 'lucide-react';
 export default function Asistencia() {
   const [programas, setProgramas] = useState([]);
   const [cohortes, setCohortes] = useState([]);
-  const [selectedCohorteId, setSelectedCohorteId] = useState('');
+  const [selectedCohorteNombre, setSelectedCohorteNombre] = useState('');
   const [bloques, setBloques] = useState([]);
   const [selectedProgramaId, setSelectedProgramaId] = useState('');
   const [selectedBloqueId, setSelectedBloqueId] = useState('');
   const [selectedClaseDate, setSelectedClaseDate] = useState('');
+  const [selectedClaseSlot, setSelectedClaseSlot] = useState('');
+  const [clasesProgramadas, setClasesProgramadas] = useState([]);
   const [students, setStudents] = useState([]);
   const [modulos, setModulos] = useState([]);
   const [attendanceGrid, setAttendanceGrid] = useState({});
   const [studentEnrolledModules, setStudentEnrolledModules] = useState({});
   const [loadingData, setLoadingData] = useState(false);
   const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
+
+  const formatDate = (yyyyMmDd) => {
+    if (!yyyyMmDd || !yyyyMmDd.includes('-')) return yyyyMmDd || '';
+    const [y, m, d] = yyyyMmDd.split('-');
+    return `${d}/${m}/${y}`;
+  };
 
   const fetchProgramas = useCallback(async () => {
     try {
@@ -44,17 +52,32 @@ export default function Asistencia() {
     } catch (error) { setFeedback({ open: true, message: 'Error al cargar bloques.', severity: 'error' }); }
   }, []);
 
-  const fetchStudentsAndModulos = useCallback(async (cohorteId, bloqueId, fecha) => {
-    if (!cohorteId || !bloqueId || !fecha) return;
+  const fetchStudentsAndModulos = useCallback(async (cohorteNombre, bloqueId, fecha) => {
+    if (!cohorteNombre || !bloqueId || !fecha) return;
     setLoadingData(true);
     try {
-      const [inscriptionsResponse, modulesRes, attendanceData] = await Promise.all([
-        api.get(`/inscripciones`, { params: { cohorte_id: cohorteId } }),
+      const cohortesFiltradas = cohortes.filter((c) => {
+        if (String(c.bloque_id || '') !== String(bloqueId)) return false;
+        return String(c.nombre || '') === String(cohorteNombre || '');
+      });
+      const cohorteIds = cohortesFiltradas.map((c) => c.id);
+      if (!cohorteIds.length) {
+        setStudents([]);
+        setModulos([]);
+        setAttendanceGrid({});
+        setStudentEnrolledModules({});
+        setLoadingData(false);
+        return;
+      }
+
+      const [inscriptionsResponses, modulesRes, attendanceData] = await Promise.all([
+        Promise.all(cohorteIds.map((id) => api.get(`/inscripciones`, { params: { cohorte_id: id } }))),
         api.get(`/modulos`, { params: { bloque_id: bloqueId } }),
         listAsistencias({ bloque_id: bloqueId, fecha }),
       ]);
 
-      const inscriptions = Array.isArray(inscriptionsResponse.data) ? inscriptionsResponse.data : [];
+      const inscriptions = inscriptionsResponses.flatMap((res) => (Array.isArray(res.data) ? res.data : []));
+
       const existingAttendance = Array.isArray(attendanceData) ? attendanceData : [];
       const modulosBloque = Array.isArray(modulesRes.data) ? modulesRes.data : [];
 
@@ -91,23 +114,58 @@ export default function Asistencia() {
     } catch (error) {
       setFeedback({ open: true, message: 'Error al cargar datos.', severity: 'error' });
     } finally { setLoadingData(false); }
-  }, []);
+  }, [cohortes]);
+
+  const fetchClasesProgramadas = useCallback(async (cohorteNombre, bloqueId) => {
+    if (!cohorteNombre || !bloqueId) {
+      setClasesProgramadas([]);
+      return;
+    }
+    try {
+      const cohortesFiltradas = cohortes.filter((c) => {
+        if (String(c.bloque_id || '') !== String(bloqueId)) return false;
+        return String(c.nombre || '') === String(cohorteNombre || '');
+      });
+      const cohorteIds = cohortesFiltradas.map((c) => c.id);
+      if (!cohorteIds.length) {
+        setClasesProgramadas([]);
+        return;
+      }
+      const responses = await Promise.all(
+        cohorteIds.map((id) => api.get('/horarios-cursada/clases-programadas', { params: { cohorte_id: id, bloque_id: bloqueId } }))
+      );
+      const clases = responses.flatMap((res) => (Array.isArray(res.data) ? res.data : []));
+      clases.sort((a, b) => {
+        const aKey = `${a.fecha || ''}${a.hora_inicio || ''}`;
+        const bKey = `${b.fecha || ''}${b.hora_inicio || ''}`;
+        return aKey.localeCompare(bKey);
+      });
+      setClasesProgramadas(clases);
+    } catch (error) {
+      setClasesProgramadas([]);
+      setFeedback({ open: true, message: 'Error al cargar clases programadas.', severity: 'error' });
+    }
+  }, [cohortes]);
 
   useEffect(() => { fetchProgramas(); }, [fetchProgramas]);
   useEffect(() => { fetchCohortes(selectedProgramaId); }, [fetchCohortes, selectedProgramaId]);
   useEffect(() => { fetchBloques(selectedProgramaId); }, [fetchBloques, selectedProgramaId]);
+  useEffect(() => { fetchClasesProgramadas(selectedCohorteNombre, selectedBloqueId); }, [fetchClasesProgramadas, selectedCohorteNombre, selectedBloqueId]);
   useEffect(() => {
-    if (selectedCohorteId && selectedBloqueId && selectedClaseDate) {
-      fetchStudentsAndModulos(selectedCohorteId, selectedBloqueId, selectedClaseDate);
+    if (selectedCohorteNombre && selectedBloqueId && selectedClaseDate) {
+      fetchStudentsAndModulos(selectedCohorteNombre, selectedBloqueId, selectedClaseDate);
     }
-  }, [selectedCohorteId, selectedBloqueId, selectedClaseDate, fetchStudentsAndModulos]);
+  }, [selectedCohorteNombre, selectedBloqueId, selectedClaseDate, fetchStudentsAndModulos]);
 
   const handleProgramaChange = (e) => {
-    setSelectedProgramaId(e.target.value); setSelectedCohorteId(''); setSelectedBloqueId(''); setSelectedClaseDate('');
+    setSelectedProgramaId(e.target.value); setSelectedCohorteNombre(''); setSelectedBloqueId(''); setSelectedClaseDate('');
+    setSelectedClaseSlot('');
+    setClasesProgramadas([]);
     setStudents([]); setModulos([]); setAttendanceGrid({}); setStudentEnrolledModules({});
   };
   const handleCohorteChange = (e) => {
-    setSelectedCohorteId(e.target.value); setSelectedBloqueId(''); setSelectedClaseDate('');
+    setSelectedCohorteNombre(e.target.value); setSelectedClaseDate('');
+    setSelectedClaseSlot('');
     setStudents([]); setModulos([]); setAttendanceGrid({}); setStudentEnrolledModules({});
   };
 
@@ -141,11 +199,21 @@ export default function Asistencia() {
         }
       }
       setFeedback({ open: true, message: 'Asistencias guardadas con éxito', severity: 'success' });
-      fetchStudentsAndModulos(selectedCohorteId, selectedBloqueId, selectedClaseDate);
+      fetchStudentsAndModulos(selectedCohorteNombre, selectedBloqueId, selectedClaseDate);
     } catch (error) {
       setFeedback({ open: true, message: `Error al guardar: ${error.message}`, severity: 'error' });
     } finally { setLoadingData(false); }
   };
+
+  const cohortesOptions = useMemo(() => {
+    const base = cohortes.filter((c) => {
+      if (!selectedBloqueId) return true;
+      return String(c.bloque_id || '') === String(selectedBloqueId);
+    });
+    const uniqueNames = Array.from(new Set(base.map((c) => (c.nombre || '').trim()).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, 'es'));
+    return [{ value: '', label: 'Seleccionar...' }, ...uniqueNames.map((nombre) => ({ value: nombre, label: nombre }))];
+  }, [cohortes, selectedBloqueId]);
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -155,11 +223,54 @@ export default function Asistencia() {
       </div>
 
       <Card className="bg-indigo-900/20 border-indigo-500/30 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           <Select label="Programa" value={selectedProgramaId} onChange={handleProgramaChange} options={[{ value: '', label: 'Seleccionar...' }, ...programas.map(p => ({ value: p.id, label: p.nombre }))]} className="bg-indigo-950/50" />
-          <Select label="Bloque" value={selectedBloqueId} onChange={e => setSelectedBloqueId(e.target.value)} disabled={!selectedProgramaId} options={[{ value: '', label: 'Seleccionar...' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]} className="bg-indigo-950/50" />
-          <Select label="Cohorte" value={selectedCohorteId} onChange={handleCohorteChange} disabled={!selectedProgramaId} options={[{ value: '', label: 'Seleccionar...' }, ...cohortes.map(c => ({ value: c.id, label: c.nombre }))]} className="bg-indigo-950/50" />
-          <Input label="Fecha" type="date" value={selectedClaseDate} onChange={e => setSelectedClaseDate(e.target.value)} disabled={!selectedCohorteId} className="bg-indigo-950/50" />
+          <Select
+            label="Bloque"
+            value={selectedBloqueId}
+            onChange={e => { setSelectedBloqueId(e.target.value); setSelectedCohorteNombre(''); setSelectedClaseDate(''); setSelectedClaseSlot(''); setClasesProgramadas([]); setStudents([]); setModulos([]); setAttendanceGrid({}); setStudentEnrolledModules({}); }}
+            disabled={!selectedProgramaId}
+            options={[{ value: '', label: 'Seleccionar...' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]}
+            className="bg-indigo-950/50"
+          />
+          <Select
+            label="Cohorte"
+            value={selectedCohorteNombre}
+            onChange={handleCohorteChange}
+            disabled={!selectedProgramaId}
+            options={cohortesOptions}
+            className="bg-indigo-950/50"
+          />
+          <Input
+            label="Fecha"
+            type="date"
+            value={selectedClaseDate || ''}
+            onChange={(e) => {
+              setSelectedClaseDate(e.target.value);
+              setSelectedClaseSlot('');
+            }}
+            disabled={!selectedCohorteNombre}
+            className="bg-indigo-950/50"
+          />
+          <Select
+            label="Sel. Rápida (Horario)"
+            value={selectedClaseSlot}
+            onChange={(e) => {
+              const slot = e.target.value;
+              setSelectedClaseSlot(slot);
+              const fecha = slot ? slot.split('|')[0] : '';
+              setSelectedClaseDate(fecha);
+            }}
+            disabled={!selectedCohorteNombre}
+            options={[
+              { value: '', label: 'Seleccionar...' },
+              ...clasesProgramadas.map((c) => ({
+                value: `${c.fecha}|${c.hora_inicio}|${c.hora_fin}|${c.cohorte_id}|${c.modulo_id || 0}`,
+                label: `${formatDate(c.fecha)} ${String(c.hora_inicio || '').slice(0, 5)} - ${String(c.hora_fin || '').slice(0, 5)}`,
+              })),
+            ]}
+            className="bg-indigo-950/50"
+          />
         </div>
       </Card>
 

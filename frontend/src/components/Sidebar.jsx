@@ -41,6 +41,7 @@ const adminCursosItems = [
   { label: 'Estructura Académica', icon: <GitBranch size={20} />, href: '/estructura' },
   { label: 'Calendario Académico', icon: <Calendar size={20} />, href: '/calendario' },
   { label: 'Cohortes', icon: <Layers size={20} />, href: '/cohortes' },
+  { label: 'Horarios de Cursada', icon: <Calendar size={20} />, href: '/horarios-cursada' },
   { label: 'Gráfico de Cursos', icon: <BarChart2 size={20} />, href: '/grafico-cursos' },
 ];
 

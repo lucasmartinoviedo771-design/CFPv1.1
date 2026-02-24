@@ -18,8 +18,11 @@ import os
 from pathlib import Path
 
 # Agregar el backend al path
-backend_path = Path(__file__).parent.parent / "backend"
-sys.path.insert(0, str(backend_path))
+if os.path.exists('/app/manage.py'):
+    sys.path.insert(0, '/app')
+else:
+    backend_path = Path(__file__).parent.parent / "backend"
+    sys.path.insert(0, str(backend_path))
 
 # Configurar Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "academia.settings")

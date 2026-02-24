@@ -16,6 +16,7 @@ from .auth_endpoints import router as auth_endpoints_router
 from .user_info import router as user_info_router
 from .estructura import router as estructura_router
 from .resoluciones import router as resoluciones_router
+from .horarios_cursada import router as horarios_cursada_router
 
 __all__ = [
     "health_router",
@@ -35,4 +36,5 @@ __all__ = [
     "user_info_router",
     "estructura_router",
     "resoluciones_router",
+    "horarios_cursada_router",
 ]

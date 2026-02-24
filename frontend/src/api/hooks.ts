@@ -140,8 +140,37 @@ export const useSaveInscripcion = () => {
       const { data } = await apiClientV2.post<Inscripcion>('/inscripciones', payload);
       return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['inscripciones'] });
+    onMutate: async (newInscripcion) => {
+      if (!newInscripcion.id) return; // Only do optimistic update on edits
+
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await qc.cancelQueries({ queryKey: keys.inscripciones() });
+
+      // Snapshot the previous value
+      const previousInscripciones = qc.getQueriesData<Inscripcion[]>({ queryKey: keys.inscripciones() });
+
+      // Optimistically update to the new value
+      qc.setQueriesData<Inscripcion[]>({ queryKey: keys.inscripciones() }, (old) => {
+        if (!old) return [];
+        return old.map(insc => insc.id === newInscripcion.id ? { ...insc, ...newInscripcion } as Inscripcion : insc);
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousInscripciones };
+    },
+    onError: (err, newInscripcion, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousInscripciones) {
+        context.previousInscripciones.forEach(([queryKey, data]) => {
+          qc.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we're in sync
+      // but only in the background (preventing the 3 second freeze on UI jump)
+      qc.invalidateQueries({ queryKey: keys.inscripciones() });
+      qc.invalidateQueries({ queryKey: keys.estudiantes() }); // Also invalidate students if needed
     },
   });
 };

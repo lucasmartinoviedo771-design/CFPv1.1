@@ -410,33 +410,8 @@ export default function Estructura() {
   const fetchResoluciones = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/resoluciones');
-      const resolucionesList = Array.isArray(data) ? data : [];
-
-      // Para cada resolución, cargar sus programas
-      const resolucionesConProgramas = await Promise.all(resolucionesList.map(async (resolucion) => {
-        const programasRes = await api.get('/programas', { params: { resolucion_id: resolucion.id } });
-        const programas = Array.isArray(programasRes.data) ? programasRes.data : [];
-
-        // Para cada programa, cargar bloques y módulos
-        const programasConBloques = await Promise.all(programas.map(async (programa) => {
-          const bloquesRes = await api.get('/bloques', { params: { programa_id: programa.id } });
-          const bloques = Array.isArray(bloquesRes.data) ? bloquesRes.data : [];
-
-          const bloquesConModulos = await Promise.all(
-            bloques.map(async (b) => {
-              const modRes = await api.get('/modulos', { params: { bloque_id: b.id } });
-              const mods = Array.isArray(modRes.data) ? modRes.data : [];
-              return { ...b, modulos: mods };
-            })
-          );
-          return { ...programa, bloques: bloquesConModulos };
-        }));
-
-        return { ...resolucion, programas: programasConBloques };
-      }));
-
-      setResoluciones(resolucionesConProgramas);
+      const { data } = await api.get('/resoluciones/estructura_completa');
+      setResoluciones(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error al cargar resoluciones:", error);
       setFeedback({ open: true, message: 'Error al cargar resoluciones.', severity: 'error' });

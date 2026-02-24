@@ -21,4 +21,12 @@ python init_su.py
 
 # Iniciar servidor con Gunicorn (Producción)
 echo "Iniciando Gunicorn..."
-exec gunicorn academia.wsgi:application --bind 0.0.0.0:8000
+WEB_CONCURRENCY=${WEB_CONCURRENCY:-3}
+GUNICORN_THREADS=${GUNICORN_THREADS:-2}
+GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
+
+exec gunicorn academia.wsgi:application \
+  --bind 0.0.0.0:8000 \
+  --workers "${WEB_CONCURRENCY}" \
+  --threads "${GUNICORN_THREADS}" \
+  --timeout "${GUNICORN_TIMEOUT}"

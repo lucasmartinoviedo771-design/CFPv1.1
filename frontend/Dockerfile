@@ -1,12 +1,12 @@
 # Build Stage
-FROM node:18-alpine as build
+FROM node:20 as build
 WORKDIR /app
 COPY package.json ./
-RUN npm install -g pnpm && pnpm install
+RUN npm install --legacy-peer-deps
 COPY . .
 # En producción, el proxy de nginx redigirá /api al backend
 ENV VITE_API_BASE=/api
-RUN pnpm build
+RUN npm run build
 
 # Serve Stage
 FROM nginx:alpine

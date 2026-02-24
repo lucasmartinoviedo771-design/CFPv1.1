@@ -18,6 +18,7 @@ import Programas from './pages/Programas'; // Still .tsx based on file list
 import Estructura from './pages/Estructura'; // Still .jsx based on file list
 import Calendario from './pages/Calendario';
 import Cohortes from './pages/Cohortes';
+import HorariosCursada from './pages/HorariosCursada.jsx';
 import HistoricoCursos from './pages/HistoricoCursos.jsx';
 import HistoricoEstudiante from './pages/HistoricoEstudiante.jsx';
 import GraficoCursos from './pages/GraficoCursos';
@@ -116,6 +117,7 @@ export default function App() {
             <Route path="/estructura" element={<PrivateRoute><WithLayout title="Estructura Académica"><Estructura /></WithLayout></PrivateRoute>} />
             <Route path="/calendario" element={<PrivateRoute><WithLayout title="Calendario Académico"><Calendario /></WithLayout></PrivateRoute>} />
             <Route path="/cohortes" element={<PrivateRoute><WithLayout title="Cohortes"><Cohortes /></WithLayout></PrivateRoute>} />
+            <Route path="/horarios-cursada" element={<PrivateRoute><WithLayout title="Horarios de Cursada"><HorariosCursada /></WithLayout></PrivateRoute>} />
             <Route path="/historico-cursos" element={<PrivateRoute><WithLayout title="Histórico por Cursos"><HistoricoCursos /></WithLayout></PrivateRoute>} />
             <Route path="/historico-estudiante" element={<PrivateRoute><WithLayout title="Histórico por Estudiante"><HistoricoEstudiante /></WithLayout></PrivateRoute>} />
             <Route path="/grafico-cursos" element={<PrivateRoute><WithLayout title="Gráfico de Cursos"><GraficoCursos /></WithLayout></PrivateRoute>} />

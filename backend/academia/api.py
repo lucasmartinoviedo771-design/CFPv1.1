@@ -18,6 +18,7 @@ from core.api import (
     user_info_router,
     estructura_router,
     resoluciones_router,
+    horarios_cursada_router,
 )
 from core.api.auth import jwt_auth
 
@@ -40,6 +41,7 @@ api.add_router("/inscripciones", inscripciones_router)
 api.add_router("/examenes", examenes_router)
 api.add_router("/analytics", analytics_router)
 api.add_router("/bloques-de-fechas", bloques_fechas_router)
+api.add_router("/horarios-cursada", horarios_cursada_router)
 api.add_router("", users_router)  # users/groups paths
 api.add_router("", dashboard_router)
 api.add_router("", imports_router)

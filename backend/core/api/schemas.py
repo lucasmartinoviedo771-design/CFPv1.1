@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import List, Optional
 
 from ninja import Schema
@@ -104,6 +104,40 @@ class CohorteIn(Schema):
     bloque_fechas_id: int
     fecha_inicio: Optional[date] = None
     fecha_fin: Optional[date] = None
+
+
+class HorarioCursadaOut(Schema):
+    id: int
+    cohorte_id: int
+    bloque_id: int
+    modulo_id: Optional[int] = None
+    docente_id: Optional[int] = None
+    docente_nombre: Optional[str] = None
+    dia_semana: str
+    hora_inicio: time
+    hora_fin: time
+
+
+class HorarioCursadaIn(Schema):
+    cohorte_id: int
+    bloque_id: int
+    modulo_id: Optional[int] = None
+    docente_id: Optional[int] = None
+    dia_semana: str
+    hora_inicio: time
+    hora_fin: time
+
+
+class ClaseProgramadaOut(Schema):
+    cohorte_id: int
+    bloque_id: int
+    modulo_id: Optional[int] = None
+    docente_id: Optional[int] = None
+    docente_nombre: Optional[str] = None
+    dia_semana: str
+    fecha: date
+    hora_inicio: time
+    hora_fin: time
 
 
 # --- Inputs ---
@@ -232,3 +266,69 @@ class UserOut(Schema):
     @staticmethod
     def resolve_groups(obj):
         return [g.name for g in obj.groups.all()]
+
+
+# --- Structure Optimization Schemas ---
+
+class ModuloStructureOut(Schema):
+    id: int
+    nombre: str
+    es_practica: bool
+    asistencia_requerida_practica: int
+    bloque_id: Optional[int] = None
+
+
+class BloqueStructureOut(Schema):
+    id: int
+    nombre: str
+    programa_id: Optional[int] = None
+    correlativas_ids: List[int] = []
+    modulos: List[ModuloStructureOut] = []
+
+
+class ProgramaStructureOut(Schema):
+    id: int
+    codigo: str
+    nombre: str
+    resolucion_id: Optional[int] = None
+    bloques: List[BloqueStructureOut] = []
+
+
+class ResolucionStructureOut(Schema):
+    id: int
+    numero: str
+    nombre: str
+    fecha_publicacion: date
+    vigente: bool
+    observaciones: Optional[str] = None
+    programas: List[ProgramaStructureOut] = []
+
+
+
+class DocenteSimpleOut(Schema):
+    id: int
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+
+class BloqueMetadataOut(Schema):
+    id: int
+    nombre: str
+    programa_id: int
+
+
+
+class ModuloMetadataOut(Schema):
+    id: int
+    nombre: str
+    bloque_id: int
+
+
+class HorariosCursadaMetadataOut(Schema):
+    programas: List[ProgramaOut]
+    bloques: List[BloqueMetadataOut]
+    cohortes: List[CohorteOut]
+    docentes: List[DocenteSimpleOut]
+    horarios: List[HorarioCursadaOut]
+    modulos: List[ModuloMetadataOut]

@@ -96,6 +96,14 @@ def actualizar_inscripcion(request, inscripcion_id: int, payload: InscripcionIn)
     return detalle_inscripcion(request, insc.id)
 
 
+@router.delete("/{inscripcion_id}", response=dict)
+@require_authenticated_group
+def eliminar_inscripcion(request, inscripcion_id: int):
+    insc = get_object_or_404(Inscripcion, pk=inscripcion_id)
+    insc.delete()
+    return {"deleted": True, "id": inscripcion_id}
+
+
 # Cohorte detail endpoints
 
 

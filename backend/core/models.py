@@ -165,8 +165,8 @@ class Estudiante(TimeStamped):
     ]
     nivel_educativo = models.CharField(max_length=60, choices=NIVEL_EDUCATIVO_OPCIONES, blank=True, verbose_name="Nivel Alcanzado")
     
-    ESTATUS_REGULARIDAD = [('Regular', 'Regular'), ('Libre', 'Libre'), ('Baja', 'Baja')]
-    estatus = models.CharField(max_length=10, choices=ESTATUS_REGULARIDAD, default='Regular', verbose_name="Estatus de Regularidad")
+    ESTATUS_REGULARIDAD = [('Regular', 'Regular'), ('Baja', 'Baja'), ('Condicional', 'Condicional'), ('Preinscripto', 'Preinscripto')]
+    estatus = models.CharField(max_length=15, choices=ESTATUS_REGULARIDAD, default='Regular', verbose_name="Estatus de Regularidad")
 
     # --- Conectividad y Recursos ---
     posee_pc = models.BooleanField(default=False, verbose_name="Posee PC en su Domicilio")
@@ -234,6 +234,61 @@ class Modulo(TimeStamped):
         unique_together = ("bloque", "nombre")
         ordering = ["id"]
 
+
+class HorarioCursada(TimeStamped):
+    LUNES = "LUNES"
+    MARTES = "MARTES"
+    MIERCOLES = "MIERCOLES"
+    JUEVES = "JUEVES"
+    VIERNES = "VIERNES"
+    SABADO = "SABADO"
+    DOMINGO = "DOMINGO"
+    DIAS = [
+        (LUNES, "Lunes"),
+        (MARTES, "Martes"),
+        (MIERCOLES, "Miércoles"),
+        (JUEVES, "Jueves"),
+        (VIERNES, "Viernes"),
+        (SABADO, "Sábado"),
+        (DOMINGO, "Domingo"),
+    ]
+
+    cohorte = models.ForeignKey(Cohorte, on_delete=models.CASCADE, related_name="horarios")
+    bloque = models.ForeignKey(Bloque, on_delete=models.CASCADE, related_name="horarios")
+    modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name="horarios", null=True, blank=True)
+    docente = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="horarios_cursada",
+        null=True,
+        blank=True,
+    )
+    dia_semana = models.CharField(max_length=10, choices=DIAS)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+
+    class Meta:
+        ordering = ["cohorte_id", "bloque_id", "modulo_id", "dia_semana", "hora_inicio"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cohorte", "bloque", "modulo", "dia_semana", "hora_inicio", "hora_fin"],
+                name="uniq_horario_cursada",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["cohorte", "dia_semana"]),
+            models.Index(fields=["bloque", "modulo"]),
+            models.Index(fields=["docente", "cohorte"]),
+        ]
+
+    def clean(self):
+        if self.hora_fin <= self.hora_inicio:
+            raise ValidationError("La hora de fin debe ser mayor que la hora de inicio.")
+        if self.cohorte_id and self.bloque_id and self.cohorte.bloque_id and self.cohorte.bloque_id != self.bloque_id:
+            raise ValidationError("El bloque del horario no coincide con el bloque de la cohorte.")
+        if self.modulo_id and self.modulo.bloque_id != self.bloque_id:
+            raise ValidationError("El módulo debe pertenecer al bloque seleccionado.")
+
 class Examen(TimeStamped):
     PARCIAL = "PARCIAL"
     RECUP = "RECUP"
@@ -280,9 +335,9 @@ class Examen(TimeStamped):
 class Inscripcion(TimeStamped):
     INSCRIPTO = "INSCRIPTO"
     ACTIVO = "ACTIVO"
-    PAUSADO = "PAUSADO"
-    EGRESADO = "EGRESADO"
-    ESTADOS = [(INSCRIPTO,"Inscripto"), (ACTIVO,"Activo"), (PAUSADO,"Pausado"), (EGRESADO,"Egresado")]
+    INACTIVO = "INACTIVO"
+    LIBRE = "LIBRE"
+    ESTADOS = [(INSCRIPTO,"Inscripto"), (ACTIVO,"Activo"), (INACTIVO,"Inactivo"), (LIBRE,"Libre")]
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE, related_name="inscripciones")
     cohorte = models.ForeignKey(Cohorte, on_delete=models.CASCADE, related_name="inscripciones")
     modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name="inscripciones", null=True, blank=True)

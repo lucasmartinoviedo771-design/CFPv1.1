@@ -150,7 +150,11 @@ export default function Estudiantes() {
         const modulosMap = new Map();
         inscripcionesActivas.forEach(i => {
             if (i?.modulo?.id && !modulosMap.has(i.modulo.id)) {
-                modulosMap.set(i.modulo.id, i.modulo);
+                modulosMap.set(i.modulo.id, {
+                    ...i.modulo,
+                    _programa_nombre: i?.cohorte?.programa?.nombre,
+                    _bloque_nombre: i?.modulo?.bloque?.nombre || i?.cohorte?.bloque?.nombre
+                });
             }
         });
         const modulosInscriptos = Array.from(modulosMap.values());
@@ -260,7 +264,7 @@ export default function Estudiantes() {
                                 { value: 'Terciaria/Universitaria Completa', label: 'Terciaria/Universitaria Completa' },
                                 { value: 'Terciaria/Universitaria', label: 'Terciaria/Universitaria' },
                             ]} /></div>
-                            <div className="md:col-span-2"><Select name="estatus" label="Estatus" value={form.estatus} onChange={onChange} options={[{ value: 'Regular', label: 'Regular' }, { value: 'Libre', label: 'Libre' }, { value: 'Baja', label: 'Baja' }]} /></div>
+                            <div className="md:col-span-2"><Select name="estatus" label="Estatus" value={form.estatus} onChange={onChange} options={[{ value: 'Regular', label: 'Regular' }, { value: 'Baja', label: 'Baja' }, { value: 'Condicional', label: 'Condicional' }, { value: 'Preinscripto', label: 'Preinscripto' }]} /></div>
                         </div>
 
                         <div className="flex flex-wrap gap-4 pt-2">
@@ -287,7 +291,7 @@ export default function Estudiantes() {
                 <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="flex-1"><Input placeholder="Buscar por Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
                     <div className="w-full md:w-48"><Input placeholder="Buscar DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
-                    <div className="w-full md:w-48"><Select value={filters.estatus} onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} options={[{ value: '', label: 'Todos' }, { value: 'Regular', label: 'Regular' }, { value: 'Baja', label: 'Baja' }]} className="bg-indigo-950/50" /></div>
+                    <div className="w-full md:w-48"><Select value={filters.estatus} onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} options={[{ value: '', label: 'Todos' }, { value: 'Regular', label: 'Regular' }, { value: 'Baja', label: 'Baja' }, { value: 'Condicional', label: 'Condicional' }, { value: 'Preinscripto', label: 'Preinscripto' }]} className="bg-indigo-950/50" /></div>
                     <Button onClick={() => refetch()} startIcon={<Search size={18} />} className="bg-indigo-600 hover:bg-indigo-500 border-none">Buscar</Button>
                 </div>
 
@@ -312,7 +316,11 @@ export default function Estudiantes() {
                                         <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.email}</td>
                                         <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.ciudad}</td>
                                         <td className="px-6 py-3">
-                                            <span className={`px-2 py-1 rounded text-xs font-bold ${r.estatus === 'Baja' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                                            <span className={`px-2 py-1 rounded text-xs font-bold ${r.estatus === 'Baja' ? 'bg-red-500/20 text-red-400' :
+                                                    r.estatus === 'Condicional' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                        r.estatus === 'Preinscripto' ? 'bg-blue-500/20 text-blue-400' :
+                                                            'bg-green-500/20 text-green-400'
+                                                }`}>
                                                 {r.estatus}
                                             </span>
                                         </td>
@@ -417,6 +425,7 @@ export default function Estudiantes() {
                                         {viewData.inscripciones.length ? viewData.inscripciones.map(i => (
                                             <div key={i.id} className="border-b border-indigo-500/10 pb-2">
                                                 <p className="text-indigo-100">{i?.cohorte?.programa?.nombre || "Programa"} - {i?.cohorte?.nombre || "Cohorte"}</p>
+                                                <p className="text-indigo-300">Bloque: {i?.modulo?.bloque?.nombre || i?.cohorte?.bloque?.nombre || "-"}</p>
                                                 <p className="text-indigo-300">Módulo: {i?.modulo?.nombre || "-"}</p>
                                                 <p className="text-indigo-300">Estado: {i.estado}</p>
                                             </div>
@@ -428,7 +437,10 @@ export default function Estudiantes() {
                                     <h4 className="text-white font-semibold mb-2">Qué le falta aprobar</h4>
                                     <div className="space-y-2 text-sm">
                                         {trayectoria.modulosPendientes.length ? trayectoria.modulosPendientes.map(m => (
-                                            <p key={m.id} className="text-amber-300">{m.nombre}</p>
+                                            <div key={m.id} className="border-b border-indigo-500/10 pb-1 mb-1">
+                                                <p className="text-indigo-300 text-xs">{m._programa_nombre || "Programa"} - {m._bloque_nombre || "Bloque"}</p>
+                                                <p className="text-amber-300">{m.nombre}</p>
+                                            </div>
                                         )) : <p className="text-green-300">No tiene módulos pendientes en sus inscripciones activas.</p>}
                                     </div>
                                 </Card>
