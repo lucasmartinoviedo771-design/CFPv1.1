@@ -6,6 +6,14 @@ import { Footer } from "../components/Footer";
 
 const MAX_MB = 3;
 const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const NIVEL_EDUCATIVO_OPTIONS = [
+  "Primaria Completa",
+  "Secundaria Incompleta",
+  "Secundaria Completa",
+  "Terciaria/Universitaria Incompleta",
+  "Terciaria/Universitaria Completa",
+  "Terciaria/Universitaria",
+];
 
 function validateFile(file, label) {
   if (!file) return `${label}: archivo requerido.`;
@@ -24,6 +32,50 @@ function normalizeText(value) {
 
 function isProgramacionII(bloqueNombre) {
   return normalizeText(bloqueNombre).includes("programacion ii");
+}
+
+function DropFileField({ label, required, file, onFileChange }) {
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const dropped = e.dataTransfer?.files?.[0] || null;
+    if (dropped) onFileChange(dropped);
+  };
+
+  return (
+    <div>
+      <label className="block text-sm text-indigo-200 mb-2">{label}</label>
+      <label
+        className={`block rounded-xl border-2 border-dashed p-4 cursor-pointer transition-colors ${
+          dragOver ? "border-brand-cyan bg-indigo-900/40" : "border-indigo-400/40 bg-indigo-950/20"
+        }`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+      >
+        <input
+          type="file"
+          accept=".pdf,image/*"
+          className="hidden"
+          onChange={(e) => onFileChange(e.target.files?.[0] || null)}
+          required={required}
+        />
+        <div className="text-sm">
+          <p className="font-semibold text-white">Arrastrá y soltá el archivo acá</p>
+          <p className="text-indigo-200">o hacé clic para abrir el explorador</p>
+          <p className="mt-1 text-xs text-indigo-300">PDF/JPG/PNG/WEBP - Máximo 3MB</p>
+          <p className="mt-2 text-xs text-emerald-300">
+            {file ? `Seleccionado: ${file.name}` : "Ningún archivo seleccionado"}
+          </p>
+        </div>
+      </label>
+    </div>
+  );
 }
 
 export default function PreinscripcionPublica() {
@@ -288,13 +340,41 @@ export default function PreinscripcionPublica() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-xl font-bold">Situación Académica y Recursos</h2>
+              <h2 className="text-xl font-bold">Situación Académica</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="nivel_educativo" placeholder="Nivel educativo" value={form.nivel_educativo} onChange={onChange} />
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-indigo-200 mb-1">Nivel Educativo</label>
+                  <select className="w-full bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="nivel_educativo" value={form.nivel_educativo} onChange={onChange}>
+                    <option value="">Seleccionar...</option>
+                    {NIVEL_EDUCATIVO_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-xl font-bold">Recursos</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <label className="flex items-center gap-2 text-sm text-indigo-200"><input type="checkbox" name="posee_pc" checked={form.posee_pc} onChange={onChange} />Posee PC</label>
                 <label className="flex items-center gap-2 text-sm text-indigo-200"><input type="checkbox" name="posee_conectividad" checked={form.posee_conectividad} onChange={onChange} />Posee conectividad</label>
-                <label className="flex items-center gap-2 text-sm text-indigo-200"><input type="checkbox" name="puede_traer_pc" checked={form.puede_traer_pc} onChange={onChange} />Puede traer PC</label>
-                <label className="md:col-span-2 flex items-center gap-2 text-sm text-indigo-200"><input type="checkbox" name="trabaja" checked={form.trabaja} onChange={onChange} />Actualmente trabaja</label>
+                <label className="flex items-center gap-2 text-sm text-indigo-200 md:col-span-2"><input type="checkbox" name="puede_traer_pc" checked={form.puede_traer_pc} onChange={onChange} />Puede traer esa PC a clase</label>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-xl font-bold">Situación Laboral</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <p className="text-sm text-indigo-200 mb-2">Actualmente trabaja</p>
+                  <label className="mr-5 text-sm text-indigo-100">
+                    <input type="radio" name="trabaja_radio" checked={form.trabaja === true} onChange={() => setForm((prev) => ({ ...prev, trabaja: true }))} /> Si
+                  </label>
+                  <label className="text-sm text-indigo-100">
+                    <input type="radio" name="trabaja_radio" checked={form.trabaja === false} onChange={() => setForm((prev) => ({ ...prev, trabaja: false, lugar_trabajo: "" }))} /> No
+                  </label>
+                </div>
                 {form.trabaja ? <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2 md:col-span-2" name="lugar_trabajo" placeholder="Lugar de trabajo" value={form.lugar_trabajo} onChange={onChange} /> : null}
               </div>
             </section>
@@ -302,16 +382,8 @@ export default function PreinscripcionPublica() {
             <section className="space-y-3">
               <h2 className="text-xl font-bold">Documentación (PDF o imagen, máx 3MB)</h2>
               <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm text-indigo-200 mb-1">DNI (obligatorio)</label>
-                  <input type="file" accept=".pdf,image/*" onChange={(e) => setDniFile(e.target.files?.[0] || null)} required />
-                </div>
-                <div>
-                  <label className="block text-sm text-indigo-200 mb-1">
-                    Título secundario {requiereTitulo ? "(obligatorio para este programa)" : "(opcional)"}
-                  </label>
-                  <input type="file" accept=".pdf,image/*" onChange={(e) => setTituloFile(e.target.files?.[0] || null)} required={requiereTitulo} />
-                </div>
+                <DropFileField label="DNI (obligatorio)" required file={dniFile} onFileChange={setDniFile} />
+                <DropFileField label={`Título secundario ${requiereTitulo ? "(obligatorio para este programa)" : "(opcional)"}`} required={requiereTitulo} file={tituloFile} onFileChange={setTituloFile} />
               </div>
             </section>
 
