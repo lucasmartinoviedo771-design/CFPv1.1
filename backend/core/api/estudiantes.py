@@ -70,6 +70,7 @@ def detalle_estudiante(request, estudiante_id: int):
         trabaja=e.trabaja,
         lugar_trabajo=e.lugar_trabajo,
         dni_digitalizado=e.dni_digitalizado,
+        titulo_secundario_digitalizado=e.titulo_secundario_digitalizado,
         created_at=e.created_at,
         updated_at=e.updated_at,
     )

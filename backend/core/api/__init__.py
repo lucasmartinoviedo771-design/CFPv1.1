@@ -17,6 +17,7 @@ from .user_info import router as user_info_router
 from .estructura import router as estructura_router
 from .resoluciones import router as resoluciones_router
 from .horarios_cursada import router as horarios_cursada_router
+from .preinscripciones_publicas import router as preinscripciones_publicas_router
 
 __all__ = [
     "health_router",
@@ -37,4 +38,5 @@ __all__ = [
     "estructura_router",
     "resoluciones_router",
     "horarios_cursada_router",
+    "preinscripciones_publicas_router",
 ]

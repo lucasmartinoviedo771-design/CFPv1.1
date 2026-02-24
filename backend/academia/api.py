@@ -19,6 +19,7 @@ from core.api import (
     estructura_router,
     resoluciones_router,
     horarios_cursada_router,
+    preinscripciones_publicas_router,
 )
 from core.api.auth import jwt_auth
 
@@ -42,6 +43,7 @@ api.add_router("/examenes", examenes_router)
 api.add_router("/analytics", analytics_router)
 api.add_router("/bloques-de-fechas", bloques_fechas_router)
 api.add_router("/horarios-cursada", horarios_cursada_router)
+api.add_router("/preinscripcion", preinscripciones_publicas_router, auth=None)
 api.add_router("", users_router)  # users/groups paths
 api.add_router("", dashboard_router)
 api.add_router("", imports_router)

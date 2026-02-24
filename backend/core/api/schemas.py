@@ -28,6 +28,7 @@ class ProgramaOut(Schema):
     codigo: str
     nombre: str
     activo: bool
+    requiere_titulo_secundario: bool = False
     resolucion_id: Optional[int] = None
 
 
@@ -35,6 +36,7 @@ class ProgramaIn(Schema):
     codigo: str
     nombre: str
     activo: bool = True
+    requiere_titulo_secundario: bool = False
     resolucion_id: Optional[int] = None
 
 
@@ -164,6 +166,7 @@ class EstudianteIn(Schema):
     trabaja: Optional[bool] = None
     lugar_trabajo: Optional[str] = None
     dni_digitalizado: Optional[str] = None
+    titulo_secundario_digitalizado: Optional[str] = None
 
 
 class InscripcionIn(Schema):
@@ -225,6 +228,7 @@ class EstudianteDetailOut(EstudianteOut):
     trabaja: bool
     lugar_trabajo: Optional[str] = None
     dni_digitalizado: Optional[str] = None
+    titulo_secundario_digitalizado: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

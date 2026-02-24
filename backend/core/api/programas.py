@@ -38,6 +38,7 @@ def detalle_programa(request, programa_id: int):
         codigo=programa.codigo,
         nombre=programa.nombre,
         activo=programa.activo,
+        requiere_titulo_secundario=programa.requiere_titulo_secundario,
         bloques=bloques,
     )
 

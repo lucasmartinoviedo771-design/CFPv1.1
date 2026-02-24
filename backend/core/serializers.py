@@ -97,7 +97,7 @@ class ProgramaSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Programa
-        fields = ['id', 'codigo', 'nombre', 'activo', 'resolucion', 'resolucion_id']
+        fields = ['id', 'codigo', 'nombre', 'activo', 'requiere_titulo_secundario', 'resolucion', 'resolucion_id']
 
 
 class CohorteBloqueSerializer(serializers.ModelSerializer):
@@ -180,7 +180,7 @@ class ProgramaDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Programa
-        fields = ['id', 'codigo', 'nombre', 'activo', 'bloques']
+        fields = ['id', 'codigo', 'nombre', 'activo', 'requiere_titulo_secundario', 'bloques']
 
 class BloqueSerializer(serializers.ModelSerializer):
     programa_id = serializers.PrimaryKeyRelatedField(

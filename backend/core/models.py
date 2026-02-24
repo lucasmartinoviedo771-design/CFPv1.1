@@ -56,6 +56,10 @@ class Programa(TimeStamped):
     codigo = models.CharField(max_length=30, unique=True)
     nombre = models.CharField(max_length=200)
     activo = models.BooleanField(default=True)
+    requiere_titulo_secundario = models.BooleanField(
+        default=False,
+        help_text="Indica si para este programa se debe adjuntar título secundario.",
+    )
     
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
@@ -179,6 +183,11 @@ class Estudiante(TimeStamped):
 
     # --- Documentación (Links) ---
     dni_digitalizado = models.URLField(max_length=500, blank=True, verbose_name="DNI digitalizado (Link)")
+    titulo_secundario_digitalizado = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="Título secundario digitalizado (Link)",
+    )
 
     def get_approved_bloques(self):
         return Bloque.objects.filter(
