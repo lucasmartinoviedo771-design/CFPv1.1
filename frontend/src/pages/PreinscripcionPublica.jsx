@@ -138,6 +138,10 @@ export default function PreinscripcionPublica() {
     () => oferta.find((p) => String(p.programa_id) === String(programaId)),
     [oferta, programaId]
   );
+  const bloquesSeleccionadosDetalle = useMemo(() => {
+    if (!programaSeleccionado) return [];
+    return (programaSeleccionado.bloques || []).filter((b) => bloqueIds.includes(b.bloque_id));
+  }, [programaSeleccionado, bloqueIds]);
 
   const requiereTitulo = Boolean(programaSeleccionado?.requiere_titulo_secundario);
 
@@ -264,7 +268,7 @@ export default function PreinscripcionPublica() {
                     return aLast - bLast;
                   });
                   return (
-                    <div key={p.programa_id} className={`rounded-xl border p-4 ${active ? "border-brand-cyan bg-indigo-950/50" : "border-white/10 bg-black/30"}`}>
+                    <div key={p.programa_id} className={`rounded-xl border p-4 ${active ? "border-emerald-400 bg-emerald-900/20" : "border-white/10 bg-black/30"}`}>
                       <button
                         type="button"
                         onClick={() => openPrograma(p)}
@@ -284,7 +288,7 @@ export default function PreinscripcionPublica() {
                             const programacionIILocked = isProgramacionII(b.bloque_nombre);
                             const checked = bloqueIds.includes(b.bloque_id);
                             return (
-                              <label key={b.bloque_id} className="flex items-start gap-2 text-sm text-indigo-100">
+                              <label key={b.bloque_id} className={`flex items-start gap-2 text-sm rounded-lg px-2 py-1 ${checked ? "bg-emerald-500/15 text-emerald-200" : "text-indigo-100"}`}>
                                 <input
                                   type="checkbox"
                                   checked={checked}
@@ -306,6 +310,24 @@ export default function PreinscripcionPublica() {
                     </div>
                   );
                 })}
+              </div>
+              <div className="rounded-xl border border-emerald-500/40 bg-emerald-900/15 p-4">
+                <h3 className="font-bold text-emerald-300 mb-2">Resumen de inscripción</h3>
+                {!programaSeleccionado ? (
+                  <p className="text-sm text-emerald-100/80">Todavía no seleccionaste una oferta formativa.</p>
+                ) : (
+                  <div className="text-sm text-emerald-100 space-y-2">
+                    <p><strong>Programa:</strong> {programaSeleccionado.programa_nombre}</p>
+                    <p><strong>Bloques seleccionados:</strong> {bloquesSeleccionadosDetalle.length}</p>
+                    <ul className="space-y-1">
+                      {bloquesSeleccionadosDetalle.map((b) => (
+                        <li key={b.bloque_id} className="rounded bg-emerald-700/20 px-2 py-1">
+                          {b.bloque_nombre} - cohorte automática: {b.cohorte_nombre}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </section>
 
