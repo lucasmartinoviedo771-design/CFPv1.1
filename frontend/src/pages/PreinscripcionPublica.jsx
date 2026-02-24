@@ -88,6 +88,7 @@ export default function PreinscripcionPublica() {
   const [programaId, setProgramaId] = useState("");
   const [expandedProgramaId, setExpandedProgramaId] = useState("");
   const [bloqueIds, setBloqueIds] = useState([]);
+  const [bloquesPorPrograma, setBloquesPorPrograma] = useState({});
 
   const [dniFile, setDniFile] = useState(null);
   const [tituloFile, setTituloFile] = useState(null);
@@ -162,17 +163,27 @@ export default function PreinscripcionPublica() {
     }
 
     setProgramaId(id);
+    const prevSeleccion = bloquesPorPrograma[id];
+    if (Array.isArray(prevSeleccion)) {
+      setBloqueIds(prevSeleccion);
+      return;
+    }
     const defaultBloques = (p.bloques || [])
       .filter((b) => (b.correlativas_ids || []).length === 0 && !isProgramacionII(b.bloque_nombre))
       .map((b) => b.bloque_id);
     setBloqueIds(defaultBloques);
+    setBloquesPorPrograma((prev) => ({ ...prev, [id]: defaultBloques }));
   };
 
   const toggleBloque = (bloqueId) => {
     setBloqueIds((prev) => {
       const exists = prev.includes(bloqueId);
       if (exists && prev.length <= 1) return prev;
-      return exists ? prev.filter((x) => x !== bloqueId) : [...prev, bloqueId];
+      const next = exists ? prev.filter((x) => x !== bloqueId) : [...prev, bloqueId];
+      if (programaId) {
+        setBloquesPorPrograma((prevMap) => ({ ...prevMap, [String(programaId)]: next }));
+      }
+      return next;
     });
   };
 
