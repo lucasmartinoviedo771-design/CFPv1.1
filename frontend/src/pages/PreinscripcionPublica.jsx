@@ -148,7 +148,12 @@ export default function PreinscripcionPublica() {
           const bLast = isProgramacionII(b.bloque_nombre) ? 1 : 0;
           return aLast - bLast;
         }),
-      })),
+      })).sort((a, b) => {
+        const aProg = normalizeText(a.programa_nombre) === "programador de nivel iii" ? 0 : 1;
+        const bProg = normalizeText(b.programa_nombre) === "programador de nivel iii" ? 0 : 1;
+        if (aProg !== bProg) return aProg - bProg;
+        return a.programa_nombre.localeCompare(b.programa_nombre, "es");
+      }),
     [oferta]
   );
   const requiereTitulo = selectedProgramas.some((p) => Boolean(p.requiere_titulo_secundario));
@@ -264,9 +269,11 @@ export default function PreinscripcionPublica() {
   return (
     <div className="flex flex-col min-h-screen text-white">
       <Navbar />
-      <div className="lines-bg"><div className="line"></div><div className="line"></div><div className="line"></div></div>
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#0a0033] to-[#0a0033]"></div>
+      </div>
 
-      <div className="flex-grow pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 flex-grow pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1500px] mx-auto space-y-6">
           <div className="animate-fade-in-up">
             <div className="inline-block px-4 py-1 rounded-full border border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan text-xs font-bold tracking-wider uppercase mb-3">

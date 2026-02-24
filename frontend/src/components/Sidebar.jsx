@@ -29,6 +29,7 @@ const dataItems = [
 
 const cargaDatosItems = [
   { label: 'Estudiantes', icon: <Users size={20} />, href: '/estudiantes' },
+  { label: 'Preinscripciones', icon: <FileCheck size={20} />, href: '/preinscripcion' },
   { label: 'Inscripciones', icon: <FileText size={20} />, href: '/inscripciones' },
   { label: 'Asistencia', icon: <CheckSquare size={20} />, href: '/asistencia' },
 ];
