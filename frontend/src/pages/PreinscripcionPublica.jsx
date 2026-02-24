@@ -37,8 +37,8 @@ export default function PreinscripcionPublica() {
     dni_digitalizado: "",
     titulo_secundario_digitalizado: "",
   });
-  const [cohorteIds, setCohorteIds] = useState([]);
-  const [modulosSeleccionados, setModulosSeleccionados] = useState({});
+  const [programaId, setProgramaId] = useState("");
+  const [bloqueIds, setBloqueIds] = useState([]);
 
   useEffect(() => {
     const load = async () => {
@@ -46,7 +46,13 @@ export default function PreinscripcionPublica() {
       setError("");
       try {
         const { data } = await apiClientV2.get("/preinscripcion/oferta");
-        setOferta(Array.isArray(data?.items) ? data.items : []);
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setOferta(items);
+        if (items.length > 0) {
+          const firstProgramaId = items[0].programa_id;
+          setProgramaId(String(firstProgramaId));
+          setBloqueIds((items[0].bloques || []).map((b) => b.bloque_id));
+        }
       } catch (e) {
         setError("No se pudo cargar la oferta de preinscripción.");
       } finally {
@@ -56,46 +62,32 @@ export default function PreinscripcionPublica() {
     load();
   }, []);
 
+  const programaSeleccionado = useMemo(
+    () => oferta.find((p) => String(p.programa_id) === String(programaId)),
+    [oferta, programaId]
+  );
+
   const requiereTitulo = useMemo(() => {
-    const selected = oferta.filter((o) => cohorteIds.includes(o.cohorte_id));
-    return selected.some((o) => o.requiere_titulo_secundario);
-  }, [oferta, cohorteIds]);
+    return Boolean(programaSeleccionado?.requiere_titulo_secundario);
+  }, [programaSeleccionado]);
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const toggleCohorte = (id) => {
-    const selected = oferta.find((x) => x.cohorte_id === id);
-    setCohorteIds((prev) => {
-      if (prev.includes(id)) {
-        const next = prev.filter((x) => x !== id);
-        setModulosSeleccionados((curr) => {
-          const clone = { ...curr };
-          delete clone[id];
-          return clone;
-        });
-        return next;
-      }
-      setModulosSeleccionados((curr) => ({
-        ...curr,
-        [id]: (selected?.modulos || []).map((m) => m.id),
-      }));
-      return [...prev, id];
-    });
+  const onProgramaChange = (e) => {
+    const id = e.target.value;
+    setProgramaId(id);
+    const p = oferta.find((x) => String(x.programa_id) === String(id));
+    setBloqueIds((p?.bloques || []).map((b) => b.bloque_id));
   };
 
-  const toggleModulo = (cohorteId, moduloId) => {
-    const item = oferta.find((x) => x.cohorte_id === cohorteId);
-    const total = item?.modulos?.length || 0;
-    if (total <= 1) return;
-    setModulosSeleccionados((prev) => {
-      const actual = prev[cohorteId] || [];
-      const exists = actual.includes(moduloId);
-      if (exists && actual.length <= 1) return prev;
-      const next = exists ? actual.filter((m) => m !== moduloId) : [...actual, moduloId];
-      return { ...prev, [cohorteId]: next };
+  const toggleBloque = (bloqueId) => {
+    setBloqueIds((prev) => {
+      const exists = prev.includes(bloqueId);
+      if (exists && prev.length <= 1) return prev;
+      return exists ? prev.filter((x) => x !== bloqueId) : [...prev, bloqueId];
     });
   };
 
@@ -103,18 +95,13 @@ export default function PreinscripcionPublica() {
     e.preventDefault();
     setError("");
     setOk("");
-    if (!cohorteIds.length) {
-      setError("Seleccioná al menos un trayecto/bloque.");
+    if (!programaId) {
+      setError("Seleccioná un programa.");
       return;
     }
-    for (const cohorteId of cohorteIds) {
-      const item = oferta.find((x) => x.cohorte_id === cohorteId);
-      const cantModulos = item?.modulos?.length || 0;
-      const selectedMods = modulosSeleccionados[cohorteId] || [];
-      if (cantModulos > 1 && selectedMods.length < 1) {
-        setError(`Debés dejar al menos un módulo seleccionado para ${item?.programa_nombre}.`);
-        return;
-      }
+    if (!bloqueIds.length) {
+      setError("Debés dejar al menos un bloque seleccionado.");
+      return;
     }
     if (!form.dni_digitalizado.trim()) {
       setError("Debés cargar el link de DNI digitalizado.");
@@ -128,10 +115,8 @@ export default function PreinscripcionPublica() {
       setSaving(true);
       const payload = {
         ...form,
-        seleccion_modulos_por_cohorte: cohorteIds.map((cohorteId) => ({
-          cohorte_id: cohorteId,
-          modulo_ids: modulosSeleccionados[cohorteId] || [],
-        })),
+        programa_id: Number(programaId),
+        bloque_ids: bloqueIds,
       };
       const { data } = await apiClientV2.post("/preinscripcion", payload);
       setOk(
@@ -139,7 +124,8 @@ export default function PreinscripcionPublica() {
           data?.inscripciones_creadas?.length || 0
         }.`
       );
-      setCohorteIds([]);
+      const p = oferta.find((x) => String(x.programa_id) === String(programaId));
+      setBloqueIds((p?.bloques || []).map((b) => b.bloque_id));
     } catch (e) {
       const msg = e?.response?.data?.detail || "No se pudo enviar la preinscripción.";
       setError(String(msg));
@@ -221,46 +207,41 @@ export default function PreinscripcionPublica() {
               </div>
 
               <div className="space-y-3">
-                <h2 className="text-xl font-bold">Trayectos/Bloques disponibles</h2>
+                <h2 className="text-xl font-bold">Programa y Bloques</h2>
+                <select
+                  className="w-full bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2"
+                  value={programaId}
+                  onChange={onProgramaChange}
+                  required
+                >
+                  <option value="">Seleccionar programa</option>
+                  {oferta.map((p) => (
+                    <option key={p.programa_id} value={p.programa_id}>
+                      {p.programa_nombre}
+                    </option>
+                  ))}
+                </select>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {oferta.map((item) => (
-                    <label key={item.cohorte_id} className="border border-white/10 rounded-xl p-4 bg-black/30 hover:bg-black/40 transition-colors flex gap-3">
+                  {(programaSeleccionado?.bloques || []).map((item) => (
+                    <label key={item.bloque_id} className="border border-white/10 rounded-xl p-4 bg-black/30 hover:bg-black/40 transition-colors flex gap-3">
                       <input
                         type="checkbox"
-                        checked={cohorteIds.includes(item.cohorte_id)}
-                        onChange={() => toggleCohorte(item.cohorte_id)}
+                        checked={bloqueIds.includes(item.bloque_id)}
+                        onChange={() => toggleBloque(item.bloque_id)}
                       />
                       <div>
-                        <p className="font-bold">{item.programa_nombre}</p>
-                        <p className="text-sm text-indigo-200">
-                          {item.bloque_nombre} - {item.cohorte_nombre}
+                        <p className="font-bold">{item.bloque_nombre}</p>
+                        <p className="text-sm text-indigo-200">Cohorte automática: {item.cohorte_nombre}</p>
+                        <p className="text-xs text-indigo-300 mt-1">
+                          Al confirmar se inscribe en Módulo 1 (o módulo único si solo existe uno).
                         </p>
-                        {cohorteIds.includes(item.cohorte_id) ? (
-                          <div className="mt-2 space-y-1">
-                            {(item.modulos || []).map((m) => {
-                              const selected = (modulosSeleccionados[item.cohorte_id] || []).includes(m.id);
-                              const unico = (item.modulos || []).length <= 1;
-                              return (
-                                <label key={m.id} className="flex items-center gap-2 text-sm text-indigo-100">
-                                  <input
-                                    type="checkbox"
-                                    checked={selected}
-                                    disabled={unico}
-                                    onChange={() => toggleModulo(item.cohorte_id, m.id)}
-                                  />
-                                  {m.nombre} {unico ? "(obligatorio)" : ""}
-                                </label>
-                              );
-                            })}
-                          </div>
-                        ) : null}
-                        {item.requiere_titulo_secundario ? (
-                          <p className="text-xs text-amber-300 mt-1">Requiere título secundario</p>
-                        ) : null}
                       </div>
                     </label>
                   ))}
                 </div>
+                {requiereTitulo ? (
+                  <p className="text-xs text-amber-300">Este programa requiere título secundario digitalizado.</p>
+                ) : null}
               </div>
 
               <div className="grid grid-cols-1 gap-4">

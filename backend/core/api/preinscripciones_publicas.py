@@ -13,19 +13,22 @@ router = Router(tags=["preinscripciones-publicas"])
 
 
 class OfertaBloqueOut(Schema):
-    cohorte_id: int
-    cohorte_nombre: str
-    programa_id: int
-    programa_nombre: str
     bloque_id: int
     bloque_nombre: str
-    requiere_titulo_secundario: bool
+    cohorte_id: int
+    cohorte_nombre: str
     correlativas_ids: List[int]
-    modulos: List[dict]
+
+
+class OfertaProgramaOut(Schema):
+    programa_id: int
+    programa_nombre: str
+    requiere_titulo_secundario: bool
+    bloques: List[OfertaBloqueOut]
 
 
 class PreinscripcionOfertaOut(Schema):
-    items: List[OfertaBloqueOut]
+    items: List[OfertaProgramaOut]
 
 
 class PreinscripcionIn(Schema):
@@ -51,8 +54,8 @@ class PreinscripcionIn(Schema):
     puede_traer_pc: Optional[bool] = False
     trabaja: Optional[bool] = False
     lugar_trabajo: Optional[str] = None
-    cohorte_ids: Optional[List[int]] = None
-    seleccion_modulos_por_cohorte: Optional[List[dict]] = None
+    programa_id: int
+    bloque_ids: Optional[List[int]] = None
     dni_digitalizado: str
     titulo_secundario_digitalizado: Optional[str] = None
 
@@ -130,42 +133,38 @@ def _validar_correlativas(estudiante_id: int, cohortes: List[Cohorte]):
             )
 
 
-def _normalizar_seleccion(payload: PreinscripcionIn) -> dict[int, List[int]]:
-    seleccion: dict[int, List[int]] = {}
-    if payload.seleccion_modulos_por_cohorte:
-        for item in payload.seleccion_modulos_por_cohorte:
-            cohorte_id = item.get("cohorte_id")
-            modulo_ids = item.get("modulo_ids") or []
-            if not cohorte_id:
-                continue
-            seleccion[int(cohorte_id)] = [int(m) for m in modulo_ids]
-    elif payload.cohorte_ids:
-        for cohorte_id in payload.cohorte_ids:
-            seleccion[int(cohorte_id)] = []
-    return seleccion
-
-
 @router.get("/oferta", response=PreinscripcionOfertaOut, auth=None)
 def listar_oferta_preinscripcion(request, programa_id: Optional[int] = None):
     qs = _cohortes_habilitadas()
     if programa_id:
         qs = [c for c in qs if c.programa_id == programa_id]
-    items = []
+    items_map: dict[int, dict] = {}
     for c in qs:
-        modulos = list(c.bloque.modulos.all().order_by("id"))
-        items.append(
-            OfertaBloqueOut(
-                cohorte_id=c.id,
-                cohorte_nombre=c.nombre,
-                programa_id=c.programa_id,
-                programa_nombre=c.programa.nombre,
-                bloque_id=c.bloque_id,
-                bloque_nombre=c.bloque.nombre,
-                requiere_titulo_secundario=c.programa.requiere_titulo_secundario,
-                correlativas_ids=list(c.bloque.correlativas.values_list("id", flat=True)),
-                modulos=[{"id": m.id, "nombre": m.nombre} for m in modulos],
-            )
+        if c.programa_id not in items_map:
+            items_map[c.programa_id] = {
+                "programa_id": c.programa_id,
+                "programa_nombre": c.programa.nombre,
+                "requiere_titulo_secundario": c.programa.requiere_titulo_secundario,
+                "bloques": [],
+            }
+        items_map[c.programa_id]["bloques"].append(
+            {
+                "bloque_id": c.bloque_id,
+                "bloque_nombre": c.bloque.nombre,
+                "cohorte_id": c.id,
+                "cohorte_nombre": c.nombre,
+                "correlativas_ids": list(c.bloque.correlativas.values_list("id", flat=True)),
+            }
         )
+    items = [
+        OfertaProgramaOut(
+            programa_id=v["programa_id"],
+            programa_nombre=v["programa_nombre"],
+            requiere_titulo_secundario=v["requiere_titulo_secundario"],
+            bloques=[OfertaBloqueOut(**b) for b in v["bloques"]],
+        )
+        for v in items_map.values()
+    ]
     return PreinscripcionOfertaOut(items=items)
 
 
@@ -174,9 +173,6 @@ def crear_preinscripcion_publica(request, payload: PreinscripcionIn):
     dni = normalize_dni_digits(payload.dni)
     if len(dni) != 8:
         raise HttpError(400, "El DNI debe tener 8 dígitos.")
-    seleccion = _normalizar_seleccion(payload)
-    if not seleccion:
-        raise HttpError(400, "Debe seleccionar al menos una cohorte.")
     if not payload.dni_digitalizado:
         raise HttpError(400, "Debe adjuntar la copia digitalizada del DNI.")
 
@@ -218,13 +214,23 @@ def crear_preinscripcion_publica(request, payload: PreinscripcionIn):
         serializer.is_valid(raise_exception=True)
         estudiante = serializer.save()
 
-        habilitadas = {c.id: c for c in _cohortes_habilitadas()}
-        cohortes = []
-        for cohorte_id in seleccion.keys():
-            cohorte = habilitadas.get(cohorte_id)
-            if not cohorte:
-                raise HttpError(400, f"La cohorte {cohorte_id} no está habilitada para preinscripción.")
-            cohortes.append(cohorte)
+        cohortes_habilitadas = [
+            c for c in _cohortes_habilitadas() if c.programa_id == payload.programa_id
+        ]
+        if not cohortes_habilitadas:
+            raise HttpError(400, "El programa seleccionado no tiene cohortes habilitadas.")
+
+        cohortes_por_bloque = {c.bloque_id: c for c in cohortes_habilitadas}
+        bloques_disponibles = set(cohortes_por_bloque.keys())
+        bloques_seleccionados = payload.bloque_ids or sorted(list(bloques_disponibles))
+        bloques_seleccionados = [int(b) for b in bloques_seleccionados]
+
+        if not bloques_seleccionados:
+            raise HttpError(400, "Debe seleccionar al menos un bloque.")
+        if any(b not in bloques_disponibles for b in bloques_seleccionados):
+            raise HttpError(400, "Uno o más bloques seleccionados no están habilitados para el programa.")
+
+        cohortes = [cohortes_por_bloque[b] for b in bloques_seleccionados]
 
         _validar_correlativas(estudiante.id, cohortes)
         requiere_titulo = any(c.programa.requiere_titulo_secundario for c in cohortes)
@@ -245,32 +251,38 @@ def crear_preinscripcion_publica(request, payload: PreinscripcionIn):
         inscripciones_creadas = []
         inscripciones_existentes = []
         for cohorte in cohortes:
-            modulos_bloque = list(Modulo.objects.filter(bloque_id=cohorte.bloque_id).order_by("id"))
-            if not modulos_bloque:
+            # Regla de primera inscripción: se asigna siempre al módulo 1 (o único).
+            modulo_inicial = Modulo.objects.filter(bloque_id=cohorte.bloque_id).order_by("id").first()
+            if not modulo_inicial:
                 raise HttpError(400, f"La cohorte '{cohorte.nombre}' no tiene módulos configurados.")
 
-            seleccion_modulo_ids = seleccion.get(cohorte.id) or [m.id for m in modulos_bloque]
-            validos = {m.id for m in modulos_bloque}
-            seleccion_modulo_ids = [m_id for m_id in seleccion_modulo_ids if m_id in validos]
-
-            if len(modulos_bloque) == 1:
-                seleccion_modulo_ids = [modulos_bloque[0].id]
-
-            if not seleccion_modulo_ids:
-                raise HttpError(400, f"Debe seleccionar al menos un módulo para la cohorte '{cohorte.nombre}'.")
-
-            for modulo_id in seleccion_modulo_ids:
-                insc = Inscripcion.objects.filter(estudiante=estudiante, cohorte=cohorte, modulo_id=modulo_id).first()
-                if insc:
-                    inscripciones_existentes.append(insc.id)
-                    continue
-                created = Inscripcion.objects.create(
+            # Si ya tiene inscripción en ese bloque, no se duplica.
+            previas_bloque = list(
+                Inscripcion.objects.filter(
                     estudiante=estudiante,
-                    cohorte=cohorte,
-                    modulo_id=modulo_id,
-                    estado=Inscripcion.INSCRIPTO,
-                )
-                inscripciones_creadas.append(created.id)
+                    modulo__bloque_id=cohorte.bloque_id,
+                ).values_list("id", flat=True)
+            )
+            if previas_bloque:
+                inscripciones_existentes.extend(previas_bloque)
+                continue
+
+            insc = Inscripcion.objects.filter(
+                estudiante=estudiante,
+                cohorte=cohorte,
+                modulo_id=modulo_inicial.id,
+            ).first()
+            if insc:
+                inscripciones_existentes.append(insc.id)
+                continue
+
+            created = Inscripcion.objects.create(
+                estudiante=estudiante,
+                cohorte=cohorte,
+                modulo_id=modulo_inicial.id,
+                estado=Inscripcion.INSCRIPTO,
+            )
+            inscripciones_creadas.append(created.id)
 
     return PreinscripcionOut(
         ok=True,
