@@ -138,6 +138,19 @@ export default function PreinscripcionPublica() {
     () => oferta.filter((p) => selectedProgramaIds.includes(String(p.programa_id))),
     [oferta, selectedProgramaIds]
   );
+  const selectedProgramaSet = useMemo(() => new Set(selectedProgramaIds), [selectedProgramaIds]);
+  const ofertaView = useMemo(
+    () =>
+      oferta.map((p) => ({
+        ...p,
+        bloquesOrdenados: [...(p.bloques || [])].sort((a, b) => {
+          const aLast = isProgramacionII(a.bloque_nombre) ? 1 : 0;
+          const bLast = isProgramacionII(b.bloque_nombre) ? 1 : 0;
+          return aLast - bLast;
+        }),
+      })),
+    [oferta]
+  );
   const requiereTitulo = selectedProgramas.some((p) => Boolean(p.requiere_titulo_secundario));
 
   const onChange = (e) => {
@@ -268,22 +281,17 @@ export default function PreinscripcionPublica() {
           {error ? <div className="rounded-lg bg-red-500/20 border border-red-400/30 px-4 py-3">{error}</div> : null}
           {ok ? <div className="rounded-lg bg-emerald-500/20 border border-emerald-400/30 px-4 py-3">{ok}</div> : null}
 
-          <form onSubmit={onSubmit} className="space-y-6 bg-brand-primary/20 backdrop-blur-sm border border-white/10 rounded-2xl p-6 md:p-8">
+          <form onSubmit={onSubmit} className="space-y-6 bg-brand-primary/20 border border-white/10 rounded-2xl p-6 md:p-8">
             <section className="space-y-3">
               <h2 className="text-xl font-bold">Oferta Formativa</h2>
               <p className="text-sm text-indigo-200">Primero seleccioná una oferta. Al seleccionarla se tildan sus bloques por defecto (excepto correlativas).</p>
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                {oferta.map((p) => {
+                {ofertaView.map((p) => {
                   const pid = String(p.programa_id);
-                  const active = selectedProgramaIds.includes(pid);
+                  const active = selectedProgramaSet.has(pid);
                   const expanded = String(p.programa_id) === String(expandedProgramaId);
-                  const bloquesOrdenados = [...(p.bloques || [])].sort((a, b) => {
-                    const aLast = isProgramacionII(a.bloque_nombre) ? 1 : 0;
-                    const bLast = isProgramacionII(b.bloque_nombre) ? 1 : 0;
-                    return aLast - bLast;
-                  });
                   return (
-                    <div key={p.programa_id} className={`rounded-xl border p-4 ${active ? "border-emerald-400 bg-emerald-900/20" : "border-white/10 bg-black/30"}`}>
+                    <div key={p.programa_id} className={`rounded-xl border p-4 transition-none ${active ? "border-emerald-400 bg-emerald-900/20" : "border-white/10 bg-black/30"}`}>
                       <button
                         type="button"
                         onClick={() => openPrograma(p)}
@@ -298,7 +306,7 @@ export default function PreinscripcionPublica() {
 
                       {expanded ? (
                         <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
-                          {bloquesOrdenados.map((b) => {
+                          {p.bloquesOrdenados.map((b) => {
                             const hasCorrelativas = (b.correlativas_ids || []).length > 0;
                             const programacionIILocked = isProgramacionII(b.bloque_nombre);
                             const checked = (bloquesPorPrograma[pid] || []).includes(b.bloque_id);
@@ -331,10 +339,10 @@ export default function PreinscripcionPublica() {
                 {!resumenSeleccion.length ? (
                   <p className="text-sm text-indigo-200/80">Todavía no seleccionaste una oferta formativa.</p>
                 ) : (
-                  <div className="text-sm text-indigo-100 space-y-2">
+                  <div className="text-sm text-indigo-100 space-y-3">
                     {resumenSeleccion.map(({ programa, bloques }) => (
-                      <div key={programa.programa_id} className="space-y-1">
-                        <p><strong>Programa:</strong> {programa.programa_nombre}</p>
+                      <div key={programa.programa_id} className="rounded-lg border border-indigo-400/30 bg-indigo-900/20 p-3 space-y-2">
+                        <p className="font-semibold text-indigo-50">{programa.programa_nombre}</p>
                         <p><strong>Bloques seleccionados:</strong> {bloques.length}</p>
                         <ul className="space-y-1">
                           {bloques.map((b) => (
