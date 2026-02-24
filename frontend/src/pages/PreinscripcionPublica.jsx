@@ -34,7 +34,7 @@ function isProgramacionII(bloqueNombre) {
   return normalizeText(bloqueNombre).includes("programacion ii");
 }
 
-function DropFileField({ label, required, file, onFileChange }) {
+function DropFileField({ label, required, file, onFileChange, isDark }) {
   const [dragOver, setDragOver] = useState(false);
 
   const handleDrop = (e) => {
@@ -46,10 +46,16 @@ function DropFileField({ label, required, file, onFileChange }) {
 
   return (
     <div>
-      <label className="block text-sm text-indigo-200 mb-2">{label}</label>
+      <label className={`block text-sm mb-2 ${isDark ? "text-indigo-200" : "text-slate-700"}`}>{label}</label>
       <label
         className={`block rounded-xl border-2 border-dashed p-4 cursor-pointer transition-colors ${
-          dragOver ? "border-brand-cyan bg-indigo-900/40" : "border-indigo-400/40 bg-indigo-950/20"
+          dragOver
+            ? isDark
+              ? "border-brand-cyan bg-indigo-900/40"
+              : "border-sky-500 bg-sky-50"
+            : isDark
+              ? "border-indigo-400/40 bg-indigo-950/20"
+              : "border-slate-300 bg-white"
         }`}
         onDragOver={(e) => {
           e.preventDefault();
@@ -66,10 +72,10 @@ function DropFileField({ label, required, file, onFileChange }) {
           required={required}
         />
         <div className="text-sm">
-          <p className="font-semibold text-white">Arrastrá y soltá el archivo acá</p>
-          <p className="text-indigo-200">o hacé clic para abrir el explorador</p>
-          <p className="mt-1 text-xs text-indigo-300">PDF/JPG/PNG/WEBP - Máximo 3MB</p>
-          <p className="mt-2 text-xs text-emerald-300">
+          <p className={`font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>Arrastrá y soltá el archivo acá</p>
+          <p className={isDark ? "text-indigo-200" : "text-slate-600"}>o hacé clic para abrir el explorador</p>
+          <p className={`mt-1 text-xs ${isDark ? "text-indigo-300" : "text-slate-500"}`}>PDF/JPG/PNG/WEBP - Máximo 3MB</p>
+          <p className={`mt-2 text-xs ${isDark ? "text-emerald-300" : "text-emerald-700"}`}>
             {file ? `Seleccionado: ${file.name}` : "Ningún archivo seleccionado"}
           </p>
         </div>
@@ -283,14 +289,14 @@ export default function PreinscripcionPublica() {
         summary: "border-indigo-400/40 bg-indigo-950/30 text-indigo-100",
       }
     : {
-        page: "bg-slate-100 text-slate-900",
-        section: "bg-white border-slate-300 shadow-sm",
-        help: "text-slate-600",
-        title: "text-slate-900",
-        input: "bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-500",
-        card: "border-slate-300 bg-slate-50",
-        cardActive: "border-emerald-500 bg-emerald-50",
-        summary: "border-slate-300 bg-slate-50 text-slate-800",
+        page: "bg-[#cfe3f2] text-[#0f172a]",
+        section: "bg-[#b8d6ea] border-[#6ba3c7] shadow-sm",
+        help: "text-[#1e3a5f]",
+        title: "text-[#0f172a]",
+        input: "bg-[#a8cce3] border-[#6ba3c7] text-[#0f172a] placeholder-[#355a78]",
+        card: "border-[#6ba3c7] bg-[#a8cce3]",
+        cardActive: "border-emerald-600 bg-emerald-100",
+        summary: "border-[#6ba3c7] bg-[#a8cce3] text-[#0f172a]",
       };
 
   return (
@@ -401,38 +407,38 @@ export default function PreinscripcionPublica() {
               <h2 className={`text-xl font-bold ${theme.title}`}>Datos Personales</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="apellido" placeholder="Apellido" value={form.apellido} onChange={onChange} required />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="nombre" placeholder="Nombre" value={form.nombre} onChange={onChange} required />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="dni" placeholder="DNI (8 dígitos)" value={form.dni} onChange={onChange} required />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="cuit" placeholder="CUIT (opcional)" value={form.cuit} onChange={onChange} />
-                <select className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="sexo" value={form.sexo} onChange={onChange}>
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="nombre" placeholder="Nombre" value={form.nombre} onChange={onChange} required />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="dni" placeholder="DNI (8 dígitos)" value={form.dni} onChange={onChange} required />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="cuit" placeholder="CUIT (opcional)" value={form.cuit} onChange={onChange} />
+                <select className={`border rounded-lg px-3 py-2 ${theme.input}`} name="sexo" value={form.sexo} onChange={onChange}>
                   <option value="">Sexo (opcional)</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option>
                 </select>
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="fecha_nacimiento" type="date" value={form.fecha_nacimiento} onChange={onChange} />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="pais_nacimiento" placeholder="País de nacimiento" value={form.pais_nacimiento} onChange={onChange} />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="pais_nacimiento_otro" placeholder="Otro país de nacimiento" value={form.pais_nacimiento_otro} onChange={onChange} />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="nacionalidad" placeholder="Nacionalidad" value={form.nacionalidad} onChange={onChange} />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="nacionalidad_otra" placeholder="Otra nacionalidad" value={form.nacionalidad_otra} onChange={onChange} />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="fecha_nacimiento" type="date" value={form.fecha_nacimiento} onChange={onChange} />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="pais_nacimiento" placeholder="País de nacimiento" value={form.pais_nacimiento} onChange={onChange} />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="pais_nacimiento_otro" placeholder="Otro país de nacimiento" value={form.pais_nacimiento_otro} onChange={onChange} />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="nacionalidad" placeholder="Nacionalidad" value={form.nacionalidad} onChange={onChange} />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="nacionalidad_otra" placeholder="Otra nacionalidad" value={form.nacionalidad_otra} onChange={onChange} />
                 <input className={`border rounded-lg px-3 py-2 md:col-span-2 ${theme.input}`} name="lugar_nacimiento" placeholder="Lugar de nacimiento" value={form.lugar_nacimiento} onChange={onChange} />
               </div>
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-xl font-bold">Contacto y Domicilio</h2>
+              <h2 className={`text-xl font-bold ${theme.title}`}>Contacto y Domicilio</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="email" type="email" placeholder="Email" value={form.email} onChange={onChange} required />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="telefono" placeholder="Teléfono" value={form.telefono} onChange={onChange} />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="ciudad" placeholder="Ciudad" value={form.ciudad} onChange={onChange} />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="barrio" placeholder="Barrio" value={form.barrio} onChange={onChange} />
-                <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2 md:col-span-2" name="domicilio" placeholder="Domicilio" value={form.domicilio} onChange={onChange} />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="email" type="email" placeholder="Email" value={form.email} onChange={onChange} required />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="telefono" placeholder="Teléfono" value={form.telefono} onChange={onChange} />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="ciudad" placeholder="Ciudad" value={form.ciudad} onChange={onChange} />
+                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="barrio" placeholder="Barrio" value={form.barrio} onChange={onChange} />
+                <input className={`border rounded-lg px-3 py-2 md:col-span-2 ${theme.input}`} name="domicilio" placeholder="Domicilio" value={form.domicilio} onChange={onChange} />
               </div>
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-xl font-bold">Situación Académica</h2>
+              <h2 className={`text-xl font-bold ${theme.title}`}>Situación Académica</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-indigo-200 mb-1">Nivel Educativo</label>
-                  <select className="w-full bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2" name="nivel_educativo" value={form.nivel_educativo} onChange={onChange}>
+                  <label className={`block text-sm mb-1 ${theme.help}`}>Nivel Educativo</label>
+                  <select className={`w-full border rounded-lg px-3 py-2 ${theme.input}`} name="nivel_educativo" value={form.nivel_educativo} onChange={onChange}>
                     <option value="">Seleccionar...</option>
                     {NIVEL_EDUCATIVO_OPTIONS.map((opt) => (
                       <option key={opt} value={opt}>{opt}</option>
@@ -443,35 +449,35 @@ export default function PreinscripcionPublica() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-xl font-bold">Recursos</h2>
+              <h2 className={`text-xl font-bold ${theme.title}`}>Recursos</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex items-center gap-2 text-sm text-indigo-200"><input type="checkbox" name="posee_pc" checked={form.posee_pc} onChange={onChange} />Posee PC</label>
-                <label className="flex items-center gap-2 text-sm text-indigo-200"><input type="checkbox" name="posee_conectividad" checked={form.posee_conectividad} onChange={onChange} />Posee conectividad</label>
-                <label className="flex items-center gap-2 text-sm text-indigo-200 md:col-span-2"><input type="checkbox" name="puede_traer_pc" checked={form.puede_traer_pc} onChange={onChange} />Puede traer esa PC a clase</label>
+                <label className={`flex items-center gap-2 text-sm ${theme.help}`}><input type="checkbox" name="posee_pc" checked={form.posee_pc} onChange={onChange} />Posee PC</label>
+                <label className={`flex items-center gap-2 text-sm ${theme.help}`}><input type="checkbox" name="posee_conectividad" checked={form.posee_conectividad} onChange={onChange} />Posee conectividad</label>
+                <label className={`flex items-center gap-2 text-sm md:col-span-2 ${theme.help}`}><input type="checkbox" name="puede_traer_pc" checked={form.puede_traer_pc} onChange={onChange} />Puede traer esa PC a clase</label>
               </div>
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-xl font-bold">Situación Laboral</h2>
+              <h2 className={`text-xl font-bold ${theme.title}`}>Situación Laboral</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <p className="text-sm text-indigo-200 mb-2">Actualmente trabaja</p>
-                  <label className="mr-5 text-sm text-indigo-100">
+                  <p className={`text-sm mb-2 ${theme.help}`}>Actualmente trabaja</p>
+                  <label className={`mr-5 text-sm ${theme.help}`}>
                     <input type="radio" name="trabaja_radio" checked={form.trabaja === true} onChange={() => setForm((prev) => ({ ...prev, trabaja: true }))} /> Si
                   </label>
-                  <label className="text-sm text-indigo-100">
+                  <label className={`text-sm ${theme.help}`}>
                     <input type="radio" name="trabaja_radio" checked={form.trabaja === false} onChange={() => setForm((prev) => ({ ...prev, trabaja: false, lugar_trabajo: "" }))} /> No
                   </label>
                 </div>
-                {form.trabaja ? <input className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg px-3 py-2 md:col-span-2" name="lugar_trabajo" placeholder="Lugar de trabajo" value={form.lugar_trabajo} onChange={onChange} /> : null}
+                {form.trabaja ? <input className={`border rounded-lg px-3 py-2 md:col-span-2 ${theme.input}`} name="lugar_trabajo" placeholder="Lugar de trabajo" value={form.lugar_trabajo} onChange={onChange} /> : null}
               </div>
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-xl font-bold">Documentación (PDF o imagen, máx 3MB)</h2>
+              <h2 className={`text-xl font-bold ${theme.title}`}>Documentación (PDF o imagen, máx 3MB)</h2>
               <div className="grid grid-cols-1 gap-4">
-                <DropFileField label="DNI (obligatorio)" required file={dniFile} onFileChange={setDniFile} />
-                <DropFileField label={`Título secundario ${requiereTitulo ? "(obligatorio para este programa)" : "(opcional)"}`} required={requiereTitulo} file={tituloFile} onFileChange={setTituloFile} />
+                <DropFileField label="DNI (obligatorio)" required file={dniFile} onFileChange={setDniFile} isDark={isDark} />
+                <DropFileField label={`Título secundario ${requiereTitulo ? "(obligatorio para este programa)" : "(opcional)"}`} required={requiereTitulo} file={tituloFile} onFileChange={setTituloFile} isDark={isDark} />
               </div>
             </section>
 
