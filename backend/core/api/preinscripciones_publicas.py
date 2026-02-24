@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import json
 from typing import List, Optional
 
 from django.db import transaction
@@ -155,6 +156,43 @@ def _parse_bloque_ids(request) -> List[int]:
     return bloque_ids
 
 
+def _parse_seleccion_programas(request) -> List[dict]:
+    raw_json = request.POST.get("seleccion_programas_json", "").strip()
+    if raw_json:
+        try:
+            parsed = json.loads(raw_json)
+        except json.JSONDecodeError:
+            raise HttpError(400, "Formato inválido en seleccion_programas_json.")
+        if not isinstance(parsed, list):
+            raise HttpError(400, "seleccion_programas_json debe ser una lista.")
+        normalizada = []
+        for item in parsed:
+            if not isinstance(item, dict):
+                raise HttpError(400, "Cada selección de programa debe ser un objeto.")
+            try:
+                programa_id = int(item.get("programa_id", 0))
+            except (TypeError, ValueError):
+                raise HttpError(400, "programa_id inválido en selección.")
+            bloque_ids = item.get("bloque_ids", [])
+            if not isinstance(bloque_ids, list):
+                raise HttpError(400, "bloque_ids debe ser una lista.")
+            try:
+                bloque_ids = [int(b) for b in bloque_ids]
+            except (TypeError, ValueError):
+                raise HttpError(400, "bloque_ids contiene valores inválidos.")
+            normalizada.append({"programa_id": programa_id, "bloque_ids": bloque_ids})
+        return normalizada
+
+    # Backward compatible mode: una sola oferta
+    try:
+        programa_id = int(request.POST.get("programa_id", "0"))
+    except ValueError:
+        raise HttpError(400, "programa_id inválido.")
+    if not programa_id:
+        raise HttpError(400, "Debe seleccionar al menos una oferta formativa.")
+    return [{"programa_id": programa_id, "bloque_ids": _parse_bloque_ids(request)}]
+
+
 def _validar_archivo_documento(file_obj, field_label: str):
     if not file_obj:
         return
@@ -229,16 +267,9 @@ def crear_preinscripcion_publica(request):
     if len(dni) != 8:
         raise HttpError(400, "El DNI debe tener 8 dígitos.")
 
-    try:
-        programa_id = int(post.get("programa_id", "0"))
-    except ValueError:
-        raise HttpError(400, "programa_id inválido.")
-    if not programa_id:
-        raise HttpError(400, "Debe seleccionar un programa.")
-
-    bloque_ids = _parse_bloque_ids(request)
-    if not bloque_ids:
-        raise HttpError(400, "Debe seleccionar al menos un bloque.")
+    seleccion_programas = _parse_seleccion_programas(request)
+    if not seleccion_programas:
+        raise HttpError(400, "Debe seleccionar al menos una oferta formativa.")
 
     dni_file = files.get("dni_digitalizado")
     titulo_file = files.get("titulo_secundario_digitalizado")
@@ -281,23 +312,25 @@ def crear_preinscripcion_publica(request):
         serializer.is_valid(raise_exception=True)
         estudiante = serializer.save()
 
-        cohortes_habilitadas = [
-            c for c in _cohortes_habilitadas() if c.programa_id == programa_id
-        ]
-        if not cohortes_habilitadas:
-            raise HttpError(400, "El programa seleccionado no tiene cohortes habilitadas.")
+        todas_habilitadas = _cohortes_habilitadas()
+        cohortes: List[Cohorte] = []
+        for seleccion in seleccion_programas:
+            programa_id = seleccion["programa_id"]
+            cohortes_habilitadas = [c for c in todas_habilitadas if c.programa_id == programa_id]
+            if not cohortes_habilitadas:
+                raise HttpError(400, f"El programa {programa_id} no tiene cohortes habilitadas.")
 
-        cohortes_por_bloque = {c.bloque_id: c for c in cohortes_habilitadas}
-        bloques_disponibles = set(cohortes_por_bloque.keys())
-        bloques_seleccionados = bloque_ids or sorted(list(bloques_disponibles))
-        bloques_seleccionados = [int(b) for b in bloques_seleccionados]
+            cohortes_por_bloque = {c.bloque_id: c for c in cohortes_habilitadas}
+            bloques_disponibles = set(cohortes_por_bloque.keys())
+            bloques_seleccionados = seleccion["bloque_ids"] or sorted(list(bloques_disponibles))
+            bloques_seleccionados = [int(b) for b in bloques_seleccionados]
 
-        if not bloques_seleccionados:
-            raise HttpError(400, "Debe seleccionar al menos un bloque.")
-        if any(b not in bloques_disponibles for b in bloques_seleccionados):
-            raise HttpError(400, "Uno o más bloques seleccionados no están habilitados para el programa.")
+            if not bloques_seleccionados:
+                raise HttpError(400, f"Debe seleccionar al menos un bloque para el programa {programa_id}.")
+            if any(b not in bloques_disponibles for b in bloques_seleccionados):
+                raise HttpError(400, f"Uno o más bloques seleccionados no están habilitados para el programa {programa_id}.")
 
-        cohortes = [cohortes_por_bloque[b] for b in bloques_seleccionados]
+            cohortes.extend([cohortes_por_bloque[b] for b in bloques_seleccionados])
 
         _validar_correlativas(estudiante.id, cohortes)
         requiere_titulo = any(c.programa.requiere_titulo_secundario for c in cohortes)

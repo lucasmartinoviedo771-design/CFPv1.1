@@ -85,9 +85,8 @@ export default function PreinscripcionPublica() {
   const [ok, setOk] = useState("");
   const [oferta, setOferta] = useState([]);
 
-  const [programaId, setProgramaId] = useState("");
+  const [selectedProgramaIds, setSelectedProgramaIds] = useState([]);
   const [expandedProgramaId, setExpandedProgramaId] = useState("");
-  const [bloqueIds, setBloqueIds] = useState([]);
   const [bloquesPorPrograma, setBloquesPorPrograma] = useState({});
 
   const [dniFile, setDniFile] = useState(null);
@@ -135,16 +134,11 @@ export default function PreinscripcionPublica() {
     load();
   }, []);
 
-  const programaSeleccionado = useMemo(
-    () => oferta.find((p) => String(p.programa_id) === String(programaId)),
-    [oferta, programaId]
+  const selectedProgramas = useMemo(
+    () => oferta.filter((p) => selectedProgramaIds.includes(String(p.programa_id))),
+    [oferta, selectedProgramaIds]
   );
-  const bloquesSeleccionadosDetalle = useMemo(() => {
-    if (!programaSeleccionado) return [];
-    return (programaSeleccionado.bloques || []).filter((b) => bloqueIds.includes(b.bloque_id));
-  }, [programaSeleccionado, bloqueIds]);
-
-  const requiereTitulo = Boolean(programaSeleccionado?.requiere_titulo_secundario);
+  const requiereTitulo = selectedProgramas.some((p) => Boolean(p.requiere_titulo_secundario));
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -153,52 +147,58 @@ export default function PreinscripcionPublica() {
 
   const openPrograma = (p) => {
     const id = String(p.programa_id);
-    const isSame = String(programaId) === id;
+    const isSelected = selectedProgramaIds.includes(id);
     setExpandedProgramaId((curr) => (curr === id ? "" : id));
 
-    if (isSame) {
-      setProgramaId("");
-      setBloqueIds([]);
+    if (isSelected) {
+      setSelectedProgramaIds((prev) => prev.filter((x) => x !== id));
       return;
     }
 
-    setProgramaId(id);
+    setSelectedProgramaIds((prev) => [...prev, id]);
     const prevSeleccion = bloquesPorPrograma[id];
-    if (Array.isArray(prevSeleccion)) {
-      setBloqueIds(prevSeleccion);
-      return;
-    }
+    if (Array.isArray(prevSeleccion)) return;
     const defaultBloques = (p.bloques || [])
       .filter((b) => (b.correlativas_ids || []).length === 0 && !isProgramacionII(b.bloque_nombre))
       .map((b) => b.bloque_id);
-    setBloqueIds(defaultBloques);
     setBloquesPorPrograma((prev) => ({ ...prev, [id]: defaultBloques }));
   };
 
-  const toggleBloque = (bloqueId) => {
-    setBloqueIds((prev) => {
-      const exists = prev.includes(bloqueId);
-      if (exists && prev.length <= 1) return prev;
-      const next = exists ? prev.filter((x) => x !== bloqueId) : [...prev, bloqueId];
-      if (programaId) {
-        setBloquesPorPrograma((prevMap) => ({ ...prevMap, [String(programaId)]: next }));
-      }
-      return next;
-    });
+  const toggleBloque = (programaId, bloqueId) => {
+    const key = String(programaId);
+    const actuales = bloquesPorPrograma[key] || [];
+    const next = (() => {
+      const exists = actuales.includes(bloqueId);
+      if (exists && actuales.length <= 1) return actuales;
+      return exists ? actuales.filter((x) => x !== bloqueId) : [...actuales, bloqueId];
+    })();
+    setBloquesPorPrograma((prev) => ({ ...prev, [key]: next }));
   };
+
+  const resumenSeleccion = useMemo(() => {
+    return selectedProgramas.map((p) => {
+      const sel = bloquesPorPrograma[String(p.programa_id)] || [];
+      const bloques = (p.bloques || []).filter((b) => sel.includes(b.bloque_id));
+      return { programa: p, bloques };
+    });
+  }, [selectedProgramas, bloquesPorPrograma]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setOk("");
 
-    if (!programaId) {
-      setError("Seleccioná un programa.");
+    if (!selectedProgramaIds.length) {
+      setError("Seleccioná al menos una oferta formativa.");
       return;
     }
-    if (!bloqueIds.length) {
-      setError("Debés dejar al menos un bloque seleccionado.");
-      return;
+    for (const pid of selectedProgramaIds) {
+      const sel = bloquesPorPrograma[String(pid)] || [];
+      if (!sel.length) {
+        const p = oferta.find((x) => String(x.programa_id) === String(pid));
+        setError(`Debés dejar al menos un bloque en ${p?.programa_nombre || "la oferta seleccionada"}.`);
+        return;
+      }
     }
 
     const dniErr = validateFile(dniFile, "DNI");
@@ -224,8 +224,11 @@ export default function PreinscripcionPublica() {
       setSaving(true);
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, typeof v === "boolean" ? String(v) : (v || "")));
-      fd.append("programa_id", String(programaId));
-      bloqueIds.forEach((id) => fd.append("bloque_ids", String(id)));
+      const seleccion = selectedProgramaIds.map((pid) => ({
+        programa_id: Number(pid),
+        bloque_ids: bloquesPorPrograma[String(pid)] || [],
+      }));
+      fd.append("seleccion_programas_json", JSON.stringify(seleccion));
       fd.append("dni_digitalizado", dniFile);
       if (tituloFile) fd.append("titulo_secundario_digitalizado", tituloFile);
 
@@ -271,7 +274,8 @@ export default function PreinscripcionPublica() {
               <p className="text-sm text-indigo-200">Primero seleccioná una oferta. Al seleccionarla se tildan sus bloques por defecto (excepto correlativas).</p>
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {oferta.map((p) => {
-                  const active = String(p.programa_id) === String(programaId);
+                  const pid = String(p.programa_id);
+                  const active = selectedProgramaIds.includes(pid);
                   const expanded = String(p.programa_id) === String(expandedProgramaId);
                   const bloquesOrdenados = [...(p.bloques || [])].sort((a, b) => {
                     const aLast = isProgramacionII(a.bloque_nombre) ? 1 : 0;
@@ -297,14 +301,14 @@ export default function PreinscripcionPublica() {
                           {bloquesOrdenados.map((b) => {
                             const hasCorrelativas = (b.correlativas_ids || []).length > 0;
                             const programacionIILocked = isProgramacionII(b.bloque_nombre);
-                            const checked = bloqueIds.includes(b.bloque_id);
+                            const checked = (bloquesPorPrograma[pid] || []).includes(b.bloque_id);
                             return (
                               <label key={b.bloque_id} className={`flex items-start gap-2 text-sm rounded-lg px-2 py-1 ${checked ? "bg-emerald-500/15 text-emerald-200" : "text-indigo-100"}`}>
                                 <input
                                   type="checkbox"
                                   checked={checked}
                                   disabled={programacionIILocked}
-                                  onChange={() => toggleBloque(b.bloque_id)}
+                                  onChange={() => toggleBloque(pid, b.bloque_id)}
                                 />
                                 <span>
                                   <strong>{b.bloque_nombre}</strong> - cohorte automática: {b.cohorte_nombre}
@@ -324,19 +328,23 @@ export default function PreinscripcionPublica() {
               </div>
               <div className="rounded-xl border border-emerald-500/40 bg-emerald-900/15 p-4">
                 <h3 className="font-bold text-emerald-300 mb-2">Resumen de inscripción</h3>
-                {!programaSeleccionado ? (
+                {!resumenSeleccion.length ? (
                   <p className="text-sm text-emerald-100/80">Todavía no seleccionaste una oferta formativa.</p>
                 ) : (
                   <div className="text-sm text-emerald-100 space-y-2">
-                    <p><strong>Programa:</strong> {programaSeleccionado.programa_nombre}</p>
-                    <p><strong>Bloques seleccionados:</strong> {bloquesSeleccionadosDetalle.length}</p>
-                    <ul className="space-y-1">
-                      {bloquesSeleccionadosDetalle.map((b) => (
-                        <li key={b.bloque_id} className="rounded bg-emerald-700/20 px-2 py-1">
-                          {b.bloque_nombre} - cohorte automática: {b.cohorte_nombre}
-                        </li>
-                      ))}
-                    </ul>
+                    {resumenSeleccion.map(({ programa, bloques }) => (
+                      <div key={programa.programa_id} className="space-y-1">
+                        <p><strong>Programa:</strong> {programa.programa_nombre}</p>
+                        <p><strong>Bloques seleccionados:</strong> {bloques.length}</p>
+                        <ul className="space-y-1">
+                          {bloques.map((b) => (
+                            <li key={b.bloque_id} className="rounded bg-emerald-700/20 px-2 py-1">
+                              {b.bloque_nombre} - cohorte automática: {b.cohorte_nombre}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
