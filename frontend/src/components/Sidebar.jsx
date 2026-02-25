@@ -140,7 +140,7 @@ export default function Sidebar() {
         >
           <span className="inline-flex items-center gap-2">
             <FileCheck size={18} />
-            Preinscripción Pública
+            Página de Preinscripción
           </span>
           <ExternalLink size={14} />
         </Link>
