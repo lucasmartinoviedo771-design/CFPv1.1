@@ -224,12 +224,12 @@ class EvaluacionService:
             es_nota_definitiva=False,  # Los parciales no son notas definitivas
             fecha_calificacion=fecha_calificacion or timezone.now()
         )
-        # Lógica de progresión automática al siguiente módulo y cohorte
-        if aprobado and examen_parcial.modulo:
+        # Lógica de progresión automática a la siguiente cohorte
+        if examen_parcial.modulo:
             modulo_actual = examen_parcial.modulo
             bloque = modulo_actual.bloque
             
-            # Buscar la inscripción actual del estudiante al módulo que acaba de aprobar
+            # Buscar la inscripción actual del estudiante al módulo que acaba de rendir
             insc_actual = Inscripcion.objects.filter(
                 estudiante=estudiante,
                 modulo=modulo_actual
@@ -238,26 +238,31 @@ class EvaluacionService:
             if insc_actual:
                 cohorte_actual = insc_actual.cohorte
                 
-                # Buscar el siguiente módulo en el mismo bloque (ordenado cronológicamente por ID)
-                siguiente_modulo = Modulo.objects.filter(
+                # Buscar la siguiente cohorte (en el tiempo) para este mismo programa/bloque
+                siguiente_cohorte = Cohorte.objects.filter(
+                    programa=cohorte_actual.programa,
                     bloque=bloque,
-                    id__gt=modulo_actual.id
-                ).order_by('id').first()
+                    fecha_inicio__gt=cohorte_actual.fecha_inicio
+                ).order_by('fecha_inicio').first()
                 
-                if siguiente_modulo:
-                    # Buscar la siguiente cohorte (en el tiempo) para este mismo programa/bloque
-                    siguiente_cohorte = Cohorte.objects.filter(
-                        programa=cohorte_actual.programa,
-                        bloque=bloque,
-                        fecha_inicio__gt=cohorte_actual.fecha_inicio
-                    ).order_by('fecha_inicio').first()
+                if siguiente_cohorte:
+                    modulo_destino = None
+                    if aprobado:
+                        # Si aprueba, va al siguiente módulo
+                        modulo_destino = Modulo.objects.filter(
+                            bloque=bloque,
+                            id__gt=modulo_actual.id
+                        ).order_by('id').first()
+                    else:
+                        # Si desaprueba, recursa el mismo módulo en la siguiente cohorte
+                        modulo_destino = modulo_actual
                     
-                    if siguiente_cohorte:
+                    if modulo_destino:
                         # Crear la inscripción automáticamente (si no existe ya)
                         Inscripcion.objects.get_or_create(
                             estudiante=estudiante,
                             cohorte=siguiente_cohorte,
-                            modulo=siguiente_modulo,
+                            modulo=modulo_destino,
                             defaults={'estado': Inscripcion.INSCRIPTO}
                         )
 
