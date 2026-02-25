@@ -133,6 +133,17 @@ class EstudianteViewSet(viewsets.ModelViewSet):
         serializer = BloqueSerializer(bloques, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['post'])
+    def bulk_approve(self, request):
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'error': 'No se proporcionaron IDs.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        with transaction.atomic():
+            updated = Estudiante.objects.filter(id__in=ids, estatus='Preinscripto').update(estatus='Regular', updated_at=timezone.now())
+            
+        return Response({'updated': updated}, status=status.HTTP_200_OK)
+
     def perform_destroy(self, instance):
         """En lugar de borrar, cambia el estatus a 'Baja' (soft delete)."""
         instance.estatus = 'Baja'

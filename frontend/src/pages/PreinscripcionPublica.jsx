@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ChevronDown, ChevronUp, Moon, Sun } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, Moon, Sun, CheckCircle2 } from "lucide-react";
 import { apiClientV2 } from "../api/client";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
@@ -52,15 +52,14 @@ function DropFileField({ label, required, file, onFileChange, isDark }) {
     <div>
       <label className={`block text-sm mb-2 ${isDark ? "text-indigo-200" : "text-slate-700"}`}>{label}</label>
       <label
-        className={`block rounded-xl border-2 border-dashed p-4 cursor-pointer transition-colors ${
-          dragOver
-            ? isDark
-              ? "border-brand-cyan bg-indigo-900/40"
-              : "border-sky-500 bg-sky-50"
-            : isDark
-              ? "border-indigo-400/40 bg-indigo-950/20"
-              : "border-slate-300 bg-white"
-        }`}
+        className={`block rounded-xl border-2 border-dashed p-4 cursor-pointer transition-colors ${dragOver
+          ? isDark
+            ? "border-brand-cyan bg-indigo-900/40"
+            : "border-sky-500 bg-sky-50"
+          : isDark
+            ? "border-indigo-400/40 bg-indigo-950/20"
+            : "border-slate-300 bg-white"
+          }`}
         onDragOver={(e) => {
           e.preventDefault();
           setDragOver(true);
@@ -73,7 +72,6 @@ function DropFileField({ label, required, file, onFileChange, isDark }) {
           accept=".pdf,image/*"
           className="hidden"
           onChange={(e) => onFileChange(e.target.files?.[0] || null)}
-          required={required}
         />
         <div className="text-sm">
           <p className={`font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>Arrastrá y soltá el archivo acá</p>
@@ -279,10 +277,39 @@ export default function PreinscripcionPublica() {
       });
 
       setOk(
-        `Preinscripción enviada. Estudiante #${data?.estudiante_id}. Inscripciones nuevas: ${
-          data?.inscripciones_creadas?.length || 0
+        `Preinscripción enviada. Estudiante #${data?.estudiante_id}. Inscripciones nuevas: ${data?.inscripciones_creadas?.length || 0
         }.`
       );
+      // Resetear el formulario
+      setForm({
+        apellido: "",
+        nombre: "",
+        email: "",
+        dni: "",
+        cuit: "",
+        sexo: "",
+        fecha_nacimiento: "",
+        pais_nacimiento: "Argentina",
+        pais_nacimiento_otro: "",
+        nacionalidad: "Argentina",
+        nacionalidad_otra: "",
+        lugar_nacimiento: "",
+        domicilio: "",
+        barrio: "",
+        ciudad: "",
+        telefono: "",
+        nivel_educativo: "Secundaria Completa",
+        posee_pc: false,
+        posee_conectividad: false,
+        puede_traer_pc: false,
+        trabaja: false,
+        lugar_trabajo: "",
+      });
+      setSelectedProgramaIds([]);
+      setExpandedProgramaId("");
+      setBloquesPorPrograma({});
+      setDniFile(null);
+      setTituloFile(null);
     } catch (eReq) {
       setError(String(eReq?.response?.data?.detail || "No se pudo enviar la preinscripción."));
     } finally {
@@ -292,25 +319,25 @@ export default function PreinscripcionPublica() {
 
   const theme = isDark
     ? {
-        page: "bg-[#090026] text-white",
-        section: "bg-brand-primary/20 border-white/10",
-        help: "text-indigo-200",
-        title: "text-white",
-        input: "bg-indigo-950/40 border-indigo-500/30 text-white placeholder-indigo-300",
-        card: "border-white/10 bg-black/30",
-        cardActive: "border-emerald-400 bg-emerald-900/20",
-        summary: "border-indigo-400/40 bg-indigo-950/30 text-indigo-100",
-      }
+      page: "bg-[#090026] text-white",
+      section: "bg-brand-primary/20 border-white/10",
+      help: "text-indigo-200",
+      title: "text-white",
+      input: "bg-indigo-950/40 border-indigo-500/30 text-white placeholder-indigo-300",
+      card: "border-white/10 bg-black/30",
+      cardActive: "border-emerald-400 bg-emerald-900/20",
+      summary: "border-indigo-400/40 bg-indigo-950/30 text-indigo-100",
+    }
     : {
-        page: "bg-[#cfe3f2] text-[#0f172a]",
-        section: "bg-[#b8d6ea] border-[#6ba3c7] shadow-sm",
-        help: "text-[#1e3a5f]",
-        title: "text-[#0f172a]",
-        input: "bg-[#a8cce3] border-[#6ba3c7] text-[#0f172a] placeholder-[#355a78]",
-        card: "border-[#6ba3c7] bg-[#a8cce3]",
-        cardActive: "border-emerald-600 bg-emerald-100",
-        summary: "border-[#6ba3c7] bg-[#a8cce3] text-[#0f172a]",
-      };
+      page: "bg-[#cfe3f2] text-[#0f172a]",
+      section: "bg-[#b8d6ea] border-[#6ba3c7] shadow-sm",
+      help: "text-[#1e3a5f]",
+      title: "text-[#0f172a]",
+      input: "bg-[#a8cce3] border-[#6ba3c7] text-[#0f172a] placeholder-[#355a78]",
+      card: "border-[#6ba3c7] bg-[#a8cce3]",
+      cardActive: "border-emerald-600 bg-emerald-100",
+      summary: "border-[#6ba3c7] bg-[#a8cce3] text-[#0f172a]",
+    };
 
   return (
     <div className={`flex flex-col min-h-screen ${theme.page}`}>
@@ -340,31 +367,65 @@ export default function PreinscripcionPublica() {
             </h1>
           </div>
 
-          {loading ? <p className={theme.help}>Cargando oferta...</p> : null}
-          {error ? <div className="rounded-lg bg-red-500/20 border border-red-400/30 px-4 py-3">{error}</div> : null}
-          {ok ? <div className="rounded-lg bg-emerald-500/20 border border-emerald-400/30 px-4 py-3">{ok}</div> : null}
+          {/* Alertas fijas flotantes (Toasts) */}
+          {error && (
+            <div className="fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-[100] animate-fade-in-up max-w-sm md:max-w-md rounded-xl bg-red-600 px-5 py-4 text-white shadow-2xl shadow-red-900/50 flex items-start gap-3 border border-red-500">
+              <div className="flex-1">
+                <p className="font-bold mb-1">Oops, falta algo</p>
+                <p className="text-sm text-red-100 leading-relaxed">{error}</p>
+              </div>
+              <button className="text-red-300 hover:text-white transition-colors p-1" onClick={() => setError("")}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+          )}
+
+          {ok && (
+            <div className="fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-[100] animate-fade-in-up max-w-sm md:max-w-md rounded-xl bg-emerald-600 px-5 py-4 text-white shadow-2xl shadow-emerald-900/50 flex items-start gap-3 border border-emerald-500">
+              <div className="flex-1">
+                <p className="font-bold mb-1">¡Preinscripción Exitosa!</p>
+                <p className="text-sm text-emerald-100 leading-relaxed">{ok}</p>
+              </div>
+              <button className="text-emerald-300 hover:text-white transition-colors p-1" onClick={() => setOk("")}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+          )}
 
           <form onSubmit={onSubmit} className={`preins-form ${isDark ? "preins-dark" : "preins-light"} space-y-6 border rounded-2xl p-6 md:p-8 ${theme.section}`}>
             <section className="space-y-3">
               <h2 className={`text-xl font-bold ${theme.title}`}>Oferta Formativa</h2>
-              <p className={`text-sm ${theme.help}`}>Primero seleccioná una oferta. Al seleccionarla se tildan sus bloques por defecto (excepto correlativas).</p>
+              <p className={`text-sm ${theme.help}`}>Primero seleccioná una oferta.</p>
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {ofertaView.map((p) => {
                   const pid = String(p.programa_id);
                   const active = selectedProgramaSet.has(pid);
                   const expanded = active && String(p.programa_id) === String(expandedProgramaId);
                   return (
-                    <div key={p.programa_id} className={`rounded-xl border p-4 transition-none ${active ? theme.cardActive : theme.card}`}>
+                    <div
+                      key={p.programa_id}
+                      className={`relative rounded-xl border p-4 transition-all duration-200 cursor-pointer overflow-hidden ${active
+                        ? `${theme.cardActive} ring-2 ring-emerald-500 shadow-md`
+                        : `${theme.card} hover:border-brand-cyan/70 hover:shadow-sm hover:scale-[1.01]`
+                        }`}
+                      onClick={() => openPrograma(p)}
+                    >
+                      {active && (
+                        <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none">
+                          <div className={`absolute top-0 right-0 w-0 h-0 border-t-[40px] border-l-[40px] border-l-transparent ${isDark ? 'border-t-emerald-600/80' : 'border-t-emerald-500'}`}></div>
+                          <CheckCircle2 size={16} strokeWidth={3} className="absolute top-2 right-2 text-white" />
+                        </div>
+                      )}
+
                       <button
                         type="button"
-                        onClick={() => openPrograma(p)}
-                        className="w-full flex items-center justify-between text-left"
+                        className="w-full flex items-center justify-between text-left pr-6"
                       >
                         <div>
                           <p className={`font-bold text-lg ${theme.title}`}>{p.programa_nombre}</p>
                           <p className={`text-xs ${theme.help}`}>{p.bloques?.length || 0} bloque(s) disponible(s)</p>
                         </div>
-                        {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                        {expanded ? <ChevronUp size={18} className={theme.help} /> : <ChevronDown size={18} className={theme.help} />}
                       </button>
 
                       {expanded ? (
@@ -432,10 +493,26 @@ export default function PreinscripcionPublica() {
                   <option value="">Sexo (opcional)</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option>
                 </select>
                 <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="fecha_nacimiento" type="date" value={form.fecha_nacimiento} onChange={onChange} />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="pais_nacimiento" placeholder="País de nacimiento" value={form.pais_nacimiento} onChange={onChange} />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="pais_nacimiento_otro" placeholder="Otro país de nacimiento" value={form.pais_nacimiento_otro} onChange={onChange} />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="nacionalidad" placeholder="Nacionalidad" value={form.nacionalidad} onChange={onChange} />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="nacionalidad_otra" placeholder="Otra nacionalidad" value={form.nacionalidad_otra} onChange={onChange} />
+                <select className={`border rounded-lg px-3 py-2 ${theme.input}`} name="pais_nacimiento" value={form.pais_nacimiento} onChange={onChange}>
+                  <option value="Argentina">Argentina</option>
+                  <option value="Bolivia">Bolivia</option>
+                  <option value="Brasil">Brasil</option>
+                  <option value="Chile">Chile</option>
+                  <option value="Paraguay">Paraguay</option>
+                  <option value="Uruguay">Uruguay</option>
+                  <option value="Otro">Otro</option>
+                </select>
+                <input className={`border rounded-lg px-3 py-2 ${theme.input} transition-opacity duration-300 ${form.pais_nacimiento === 'Otro' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`} name="pais_nacimiento_otro" placeholder="Especifique país de nacimiento" value={form.pais_nacimiento_otro} onChange={onChange} tabIndex={form.pais_nacimiento === 'Otro' ? 0 : -1} />
+                <select className={`border rounded-lg px-3 py-2 ${theme.input}`} name="nacionalidad" value={form.nacionalidad} onChange={onChange}>
+                  <option value="Argentina">Argentina</option>
+                  <option value="Boliviana">Boliviana</option>
+                  <option value="Brasileña">Brasileña</option>
+                  <option value="Chilena">Chilena</option>
+                  <option value="Paraguaya">Paraguaya</option>
+                  <option value="Uruguaya">Uruguaya</option>
+                  <option value="Otra">Otra</option>
+                </select>
+                <input className={`border rounded-lg px-3 py-2 ${theme.input} transition-opacity duration-300 ${form.nacionalidad === 'Otra' || form.nacionalidad === 'Otro' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`} name="nacionalidad_otra" placeholder="Especifique nacionalidad" value={form.nacionalidad_otra} onChange={onChange} tabIndex={form.nacionalidad === 'Otra' || form.nacionalidad === 'Otro' ? 0 : -1} />
                 <input className={`border rounded-lg px-3 py-2 md:col-span-2 ${theme.input}`} name="lugar_nacimiento" placeholder="Lugar de nacimiento" value={form.lugar_nacimiento} onChange={onChange} />
               </div>
             </section>

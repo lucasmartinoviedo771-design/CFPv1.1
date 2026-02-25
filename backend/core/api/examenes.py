@@ -1,8 +1,8 @@
+from datetime import date
 from typing import List, Optional
-
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError as DjangoValidationError
-from ninja import Router
+from ninja import Router, Schema
 from core.api.permissions import require_authenticated_group
 
 from core.models import Nota, Asistencia, Examen, Estudiante, Bloque
@@ -65,6 +65,86 @@ def listar_examenes(request, modulo_id: Optional[int] = None, bloque_id: Optiona
     if tipo_examen:
         qs = qs.filter(tipo_examen=tipo_examen)
     return ExamenSerializer(qs, many=True).data
+
+
+# ==================== NUEVOS ENDPOINTS CON EVALUACION SERVICE ====================
+
+class NotaRegistroIn(Schema):
+    estudiante_id: int
+    examen_id: int
+    calificacion: float
+    fecha_calificacion: Optional[date] = None
+
+@router.post("/registro/nota-sincronico", response=dict)
+@require_authenticated_group
+def registrar_nota_sincronico(request, payload: NotaRegistroIn):
+    """
+    Registra una nota de Final Sincrónico con el servicio de evaluación.
+    """
+    estudiante = get_object_or_404(Estudiante, pk=payload.estudiante_id)
+    examen = get_object_or_404(Examen, pk=payload.examen_id)
+    
+    if examen.tipo_examen != Examen.FINAL_SINC:
+        return {"error": "El examen debe ser de tipo Final Sincrónico"}, 400
+    
+    try:
+        # Validar habilitación
+        EvaluacionService.puede_rendir_final_sincronico(estudiante, examen.bloque)
+        
+        # Registrar la nota
+        nota = EvaluacionService.registrar_nota_final_sincronico(
+            estudiante=estudiante,
+            examen_sinc=examen,
+            calificacion=payload.calificacion,
+            fecha_calificacion=payload.fecha_calificacion
+        )
+        
+        mensaje = f"Nota registrada: {nota.calificacion}"
+        if nota.aprobado:
+            mensaje += " - APROBADO ✅"
+        else:
+            mensaje += " - DESAPROBADO ⚠️ (debe volver a rendir Virtual)"
+        
+        return {
+            "success": True,
+            "nota_id": nota.id,
+            "calificacion": float(nota.calificacion),
+            "aprobado": nota.aprobado,
+            "es_nota_definitiva": nota.es_nota_definitiva,
+            "intento": nota.intento,
+            "mensaje": mensaje
+        }
+    except DjangoValidationError as e:
+        return {"error": str(e)}, 400
+
+
+@router.post("/registro/nota-parcial", response=dict)
+@require_authenticated_group
+def registrar_nota_parcial(request, payload: NotaRegistroIn):
+    """
+    Registra una nota de Parcial con el servicio de evaluación.
+    """
+    estudiante = get_object_or_404(Estudiante, pk=payload.estudiante_id)
+    examen = get_object_or_404(Examen, pk=payload.examen_id)
+    
+    try:
+        nota = EvaluacionService.registrar_nota_parcial(
+            estudiante=estudiante,
+            examen_parcial=examen,
+            calificacion=payload.calificacion,
+            fecha_calificacion=payload.fecha_calificacion
+        )
+        
+        return {
+            "success": True,
+            "nota_id": nota.id,
+            "calificacion": float(nota.calificacion),
+            "aprobado": nota.aprobado,
+            "intento": nota.intento,
+            "mensaje": f"Parcial registrado: {nota.calificacion} - {'APROBADO' if nota.aprobado else 'DESAPROBADO'}"
+        }
+    except DjangoValidationError as e:
+        return {"error": str(e)}, 400
 
 
 @router.get("/{examen_id}", response=dict)
@@ -181,87 +261,8 @@ def actualizar_asistencia(request, asistencia_id: int, payload: AsistenciaIn):
     return AsistenciaSerializer(asistencia).data
 
 
-# ==================== NUEVOS ENDPOINTS CON EVALUACION SERVICE ====================
-
-@router.post("/registrar-nota-sincronico", response=dict)
-@require_authenticated_group
-def registrar_nota_sincronico(request, payload: dict):
-    """
-    Registra una nota de Final Sincrónico con validaciones de habilitación.
-    
-    Payload:
-        estudiante_id: int
-        examen_id: int (debe ser FINAL_SINC)
-        calificacion: float
-    """
-    estudiante = get_object_or_404(Estudiante, pk=payload['estudiante_id'])
-    examen = get_object_or_404(Examen, pk=payload['examen_id'])
-    
-    if examen.tipo_examen != Examen.FINAL_SINC:
-        return {"error": "El examen debe ser de tipo Final Sincrónico"}, 400
-    
-    try:
-        # Validar habilitación
-        EvaluacionService.puede_rendir_final_sincronico(estudiante, examen.bloque)
-        
-        # Registrar la nota
-        nota = EvaluacionService.registrar_nota_final_sincronico(
-            estudiante=estudiante,
-            examen_sinc=examen,
-            calificacion=payload['calificacion']
-        )
-        
-        mensaje = f"Nota registrada: {nota.calificacion}"
-        if nota.aprobado:
-            mensaje += " - APROBADO ✅"
-        else:
-            mensaje += " - DESAPROBADO ⚠️ (debe volver a rendir Virtual)"
-        
-        return {
-            "success": True,
-            "nota_id": nota.id,
-            "calificacion": float(nota.calificacion),
-            "aprobado": nota.aprobado,
-            "es_nota_definitiva": nota.es_nota_definitiva,
-            "intento": nota.intento,
-            "mensaje": mensaje
-        }
-    except DjangoValidationError as e:
-        return {"error": str(e)}, 400
-
-
-@router.post("/registrar-nota-parcial", response=dict)
-@require_authenticated_group
-def registrar_nota_parcial(request, payload: dict):
-    """
-    Registra una nota de Parcial con el servicio de evaluación.
-    
-    Payload:
-        estudiante_id: int
-        examen_id: int (debe ser PARCIAL o RECUP)
-        calificacion: float
-    """
-    estudiante = get_object_or_404(Estudiante, pk=payload['estudiante_id'])
-    examen = get_object_or_404(Examen, pk=payload['examen_id'])
-    
-    try:
-        nota = EvaluacionService.registrar_nota_parcial(
-            estudiante=estudiante,
-            examen_parcial=examen,
-            calificacion=payload['calificacion']
-        )
-        
-        return {
-            "success": True,
-            "nota_id": nota.id,
-            "calificacion": float(nota.calificacion),
-            "aprobado": nota.aprobado,
-            "intento": nota.intento,
-            "mensaje": f"Parcial registrado: {nota.calificacion} - {'APROBADO' if nota.aprobado else 'DESAPROBADO'}"
-        }
-    except DjangoValidationError as e:
-        return {"error": str(e)}, 400
-
+    asistencia = serializer.save()
+    return AsistenciaSerializer(asistencia).data
 
 @router.get("/estudiante/{estudiante_id}/bloque/{bloque_id}/puede-rendir-sincronico", response=dict)
 @require_authenticated_group

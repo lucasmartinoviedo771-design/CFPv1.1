@@ -10,6 +10,8 @@ ESTATUS_FILTER_CHOICES = (
     ('Regular', 'Regular'),
     ('Libre', 'Libre'),
     ('Baja', 'Baja'),
+    ('Preinscripto', 'Preinscripto'),
+    ('Condicional', 'Condicional'),
 )
 
 class EstudianteFilter(django_filters.FilterSet):

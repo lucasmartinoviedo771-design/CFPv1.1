@@ -7,6 +7,10 @@ from django.db import transaction
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
+import os
+import threading
+from django.core.mail import EmailMessage
+from django.conf import settings
 from core.models import Cohorte, Estudiante, Inscripcion, Examen, Bloque, Modulo
 from core.serializers import EstudianteSerializer
 from core.utils.estudiante_normalization import normalize_dni_digits
@@ -269,8 +273,123 @@ def listar_oferta_preinscripcion(request, programa_id: Optional[int] = None):
     return PreinscripcionOfertaOut(items=items)
 
 
+def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[Cohorte]):
+    """
+    Envía un email de confirmación con archivos adjuntos basados en los trayectos seleccionados.
+    """
+    try:
+        subject = "Confirmación de Preinscripción - CFP Malvinas Argentinas"
+        
+        trayectos_html = "".join([f"<li><strong>{c.programa.nombre}</strong> ({c.bloque.nombre})</li>" for c in cohortes])
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333333; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f5; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; overflow: hidden; }}
+                .header {{ background-color: #0b1c3c; color: #ffffff; padding: 25px 20px; text-align: center; border-bottom: 5px solid #f26b21; }}
+                .header h1 {{ margin: 0; font-size: 24px; letter-spacing: 0.5px; }}
+                .header h2 {{ margin: 5px 0 0 0; font-size: 16px; font-weight: normal; color: #cbd5e1; }}
+                .content {{ padding: 30px 25px; }}
+                .trayectos {{ background-color: #f8fafc; padding: 15px 20px; border-left: 4px solid #f26b21; margin: 25px 0; border-radius: 0 8px 8px 0; }}
+                .trayectos ul {{ margin: 0; padding-left: 20px; }}
+                .trayectos li {{ margin-bottom: 5px; font-size: 15px; color: #0f172a; }}
+                .info-pdf {{ background-color: #e0f2fe; padding: 20px 25px; border-radius: 8px; margin: 25px 0; border: 1px solid #bae6fd; }}
+                .info-pdf h3 {{ margin-top: 0; color: #0284c7; font-size: 18px; margin-bottom: 15px; }}
+                .info-pdf ul {{ padding-left: 20px; margin-bottom: 0; }}
+                .info-pdf li {{ margin-bottom: 10px; font-size: 14.5px; color: #0c4a6e; }}
+                .contacto-box {{ background-color: #f1f5f9; padding: 25px; border-radius: 8px; font-size: 15px; margin-top: 20px; border: 1px solid #e2e8f0; }}
+                .contacto-item {{ margin-bottom: 12px; line-height: 1.5; }}
+                .contacto-item:last-child {{ margin-bottom: 0; }}
+                .footer {{ background-color: #0f172a; color: #94a3b8; text-align: center; padding: 20px; font-size: 12px; }}
+                a {{ color: #0284c7; text-decoration: none; font-weight: 600; }}
+                a:hover {{ text-decoration: underline; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Centro Politécnico Superior</h1>
+                    <h2>Formación Profesional - Malvinas Argentinas</h2>
+                </div>
+                <div class="content">
+                    <p style="font-size: 17px; margin-top: 0;">Hola <strong>{estudiante.nombre}</strong>,</p>
+                    <p>¡Gracias por elegirnos! Hemos recibido correctamente tu preinscripción para los siguientes trayectos de capacitación:</p>
+                    
+                    <div class="trayectos">
+                        <ul>{trayectos_html}</ul>
+                    </div>
+
+                    <div class="info-pdf">
+                        <h3>📄 ¡No olvides revisar el PDF adjunto!</h3>
+                        <p style="margin-top: 0;">En este correo te hemos adjuntado un documento muy importante con toda la información que necesitas sobre tu cursada. Allí encontrarás:</p>
+                        <ul>
+                            <li><strong>🗓️ Horarios de los encuentros sincrónicos:</strong> Para que puedas organizarte y no perderte ninguna clase.</li>
+                            <li><strong>📅 Cronograma de evaluaciones:</strong> Fechas exactas de parciales, finales virtuales y finales sincrónicos.</li>
+                            <li><strong>📋 Requisitos y Correlatividades:</strong> Las condiciones necesarias para poder cursar y aprobar los módulos.</li>
+                            <li><strong>📌 Condiciones de Cursado:</strong> Información detallada sobre el funcionamiento del campus virtual y los periodos de receso.</li>
+                        </ul>
+                    </div>
+
+                    <p style="font-size: 16px; margin-top: 35px;"><strong>Ante cualquier duda o consulta, recuerda mantenerte comunicado. Aquí tienes todos nuestros canales de contacto oficiales:</strong></p>
+                    
+                    <div class="contacto-box">
+                        <div class="contacto-item">📍 <strong>Dirección:</strong> Monte Independencia 261, Barrio El Mirador (Margen Sur), Río Grande, Tierra del Fuego.</div>
+                        <div class="contacto-item">📱 <strong>WhatsApp:</strong> <a href="https://wa.me/5492964355801">+54 9 2964 35-5801</a></div>
+                        <div class="contacto-item">📞 <strong>Teléfono:</strong> 02964 69-7979</div>
+                        <div class="contacto-item">✉️ <strong>Email:</strong> <a href="mailto:estudiantes.cfp@malvinastdf.edu.ar">estudiantes.cfp@malvinastdf.edu.ar</a></div>
+                        <div class="contacto-item">🌐 <strong>Web:</strong> <a href="https://politecnico.ar">politecnico.ar</a></div>
+                    </div>
+                    
+                    <p style="margin-top: 35px; text-align: center; font-size: 18px; color: #f26b21;"><strong>¡Te deseamos muchos éxitos en esta nueva etapa!</strong></p>
+                </div>
+                <div class="footer">
+                    Este es un mensaje automático del sistema de gestión del CFP.<br>Por favor, no respondas a este correo.
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        email = EmailMessage(
+            subject=subject,
+            body=html_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[estudiante.email],
+        )
+        email.content_subtype = "html"
+
+        resources_dir = os.path.join(settings.BASE_DIR, "core", "resources", "emails")
+        
+        # Lógica de adjuntos
+        nIII_names = ["programador de nivel iii", "programacion de nivel iii", "programación de nivel iii"]
+        
+        # Check what the student enrolled in
+        tiene_nivel_III = any(_normalize_text(c.programa.nombre) in nIII_names for c in cohortes)
+        tiene_otros = any(_normalize_text(c.programa.nombre) not in nIII_names for c in cohortes)
+
+        pdf_paths = []
+        if tiene_nivel_III:
+            pdf_paths.append(os.path.join(resources_dir, "CODE III 2026.pdf"))
+        
+        if tiene_otros:
+            pdf_paths.append(os.path.join(resources_dir, "Capacitaciones laborales 2026.pdf"))
+
+        for pdf_path in pdf_paths:
+            if os.path.exists(pdf_path):
+                email.attach_file(pdf_path)
+
+        email.send(fail_silently=True)
+    except Exception as e:
+        print(f"Error enviando email de confirmación: {e}")
+
+
 @router.post("", response=PreinscripcionOut, auth=None)
 def crear_preinscripcion_publica(request):
+    # ... (código existente hasta el final del try/transaction)
+    # [Mantengo la lógica existente hasta la línea 400 aprox]
     post = request.POST
     files = request.FILES
 
@@ -365,12 +484,10 @@ def crear_preinscripcion_publica(request):
         inscripciones_creadas = []
         inscripciones_existentes = []
         for cohorte in cohortes:
-            # Regla de primera inscripción: se asigna siempre al módulo 1 (o único).
             modulo_inicial = Modulo.objects.filter(bloque_id=cohorte.bloque_id).order_by("id").first()
             if not modulo_inicial:
                 raise HttpError(400, f"La cohorte '{cohorte.nombre}' no tiene módulos configurados.")
 
-            # Si ya tiene inscripción en ese bloque, no se duplica.
             previas_bloque = list(
                 Inscripcion.objects.filter(
                     estudiante=estudiante,
@@ -397,6 +514,9 @@ def crear_preinscripcion_publica(request):
                 estado=Inscripcion.INSCRIPTO,
             )
             inscripciones_creadas.append(created.id)
+
+    # Disparar email en segundo plano
+    threading.Thread(target=_enviar_confirmacion_preinscripcion, args=(estudiante, cohortes)).start()
 
     return PreinscripcionOut(
         ok=True,

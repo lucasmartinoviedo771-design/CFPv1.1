@@ -210,17 +210,17 @@ class EstudianteOut(Schema):
     estatus: str
     ciudad: Optional[str] = None
     telefono: Optional[str] = None
+    fecha_nacimiento: Optional[date] = None
+    lugar_nacimiento: Optional[str] = None
+    domicilio: Optional[str] = None
+    cuit: Optional[str] = None
+    barrio: Optional[str] = None
 
 
 class EstudianteDetailOut(EstudianteOut):
-    cuit: Optional[str] = None
     sexo: Optional[str] = None
-    fecha_nacimiento: Optional[date] = None
     pais_nacimiento: Optional[str] = None
     nacionalidad: Optional[str] = None
-    lugar_nacimiento: Optional[str] = None
-    domicilio: Optional[str] = None
-    barrio: Optional[str] = None
     nivel_educativo: Optional[str] = None
     posee_pc: bool
     posee_conectividad: bool

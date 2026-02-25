@@ -6,8 +6,9 @@ import { formatDateDisplay } from "../utils/dateFormat";
 import { Card, Select, Button, Input } from '../components/UI';
 import {
     UserPlus, Edit2, Trash2, Search, Save, X, AlertCircle,
-    Check, Eye, User, MapPin, Briefcase
+    Check, Eye, User, MapPin, Briefcase, FileText, Download
 } from 'lucide-react';
+import { getMediaUrl } from '../utils/media';
 
 // Section Header Helper
 const SectionDivider = ({ title, icon: Icon }) => (
@@ -34,7 +35,9 @@ const Modal = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max
 
 const initialFormState = {
     apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "", fecha_nacimiento: "",
-    pais_nacimiento: "", nacionalidad: "", lugar_nacimiento: "",
+    pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
+    nacionalidad: "Argentina", nacionalidad_otra: "",
+    lugar_nacimiento: "",
     domicilio: "", barrio: "", ciudad: "", telefono: "",
     nivel_educativo: "", estatus: "Regular",
     posee_pc: false, posee_conectividad: false, puede_traer_pc: false,
@@ -111,7 +114,20 @@ export default function Estudiantes() {
         try {
             const { data } = await apiClientV2.get(`/estudiantes/${student.id}`);
             setEditId(student.id);
-            setForm({ ...initialFormState, ...data });
+
+            // Clean data: replace nulls with empty strings to prevent controlled input issues and data loss
+            const cleanedData = { ...initialFormState };
+            Object.keys(data).forEach(key => {
+                if (data[key] !== null && data[key] !== undefined) {
+                    cleanedData[key] = data[key];
+                } else if (typeof cleanedData[key] === 'boolean') {
+                    cleanedData[key] = false;
+                } else {
+                    cleanedData[key] = "";
+                }
+            });
+
+            setForm(cleanedData);
             formCardRef.current?.scrollIntoView({ behavior: "smooth" });
         } catch {
             setFeedback({
@@ -223,39 +239,49 @@ export default function Estudiantes() {
 
                         <SectionDivider title="Origen" icon={MapPin} />
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Select
-                                name="pais_nacimiento"
-                                label="País de Nacimiento"
-                                value={form.pais_nacimiento}
-                                onChange={onChange}
-                                options={[
-                                    { value: '', label: 'Seleccionar...' },
-                                    { value: 'Argentina', label: 'Argentina' },
-                                    { value: 'Bolivia', label: 'Bolivia' },
-                                    { value: 'Brasil', label: 'Brasil' },
-                                    { value: 'Chile', label: 'Chile' },
-                                    { value: 'Paraguay', label: 'Paraguay' },
-                                    { value: 'Uruguay', label: 'Uruguay' },
-                                    { value: 'Otro', label: 'Otro' },
-                                ]}
-                            />
-                            <Select
-                                name="nacionalidad"
-                                label="Nacionalidad"
-                                value={form.nacionalidad}
-                                onChange={onChange}
-                                options={[
-                                    { value: '', label: 'Seleccionar...' },
-                                    { value: 'Argentina', label: 'Argentina' },
-                                    { value: 'Bolivia', label: 'Bolivia' },
-                                    { value: 'Brasil', label: 'Brasil' },
-                                    { value: 'Chile', label: 'Chile' },
-                                    { value: 'Paraguay', label: 'Paraguay' },
-                                    { value: 'Uruguay', label: 'Uruguay' },
-                                    { value: 'Otro', label: 'Otro' },
-                                ]}
-                            />
-                            <Input name="lugar_nacimiento" label="Lugar de Nacimiento" value={form.lugar_nacimiento} onChange={onChange} />
+                            <div className="flex flex-col gap-4">
+                                <Select
+                                    name="pais_nacimiento"
+                                    label="País de Nacimiento"
+                                    value={form.pais_nacimiento}
+                                    onChange={onChange}
+                                    options={[
+                                        { value: '', label: 'Seleccionar...' },
+                                        { value: 'Argentina', label: 'Argentina' },
+                                        { value: 'Bolivia', label: 'Bolivia' },
+                                        { value: 'Brasil', label: 'Brasil' },
+                                        { value: 'Chile', label: 'Chile' },
+                                        { value: 'Paraguay', label: 'Paraguay' },
+                                        { value: 'Uruguay', label: 'Uruguay' },
+                                        { value: 'Otro', label: 'Otro' },
+                                    ]}
+                                />
+                                {form.pais_nacimiento === 'Otro' && (
+                                    <Input name="pais_nacimiento_otro" label="Especifique País" value={form.pais_nacimiento_otro} onChange={onChange} placeholder="Nombre del país" />
+                                )}
+                            </div>
+                            <div className="flex flex-col gap-4">
+                                <Select
+                                    name="nacionalidad"
+                                    label="Nacionalidad"
+                                    value={form.nacionalidad}
+                                    onChange={onChange}
+                                    options={[
+                                        { value: '', label: 'Seleccionar...' },
+                                        { value: 'Argentina', label: 'Argentina' },
+                                        { value: 'Bolivia', label: 'Bolivia' },
+                                        { value: 'Brasil', label: 'Brasil' },
+                                        { value: 'Chile', label: 'Chile' },
+                                        { value: 'Paraguay', label: 'Paraguay' },
+                                        { value: 'Uruguay', label: 'Uruguay' },
+                                        { value: 'Otro', label: 'Otro' },
+                                    ]}
+                                />
+                                {form.nacionalidad === 'Otro' && (
+                                    <Input name="nacionalidad_otra" label="Especifique Nacionalidad" value={form.nacionalidad_otra} onChange={onChange} placeholder="Nacionalidad" />
+                                )}
+                            </div>
+                            <Input name="lugar_nacimiento" label="Lugar de Nacimiento" value={form.lugar_nacimiento} onChange={onChange} placeholder="Provincia / Estado" />
                         </div>
 
                         <SectionDivider title="Domicilio Actual" icon={MapPin} />
@@ -297,10 +323,10 @@ export default function Estudiantes() {
                         </div>
                     </div>
                 </Card>
-            </div>
+            </div >
 
             {/* Listado y Filtros */}
-            <div className="space-y-4">
+            < div className="space-y-4" >
                 <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="flex-1"><Input placeholder="Buscar por Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
                     <div className="w-full md:w-48"><Input placeholder="Buscar DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
@@ -330,9 +356,9 @@ export default function Estudiantes() {
                                         <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.ciudad}</td>
                                         <td className="px-6 py-3">
                                             <span className={`px-2 py-1 rounded text-xs font-bold ${r.estatus === 'Baja' ? 'bg-red-500/20 text-red-400' :
-                                                    r.estatus === 'Condicional' ? 'bg-yellow-500/20 text-yellow-500' :
-                                                        r.estatus === 'Preinscripto' ? 'bg-blue-500/20 text-blue-400' :
-                                                            'bg-green-500/20 text-green-400'
+                                                r.estatus === 'Condicional' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                    r.estatus === 'Preinscripto' ? 'bg-blue-500/20 text-blue-400' :
+                                                        'bg-green-500/20 text-green-400'
                                                 }`}>
                                                 {r.estatus}
                                             </span>
@@ -366,11 +392,12 @@ export default function Estudiantes() {
                         </div>
                     </div>
                 </Card>
-            </div>
+            </div >
 
             {/* Modal Confirmación Delete */}
-            <Modal
-                isOpen={!!deleteTarget}
+            < Modal
+                isOpen={!!deleteTarget
+                }
                 onClose={() => setDeleteTarget(null)}
                 title="Confirmar Baja"
                 actions={
@@ -382,7 +409,7 @@ export default function Estudiantes() {
             >
                 <p>¿Estás seguro de que quieres dar de baja a <strong>{deleteTarget?.apellido}, {deleteTarget?.nombre}</strong>?</p>
                 <p className="text-sm text-gray-400 mt-2">El estudiante no aparecerá en las listas activas pero su historial se conservará.</p>
-            </Modal>
+            </Modal >
 
             <Modal
                 isOpen={!!viewStudentId}
@@ -414,6 +441,39 @@ export default function Estudiantes() {
                                 <p><span className="text-indigo-300">Teléfono:</span> {viewData.student.telefono || "-"}</p>
                                 <p><span className="text-indigo-300">Nivel Educativo:</span> {viewData.student.nivel_educativo || "-"}</p>
                                 <p><span className="text-indigo-300">Lugar de trabajo:</span> {viewData.student.lugar_trabajo || "-"}</p>
+                            </div>
+
+                            <SectionDivider title="Documentación" icon={FileText} />
+                            <div className="flex gap-4">
+                                {viewData.student.dni_digitalizado ? (
+                                    <a
+                                        href={getMediaUrl(viewData.student.dni_digitalizado)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-4 py-2 rounded-lg text-cyan-300 transition-all border border-cyan-500/30"
+                                    >
+                                        <Download size={18} /> Ver DNI Digitalizado
+                                    </a>
+                                ) : (
+                                    <div className="flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-lg text-red-400 border border-red-500/20">
+                                        <X size={18} /> DNI no disponible
+                                    </div>
+                                )}
+
+                                {viewData.student.titulo_secundario_digitalizado ? (
+                                    <a
+                                        href={getMediaUrl(viewData.student.titulo_secundario_digitalizado)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-4 py-2 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
+                                    >
+                                        <Download size={18} /> Ver Título Secundario
+                                    </a>
+                                ) : (
+                                    <div className="flex items-center gap-2 bg-indigo-900/40 px-4 py-2 rounded-lg text-gray-500 border border-white/10">
+                                        <X size={18} /> Título no disponible
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -471,13 +531,15 @@ export default function Estudiantes() {
             </Modal>
 
             {/* Toast Feedback */}
-            {feedback.open && (
-                <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in z-[60] ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-green-900/90 border-green-500 text-white'}`}>
-                    {feedback.severity === 'error' ? <AlertCircle size={20} /> : <Check size={20} />}
-                    {feedback.message}
-                    <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
-                </div>
-            )}
-        </div>
+            {
+                feedback.open && (
+                    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in z-[60] ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-green-900/90 border-green-500 text-white'}`}>
+                        {feedback.severity === 'error' ? <AlertCircle size={20} /> : <Check size={20} />}
+                        {feedback.message}
+                        <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
+                    </div>
+                )
+            }
+        </div >
     );
 }

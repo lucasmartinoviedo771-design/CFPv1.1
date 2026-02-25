@@ -12,7 +12,7 @@ from .schemas import EstudianteOut, EstudianteDetailOut, EstudianteIn
 router = Router(tags=["estudiantes"])
 
 
-@router.get("", response=List[EstudianteOut])
+@router.get("", response=List[EstudianteDetailOut])
 @require_authenticated_group
 def listar_estudiantes(request, search: Optional[str] = None, dni: Optional[str] = None, estatus: Optional[str] = None):
     qs = Estudiante.objects.all().order_by("apellido", "nombre")
@@ -27,19 +27,7 @@ def listar_estudiantes(request, search: Optional[str] = None, dni: Optional[str]
             | Q(email__icontains=search)
             | Q(dni__icontains=search)
         )
-    return [
-        EstudianteOut(
-            id=e.id,
-            apellido=e.apellido,
-            nombre=e.nombre,
-            email=e.email,
-            dni=e.dni,
-            estatus=e.estatus,
-            ciudad=e.ciudad,
-            telefono=e.telefono,
-        )
-        for e in qs
-    ]
+    return qs
 
 
 @router.get("/{estudiante_id}", response=EstudianteDetailOut)
@@ -88,9 +76,9 @@ def crear_estudiante(request, payload: EstudianteIn):
 @router.put("/{estudiante_id}", response=EstudianteDetailOut)
 @router.patch("/{estudiante_id}", response=EstudianteDetailOut)
 @require_authenticated_group
-def actualizar_estudiante(request, estudiante_id: int, payload: EstudianteIn):
+def actualizar_estudiante_patch(request, estudiante_id: int, payload: EstudianteIn):
     estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
-    serializer = EstudianteSerializer(instance=estudiante, data=payload.dict(), partial=True)
+    serializer = EstudianteSerializer(instance=estudiante, data=payload.dict(exclude_unset=True), partial=True)
     serializer.is_valid(raise_exception=True)
     serializer.save()
     return detalle_estudiante(request, estudiante.id)

@@ -11,6 +11,7 @@ Implementa las reglas de negocio para:
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 from core.models import Nota, Examen, Estudiante, Bloque
 
 
@@ -124,7 +125,7 @@ class EvaluacionService:
     
     @staticmethod
     @transaction.atomic
-    def registrar_nota_final_sincronico(estudiante, examen_sinc, calificacion, habilitado_por=None):
+    def registrar_nota_final_sincronico(estudiante, examen_sinc, calificacion, fecha_calificacion=None, habilitado_por=None):
         """
         Registra una nota de Final Sincrónico con toda la lógica asociada.
         
@@ -138,6 +139,7 @@ class EvaluacionService:
             estudiante: Instancia de Estudiante
             examen_sinc: Instancia de Examen (tipo FINAL_SINC)
             calificacion: Decimal/float con la nota
+            fecha_calificacion: Objeto datetime/date opcional para notas históricas
             habilitado_por: Nota del Virtual que habilitó (opcional, se busca automáticamente)
             
         Returns:
@@ -172,7 +174,8 @@ class EvaluacionService:
             aprobado=aprobado,
             intento=intento,
             habilitado_por=habilitado_por,
-            es_nota_definitiva=aprobado  # Solo es definitiva si aprueba
+            es_nota_definitiva=aprobado,  # Solo es definitiva si aprueba
+            fecha_calificacion=fecha_calificacion or timezone.now()
         )
         
         if aprobado:
@@ -186,7 +189,7 @@ class EvaluacionService:
         return nota
     
     @staticmethod
-    def registrar_nota_parcial(estudiante, examen_parcial, calificacion):
+    def registrar_nota_parcial(estudiante, examen_parcial, calificacion, fecha_calificacion=None):
         """
         Registra una nota de Parcial o Recuperatorio.
         
@@ -194,6 +197,7 @@ class EvaluacionService:
             estudiante: Instancia de Estudiante
             examen_parcial: Instancia de Examen (tipo PARCIAL o RECUP)
             calificacion: Decimal/float con la nota
+            fecha_calificacion: Objeto datetime/date opcional para notas históricas
             
         Returns:
             Nota creada
@@ -217,7 +221,8 @@ class EvaluacionService:
             calificacion=calificacion,
             aprobado=aprobado,
             intento=intento,
-            es_nota_definitiva=False  # Los parciales no son notas definitivas
+            es_nota_definitiva=False,  # Los parciales no son notas definitivas
+            fecha_calificacion=fecha_calificacion or timezone.now()
         )
         
         return nota

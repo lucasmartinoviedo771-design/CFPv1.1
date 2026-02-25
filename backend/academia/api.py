@@ -29,6 +29,7 @@ api = NinjaAPI(
     version="2.0.0",
     urls_namespace="api-v2",
     auth=jwt_auth,
+    csrf=False,
 )
 
 # Routers registrados. Se completaran gradualmente con logica real.

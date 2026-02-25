@@ -26,6 +26,7 @@ import Egresados from './pages/Egresados.jsx';
 import Usuarios from './pages/Usuarios.jsx';
 import Resoluciones from './pages/Resoluciones.jsx';
 import PreinscripcionPublica from './pages/PreinscripcionPublica.jsx';
+import GestionPreinscripciones from './pages/GestionPreinscripciones.jsx';
 
 // Services
 import authService from "./services/authService";
@@ -34,7 +35,7 @@ import authService from "./services/authService";
 export const UserContext = createContext(null);
 export const ThemeModeContext = createContext({
   mode: "dark",
-  toggleMode: () => {},
+  toggleMode: () => { },
 });
 const THEME_STORAGE_KEY = "cfp_theme_mode";
 
@@ -111,6 +112,7 @@ export default function App() {
             <Route path="/set-password" element={<PrivateRoute><WithLayout title="Actualizar Contraseña"><SetPassword /></WithLayout></PrivateRoute>} />
             <Route path="/dashboard" element={<PrivateRoute><WithLayout title="Dashboard"><DashboardPage /></WithLayout></PrivateRoute>} />
             <Route path="/estudiantes" element={<PrivateRoute><WithLayout title="Estudiantes"><Estudiantes /></WithLayout></PrivateRoute>} />
+            <Route path="/gestion-preinscripciones" element={<PrivateRoute><WithLayout title="Cola de Preinscripciones"><GestionPreinscripciones /></WithLayout></PrivateRoute>} />
             <Route path="/asistencia" element={<PrivateRoute><WithLayout title="Asistencia"><Asistencia /></WithLayout></PrivateRoute>} />
             <Route path="/notas" element={<PrivateRoute><WithLayout title="Notas / Equivalencias"><Notas /></WithLayout></PrivateRoute>} />
             <Route path="/cursos/:id" element={<PrivateRoute><WithLayout title="Detalle del Curso"><CursoDetail /></WithLayout></PrivateRoute>} />

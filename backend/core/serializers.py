@@ -61,6 +61,11 @@ class EstudianteSerializer(serializers.ModelSerializer):
 
         return super().to_internal_value(mutable)
 
+    trayectos = serializers.SerializerMethodField()
+
+    def get_trayectos(self, obj):
+        return list(obj.inscripciones.values_list('cohorte__programa__nombre', flat=True).distinct())
+
     class Meta:
         model = Estudiante
         fields = "__all__"
@@ -325,6 +330,7 @@ class NotaSerializer(serializers.ModelSerializer):
             'examen_programa_nombre',
             'examen_tipo_examen',
             'examen_fecha',
+            'intento', 'es_nota_definitiva',
         )
     def validate(self, data):
         # Implement rounding for calificacion

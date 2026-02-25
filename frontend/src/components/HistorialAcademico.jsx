@@ -85,7 +85,7 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
     (async () => {
       try {
         const { results } = await listNotas({ estudiante_id: studentId, aprobado: true });
-        setStudentApprovedModuleIds(new Set((results || []).map(nota => nota.examen_modulo_id).filter(Boolean)));
+        setStudentApprovedModuleIds(new Set((results || []).map(nota => Number(nota.examen_modulo_id)).filter(Boolean)));
       } catch (error) { setStudentApprovedModuleIds(new Set()); }
     })();
   }, [studentId]);
@@ -135,8 +135,12 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
         fetchedExams = await fetchExamenesFinalesByBloque(bloque);
       } else { setExamenes([]); return; }
 
-      let filtered = fetchedExams || [];
-      if (modulo && approvedModuleExamTypes.has('PARCIAL')) filtered = filtered.filter(ex => ex.tipo_examen !== 'PARCIAL');
+      let filtered = (fetchedExams || []).filter(ex => ex.tipo_examen !== 'RECUP');
+
+      if (modulo && approvedModuleExamTypes.has('PARCIAL')) {
+        filtered = filtered.filter(ex => ex.tipo_examen !== 'PARCIAL');
+      }
+
       if (bloque && !modulo && !isFinal) {
         const currentBloque = estructura?.bloques.find(b => b.id === Number(bloque));
         if (currentBloque) {
@@ -152,14 +156,38 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await apiClient.post('/examenes/notas', {
-        estudiante: studentId,
-        examen, calificacion: Number(calificacion), fecha_calificacion: fechaCalificacion,
-        es_equivalencia: esEquivalencia, aprobado: Number(calificacion) >= 6,
-      });
+      const selectedExamen = examenes.find(ex => Number(ex.id) === Number(examen));
+      const payload = {
+        estudiante_id: Number(studentId),
+        examen_id: Number(examen),
+        calificacion: Number(calificacion),
+        fecha_calificacion: fechaCalificacion,
+      };
+
+      if (selectedExamen?.tipo_examen === 'FINAL_SINC') {
+        await apiClient.post('/examenes/registro/nota-sincronico', payload);
+      } else if (['PARCIAL', 'RECUP'].includes(selectedExamen?.tipo_examen)) {
+        await apiClient.post('/examenes/registro/nota-parcial', payload);
+      } else {
+        // Fallback a nota genérica para Final Virtual o Equivalencia
+        await apiClient.post('/examenes/notas', {
+          estudiante: studentId,
+          examen,
+          calificacion: Number(calificacion),
+          fecha_calificacion: fechaCalificacion,
+          es_equivalencia: esEquivalencia,
+          aprobado: Number(calificacion) >= 6,
+        });
+      }
       onSave();
-    } catch (error) { console.error(error); alert('Error al crear nota'); }
-    finally { setLoading(false); }
+      onClose();
+    } catch (err) {
+      console.error("Error saving grade:", err);
+      const errorDetail = err.response?.data?.error || err.response?.data?.detail || "Error al guardar nota";
+      alert(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Memoized options
@@ -175,36 +203,45 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
   }, [studentEnrollments]);
   const enrolledBloqueIds = useMemo(() => new Set(
     studentEnrollments
-      .map(e => e.modulo?.bloque?.id || e.cohorte?.bloque?.id)
+      .map(e => Number(e.modulo?.bloque?.id || e.cohorte?.bloque?.id))
       .filter(Boolean)
   ), [studentEnrollments]);
   const enrolledModulosByBloque = useMemo(() => {
     const map = new Map();
     studentEnrollments.forEach((e) => {
       const m = e.modulo;
-      const bId = m?.bloque?.id;
+      const bId = Number(m?.bloque?.id);
       if (!m?.id || !bId) return;
       if (!map.has(bId)) map.set(bId, new Map());
-      map.get(bId).set(m.id, m);
+      map.get(bId).set(Number(m.id), m);
     });
     return map;
   }, [studentEnrollments]);
   const filteredBloquesOptions = useMemo(() => {
     const all = estructura?.bloques || [];
-    const filtered = all.filter(b => enrolledBloqueIds.has(b.id));
+    const filtered = all.filter(b => enrolledBloqueIds.has(Number(b.id)));
     if (filtered.length > 0) return filtered;
     if (all.length > 0) return all;
     return enrolledBloquesDetailed;
   }, [estructura, enrolledBloqueIds, enrolledBloquesDetailed]);
-  const enrolledModuloIds = useMemo(() => new Set(studentEnrollments.map(e => e.modulo?.id).filter(Boolean)), [studentEnrollments]);
+  const enrolledModuloIds = useMemo(() => new Set(studentEnrollments.map(e => Number(e.modulo?.id)).filter(Boolean)), [studentEnrollments]);
   const filteredModulosOptions = useMemo(() => {
     if (!bloque) return [];
-    const selectedBloque = filteredBloquesOptions.find(b => b.id === Number(bloque));
+    // Ensure we handle both string and number IDs
+    const bId = Number(bloque);
+    const selectedBloque = filteredBloquesOptions.find(b => Number(b.id) === bId);
     const mods = selectedBloque?.modulos || [];
-    const filtered = mods.filter(m => enrolledModuloIds.has(m.id));
+
+    // Fallback logic: 
+    // 1. Try to filter by modules where student is actually enrolled
+    const filtered = mods.filter(m => enrolledModuloIds.has(Number(m.id)));
     if (filtered.length > 0) return filtered;
+
+    // 2. If no specific enrolling modulos found, show all modules of this block
     if (mods.length > 0) return mods;
-    const enrolledMap = enrolledModulosByBloque.get(Number(bloque));
+
+    // 3. Last resort: check if enrolledModulosByBloque has anything
+    const enrolledMap = enrolledModulosByBloque.get(bId);
     return enrolledMap ? Array.from(enrolledMap.values()) : [];
   }, [bloque, filteredBloquesOptions, enrolledModuloIds, enrolledModulosByBloque]);
 
@@ -213,10 +250,14 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
     if (!examenes || examenes.length === 0) return [{ value: '', label: 'No hay exámenes disponibles' }];
     return [
       { value: '', label: 'Seleccionar examen...' },
-      ...examenes.map(ex => ({
-        value: ex.id,
-        label: `${ex.tipo_examen} - ${ex.fecha ? dayjs(ex.fecha).format('DD/MM/YYYY') : 'Sin fecha'}`
-      })),
+      ...examenes.map(ex => {
+        let label = ex.tipo_examen;
+        if (ex.tipo_examen === 'PARCIAL') label = 'PARCIAL (Módulo)';
+        if (ex.tipo_examen === 'FINAL_VIRTUAL') label = 'EXAMEN VIRTUAL';
+        if (ex.tipo_examen === 'FINAL_SINC') label = 'EXAMEN FINAL';
+        if (ex.tipo_examen === 'EQUIVALENCIA') label = 'EQUIVALENCIA';
+        return { value: ex.id, label };
+      }),
     ];
   }, [bloque, examenes]);
 
@@ -225,17 +266,37 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
   }, [curso, filteredCursos]);
 
   useEffect(() => {
-    if (!bloque && filteredBloquesOptions.length === 1) setBloque(String(filteredBloquesOptions[0].id));
+    if (!bloque && filteredBloquesOptions.length === 1) {
+      setBloque(String(filteredBloquesOptions[0].id));
+    }
   }, [bloque, filteredBloquesOptions]);
+
+  const cursoOptions = useMemo(() => [
+    { value: '', label: 'Seleccionar curso...' },
+    ...filteredCursos.map(c => ({ value: c.id, label: c.nombre }))
+  ], [filteredCursos]);
+
+  const bloqueOptions = useMemo(() => [
+    { value: '', label: 'Seleccionar bloque...' },
+    ...filteredBloquesOptions.map(b => ({ value: b.id, label: b.nombre }))
+  ], [filteredBloquesOptions]);
+
+  const moduloOptions = useMemo(() => [
+    { value: '', label: 'Seleccionar módulo...' },
+    ...filteredModulosOptions.map(m => ({
+      value: m.id,
+      label: m.nombre + (studentApprovedModuleIds.has(Number(m.id)) ? ' (Aprobado)' : '')
+    }))
+  ], [filteredModulosOptions, studentApprovedModuleIds]);
 
   return (
     <Modal isOpen={open} onClose={onClose} title="Añadir Nueva Nota / Equivalencia"
       actions={<><Button onClick={onClose} variant="ghost">Cancelar</Button><Button onClick={handleSave} disabled={!examen || !calificacion || existingNote || loading}>Guardar</Button></>}>
 
-      <Select label="Curso" value={curso} onChange={e => setCurso(e.target.value)} options={filteredCursos.map(c => ({ value: c.id, label: c.nombre }))} />
+      <Select label="Curso" value={curso} onChange={e => setCurso(e.target.value)} options={cursoOptions} />
       <div className="flex gap-4">
-        <div className="flex-1"><Select label="Bloque" value={bloque} onChange={e => setBloque(e.target.value)} disabled={!curso} options={filteredBloquesOptions.map(b => ({ value: b.id, label: b.nombre }))} /></div>
-        <div className="flex-1"><Select label="Módulo" value={modulo} onChange={e => setModulo(e.target.value)} disabled={!bloque || allModulesInBlockApproved} options={filteredModulosOptions.map(m => ({ value: m.id, label: m.nombre + (studentApprovedModuleIds.has(m.id) ? ' (Aprobado)' : '') }))} /></div>
+        <div className="flex-1"><Select label="Bloque" value={bloque} onChange={e => setBloque(e.target.value)} disabled={!curso} options={bloqueOptions} /></div>
+        <div className="flex-1"><Select label="Módulo" value={modulo} onChange={e => setModulo(e.target.value)} disabled={!bloque || (allModulesInBlockApproved && !modulo)} options={moduloOptions} /></div>
       </div>
       {allModulesInBlockApproved && <p className="text-sm text-green-400">Todos los módulos aprobados. Selecciona un Final.</p>}
 
@@ -379,7 +440,15 @@ export default function HistorialAcademico({ historial, setHistorial, selEstudia
                       <>
                         <td className="px-4 py-3 font-medium text-white">{row.examen_programa_nombre}</td>
                         <td className="px-4 py-3 text-gray-300">{row.examen_bloque_nombre} / <span className="text-indigo-300">{row.examen_modulo_nombre}</span></td>
-                        <td className="px-4 py-3 text-gray-300">{row.examen_tipo_examen}</td>
+                        <td className="px-4 py-3 text-gray-300">
+                          {row.examen_tipo_examen}
+                          {row.intento > 1 && <span className="ml-2 text-[10px] text-indigo-400 font-normal px-1 border border-indigo-500/20 rounded">Intento {row.intento}</span>}
+                          {row.es_nota_definitiva && (
+                            <span className="ml-2 px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">
+                              PROMEDIO/FINAL
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-center">
                           <span className={`px-2 py-1 rounded text-xs font-bold ${row.aprobado ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                             {row.calificacion}

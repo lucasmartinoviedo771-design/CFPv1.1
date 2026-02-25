@@ -64,6 +64,7 @@ services:
       - backend
     volumes:
       - /home/admin486321/ssl:/etc/nginx/ssl:ro
+      - media_data:/app/media:ro
     networks:
       - cfp_network
 

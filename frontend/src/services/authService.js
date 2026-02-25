@@ -19,8 +19,8 @@ const login = async (username, password) => {
             password,
         });
         if (response.data.access) {
-            sessionStorage.setItem('accessToken', response.data.access);
-            sessionStorage.setItem('refreshToken', response.data.refresh);
+            localStorage.setItem('accessToken', response.data.access);
+            localStorage.setItem('refreshToken', response.data.refresh);
         }
         return response.data;
     } catch (err) {
@@ -39,7 +39,7 @@ const refresh = async (refreshToken) => {
             refresh: refreshToken,
         });
         if (response.data.access) {
-            sessionStorage.setItem('accessToken', response.data.access);
+            localStorage.setItem('accessToken', response.data.access);
         }
         return response.data.access;
     } catch (err) {
@@ -72,15 +72,15 @@ const getUserDetails = async () => {
  */
 const logout = async () => {
     try {
-        const refresh = sessionStorage.getItem('refreshToken');
+        const refresh = localStorage.getItem('refreshToken');
         if (refresh) {
             await axios.post(`${API_URL}/logout`, { refresh });
         }
     } catch (e) {
         // Ignore server-side logout errors; proceed to clear local state
     } finally {
-        sessionStorage.removeItem('accessToken');
-        sessionStorage.removeItem('refreshToken');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
     }
 };
 
@@ -89,7 +89,7 @@ const logout = async () => {
  * @returns {string|null} Token de acceso
  */
 const getAccessToken = () => {
-    return sessionStorage.getItem('accessToken');
+    return localStorage.getItem('accessToken');
 };
 
 /**
@@ -97,7 +97,7 @@ const getAccessToken = () => {
  * @returns {string|null} Token de refresco
  */
 const getRefreshToken = () => {
-    return sessionStorage.getItem('refreshToken');
+    return localStorage.getItem('refreshToken');
 };
 
 const authService = {
