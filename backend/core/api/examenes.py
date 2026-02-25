@@ -206,6 +206,14 @@ def actualizar_nota(request, nota_id: int, payload: NotaIn):
     return NotaSerializer(nota).data
 
 
+@router.delete("/notas/{nota_id}", response=dict)
+@require_authenticated_group
+def eliminar_nota(request, nota_id: int):
+    nota = get_object_or_404(Nota, pk=nota_id)
+    nota.delete()
+    return {"success": True, "message": "Nota eliminada correctamente."}
+
+
 # --- Asistencias ---
 @router.get("/asistencias", response=List[dict])
 @require_authenticated_group

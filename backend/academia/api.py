@@ -1,4 +1,5 @@
 from ninja import NinjaAPI
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from core.api import (
     health_router,
@@ -31,6 +32,14 @@ api = NinjaAPI(
     auth=jwt_auth,
     csrf=False,
 )
+
+@api.exception_handler(DRFValidationError)
+def drf_validation_error_handler(request, exc):
+    return api.create_response(
+        request,
+        {"detail": exc.detail},
+        status=400,
+    )
 
 # Routers registrados. Se completaran gradualmente con logica real.
 api.add_router("/health", health_router, auth=None)
