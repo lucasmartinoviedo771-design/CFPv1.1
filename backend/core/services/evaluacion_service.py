@@ -263,7 +263,7 @@ class EvaluacionService:
                             estudiante=estudiante,
                             cohorte=siguiente_cohorte,
                             modulo=modulo_destino,
-                            defaults={'estado': Inscripcion.INSCRIPTO}
+                            defaults={'estado': Inscripcion.ACTIVO}
                         )
 
         return nota
