@@ -33,11 +33,20 @@ api = NinjaAPI(
     csrf=False,
 )
 
+def format_drf_errors(detail):
+    if isinstance(detail, dict):
+        return {k: format_drf_errors(v) for k, v in detail.items()}
+    elif isinstance(detail, list):
+        return [format_drf_errors(i) for i in detail]
+    else:
+        # Esto convierte el objeto ErrorDetail en un string de Python nativo
+        return str(detail)
+
 @api.exception_handler(DRFValidationError)
 def drf_validation_error_handler(request, exc):
     return api.create_response(
         request,
-        {"detail": exc.detail},
+        {"detail": format_drf_errors(exc.detail)},
         status=400,
     )
 
