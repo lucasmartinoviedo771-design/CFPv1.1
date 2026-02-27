@@ -25,6 +25,7 @@ export type EstudianteDetail = Estudiante & {
   trabaja: boolean;
   lugar_trabajo?: string | null;
   dni_digitalizado?: string | null;
+  titulo_secundario_digitalizado?: string | null;
 };
 
 export type Programa = {

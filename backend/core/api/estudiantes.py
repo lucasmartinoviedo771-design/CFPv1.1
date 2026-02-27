@@ -67,7 +67,7 @@ def detalle_estudiante(request, estudiante_id: int):
 @router.post("", response=EstudianteDetailOut)
 @require_authenticated_group
 def crear_estudiante(request, payload: EstudianteIn):
-    serializer = EstudianteSerializer(data=payload.dict())
+    serializer = EstudianteSerializer(data=payload.dict(exclude_unset=True, exclude_none=True))
     serializer.is_valid(raise_exception=True)
     estudiante = serializer.save()
     return detalle_estudiante(request, estudiante.id)
@@ -78,7 +78,29 @@ def crear_estudiante(request, payload: EstudianteIn):
 @require_authenticated_group
 def actualizar_estudiante_patch(request, estudiante_id: int, payload: EstudianteIn):
     estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
-    serializer = EstudianteSerializer(instance=estudiante, data=payload.dict(exclude_unset=True), partial=True)
+    serializer = EstudianteSerializer(instance=estudiante, data=payload.dict(exclude_unset=True, exclude_none=True), partial=True)
     serializer.is_valid(raise_exception=True)
     serializer.save()
+    return detalle_estudiante(request, estudiante.id)
+
+@router.post("/{estudiante_id}/documentos", response=EstudianteDetailOut)
+@require_authenticated_group
+def subir_documentos_estudiante(request, estudiante_id: int):
+    estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
+    
+    dni_file = request.FILES.get('dni_digitalizado')
+    titulo_file = request.FILES.get('titulo_secundario_digitalizado')
+    
+    update_fields = []
+    if dni_file:
+        estudiante.dni_digitalizado = dni_file
+        update_fields.append("dni_digitalizado")
+    if titulo_file:
+        estudiante.titulo_secundario_digitalizado = titulo_file
+        update_fields.append("titulo_secundario_digitalizado")
+        
+    if update_fields:
+        update_fields.append("updated_at")
+        estudiante.save(update_fields=update_fields)
+        
     return detalle_estudiante(request, estudiante.id)

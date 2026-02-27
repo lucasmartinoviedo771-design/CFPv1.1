@@ -359,6 +359,11 @@ class NotaSerializer(serializers.ModelSerializer):
         # calificacion/aprobado coherentes
         if data.get("aprobado") and data.get("calificacion", 0) < 6:
             raise serializers.ValidationError("Si 'aprobado=True', la calificación debe ser >= 6.")
+
+        from django.utils import timezone
+        if not data.get("fecha_calificacion") and not getattr(self.instance, "fecha_calificacion", None):
+            data["fecha_calificacion"] = timezone.now()
+
         return data
 
 class AsistenciaSerializer(serializers.ModelSerializer):

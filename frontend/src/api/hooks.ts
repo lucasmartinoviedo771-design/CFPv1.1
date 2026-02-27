@@ -36,14 +36,38 @@ export const useEstudiante = (id: number) =>
 export const useSaveEstudiante = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Partial<EstudianteDetail> & { id?: number }) => {
-      if (payload.id) {
-        const { id, ...rest } = payload;
+    mutationFn: async (payload: Partial<EstudianteDetail> & { id?: number, dniFile?: File | null, tituloFile?: File | null }) => {
+      const { dniFile, tituloFile, ...jsonPayload } = payload;
+
+      // Prevent passing empty strings to DRF FileFields natively if no file is uploaded.
+      if (!jsonPayload.dni_digitalizado) delete jsonPayload.dni_digitalizado;
+      if (!jsonPayload.titulo_secundario_digitalizado) delete jsonPayload.titulo_secundario_digitalizado;
+
+      let estId = jsonPayload.id;
+      let resultData;
+
+      if (estId) {
+        const { id, ...rest } = jsonPayload;
         const { data } = await apiClientV2.patch<EstudianteDetail>(`/estudiantes/${id}`, rest);
-        return data;
+        resultData = data;
+      } else {
+        const { data } = await apiClientV2.post<EstudianteDetail>('/estudiantes', jsonPayload);
+        estId = data.id;
+        resultData = data;
       }
-      const { data } = await apiClientV2.post<EstudianteDetail>('/estudiantes', payload);
-      return data;
+
+      if (estId && (dniFile || tituloFile)) {
+        const formData = new FormData();
+        if (dniFile) formData.append('dni_digitalizado', dniFile);
+        if (tituloFile) formData.append('titulo_secundario_digitalizado', tituloFile);
+
+        const { data } = await apiClientV2.post<EstudianteDetail>(`/estudiantes/${estId}/documentos`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        resultData = data;
+      }
+
+      return resultData;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['estudiantes'] });

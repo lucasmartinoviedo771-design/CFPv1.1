@@ -51,6 +51,7 @@ export default function Estudiantes() {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState(initialFormState);
+    const [fileData, setFileData] = useState({ dniFile: null, tituloFile: null });
     const [feedback, setFeedback] = useState({ open: false, message: "", severity: "success" });
     const [viewStudentId, setViewStudentId] = useState(null);
     const [viewData, setViewData] = useState({ loading: false, error: "", student: null, inscripciones: [], notas: [] });
@@ -98,9 +99,10 @@ export default function Estudiantes() {
             lugar_trabajo: form.trabaja ? form.lugar_trabajo : "",
         };
         try {
-            await saveEstudiante.mutateAsync({ id: editId || undefined, ...payload });
+            await saveEstudiante.mutateAsync({ id: editId || undefined, ...payload, ...fileData });
             setFeedback({ open: true, message: `Estudiante ${editId ? "actualizado" : "creado"} con éxito`, severity: "success" });
             setForm(initialFormState);
+            setFileData({ dniFile: null, tituloFile: null });
             setEditId(null);
             refetch();
         } catch (error) {
@@ -128,6 +130,7 @@ export default function Estudiantes() {
             });
 
             setForm(cleanedData);
+            setFileData({ dniFile: null, tituloFile: null });
             formCardRef.current?.scrollIntoView({ behavior: "smooth" });
         } catch {
             setFeedback({
@@ -314,6 +317,20 @@ export default function Estudiantes() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input name="lugar_trabajo" label="Lugar de trabajo" value={form.lugar_trabajo} onChange={onChange} disabled={!form.trabaja} />
+                        </div>
+
+                        <SectionDivider title="Documentación (Opcional)" icon={FileText} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-indigo-300 mb-1">DNI Digitalizado (PDF/Imagen)</label>
+                                <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                {editId && form.dni_digitalizado && <p className="text-xs text-green-400 mt-1">Archivo actual guardado. Suba uno nuevo si desea reemplazarlo.</p>}
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-indigo-300 mb-1">Título Secundario (PDF/Imagen)</label>
+                                <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, tituloFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                {editId && form.titulo_secundario_digitalizado && <p className="text-xs text-green-400 mt-1">Archivo actual guardado. Suba uno nuevo si desea reemplazarlo.</p>}
+                            </div>
                         </div>
 
                         <div className="flex justify-end pt-4 border-t border-indigo-500/20 mt-4">

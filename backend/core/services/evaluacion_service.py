@@ -101,13 +101,14 @@ class EvaluacionService:
                 f"El estudiante debe aprobar el Final Virtual del bloque '{bloque.nombre}' "
                 f"(nota actual: {ultima_virtual.calificacion})"
             )
-        
         # Verificar que no haya reprobado un Sincrónico posterior a este Virtual
+        from django.utils import timezone
+        ref_date = ultima_virtual.fecha_calificacion or timezone.now()
         sinc_posterior_reprobado = Nota.objects.filter(
             estudiante=estudiante,
             examen__bloque=bloque,
             examen__tipo_examen=Examen.FINAL_SINC,
-            fecha_calificacion__gt=ultima_virtual.fecha_calificacion,
+            fecha_calificacion__gt=ref_date,
             aprobado=False
         ).exists()
         

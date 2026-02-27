@@ -180,6 +180,7 @@ class NotaIn(Schema):
     examen: int
     estudiante: int
     calificacion: float
+    fecha_calificacion: Optional[datetime] = None
     aprobado: Optional[bool] = None
     es_equivalencia: Optional[bool] = None
     origen_equivalencia: Optional[str] = None

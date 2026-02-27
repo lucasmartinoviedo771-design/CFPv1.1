@@ -5,6 +5,7 @@ API endpoints para gestión de Resoluciones (Marco legal de capacitaciones)
 from typing import List, Optional
 from django.shortcuts import get_object_or_404
 from ninja import Router
+from ninja.errors import HttpError
 from core.api.permissions import require_authenticated_group
 
 from core.models import Resolucion
@@ -75,12 +76,8 @@ def eliminar_resolucion(request, resolucion_id: int):
     """Elimina una resolución (solo si no tiene programas asociados)"""
     resolucion = get_object_or_404(Resolucion, pk=resolucion_id)
     
-    # Verificar si tiene programas asociados
     if resolucion.programas.exists():
-        return {
-            "error": "No se puede eliminar la resolución porque tiene programas asociados",
-            "programas_count": resolucion.programas.count()
-        }, 400
+        raise HttpError(400, f"No se puede eliminar la resolución porque tiene programas asociados ({resolucion.programas.count()})")
     
     resolucion.delete()
     return {"deleted": True, "id": resolucion_id}

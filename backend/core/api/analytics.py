@@ -3,6 +3,7 @@ from django.db.models import Avg, Count, Exists, OuterRef, Q
 from django.db.models.functions import TruncMonth, TruncWeek
 from django.utils.dateparse import parse_date
 from ninja import Router
+from ninja.errors import HttpError
 from core.api.permissions import require_authenticated_group
 
 from core.models import Inscripcion, Asistencia, Nota, Estudiante, Cohorte, Bloque, Examen, Programa
@@ -303,13 +304,13 @@ def analytics_graduates(request, programa_id: int = None, bloque_id: int = None,
             programa = coh.programa
             programa_id = programa.id
         except Cohorte.DoesNotExist:
-            return {"detail": "Cohorte no encontrado"}, 404
+            raise HttpError(404, "Cohorte no encontrado")
 
     if programa_id and programa is None:
         try:
             programa = Programa.objects.get(id=programa_id)
         except Programa.DoesNotExist:
-            return {"detail": "Programa no encontrado"}, 404
+            raise HttpError(404, "Programa no encontrado")
 
     inscripciones_qs = Inscripcion.objects.all()
     if programa_id:
@@ -394,7 +395,7 @@ def courses_graph(
     try:
         programa = Programa.objects.get(id=programa_id)
     except Programa.DoesNotExist:
-        return {"detail": "Programa no encontrado"}, 404
+        raise HttpError(404, "Programa no encontrado")
 
     cohortes_qs = (
         Cohorte.objects.filter(programa=programa)
@@ -540,7 +541,7 @@ def courses_graph(
                 "stats": cohorte_stats,
             }
         except Cohorte.DoesNotExist:
-            return {"detail": "Cohorte no encontrada para el programa seleccionado"}, 404
+            raise HttpError(404, "Cohorte no encontrada para el programa seleccionado")
 
     return {
         "programa": {"id": programa.id, "codigo": programa.codigo, "nombre": programa.nombre},

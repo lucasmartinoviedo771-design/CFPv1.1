@@ -334,7 +334,7 @@ export default function HistorialAcademico({ historial, setHistorial, selEstudia
   // Handlers for Edit/Delete
   const handleEditClick = (nota) => {
     setEditingNotaId(nota.id);
-    setEditFormData({ calificacion: nota.calificacion, fecha_calificacion: dayjs(nota.fecha_calificacion).format('YYYY-MM-DD') });
+    setEditFormData({ calificacion: nota.calificacion, fecha_calificacion: nota.fecha_calificacion ? dayjs(nota.fecha_calificacion).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD') });
   };
   const handleCancelClick = () => setEditingNotaId(null);
   const handleFormChange = (e) => setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
@@ -454,7 +454,7 @@ export default function HistorialAcademico({ historial, setHistorial, selEstudia
                             {row.calificacion}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-400">{dayjs.utc(row.fecha_calificacion).format('DD/MM/YYYY')}</td>
+                        <td className="px-4 py-3 text-gray-400">{row.fecha_calificacion ? dayjs.utc(row.fecha_calificacion).format('DD/MM/YYYY') : '-'}</td>
                         {!readOnly && (
                           <td className="px-4 py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => handleEditClick(row)} className="p-1 text-indigo-400 hover:text-white mr-2"><Edit2 size={16} /></button>

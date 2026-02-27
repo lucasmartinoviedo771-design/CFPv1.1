@@ -3,6 +3,7 @@ from typing import List, Optional
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from ninja import Router, Schema
+from ninja.errors import HttpError
 from core.api.permissions import require_authenticated_group
 
 from core.models import Nota, Asistencia, Examen, Estudiante, Bloque
@@ -85,7 +86,7 @@ def registrar_nota_sincronico(request, payload: NotaRegistroIn):
     examen = get_object_or_404(Examen, pk=payload.examen_id)
     
     if examen.tipo_examen != Examen.FINAL_SINC:
-        return {"error": "El examen debe ser de tipo Final Sincrónico"}, 400
+        raise HttpError(400, "El examen debe ser de tipo Final Sincrónico")
     
     try:
         # Validar habilitación
@@ -115,7 +116,8 @@ def registrar_nota_sincronico(request, payload: NotaRegistroIn):
             "mensaje": mensaje
         }
     except DjangoValidationError as e:
-        return {"error": str(e)}, 400
+        error_msg = e.message if hasattr(e, 'message') else str(e)
+        raise HttpError(400, str(error_msg))
 
 
 @router.post("/registro/nota-parcial", response=dict)
@@ -144,7 +146,8 @@ def registrar_nota_parcial(request, payload: NotaRegistroIn):
             "mensaje": f"Parcial registrado: {nota.calificacion} - {'APROBADO' if nota.aprobado else 'DESAPROBADO'}"
         }
     except DjangoValidationError as e:
-        return {"error": str(e)}, 400
+        error_msg = e.message if hasattr(e, 'message') else str(e)
+        raise HttpError(400, str(error_msg))
 
 
 @router.get("/{examen_id}", response=dict)
