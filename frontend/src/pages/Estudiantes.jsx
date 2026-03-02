@@ -34,7 +34,7 @@ const Modal = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max
 };
 
 const initialFormState = {
-    apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "", fecha_nacimiento: "",
+    apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "Masculino", fecha_nacimiento: "",
     pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
     nacionalidad: "Argentina", nacionalidad_otra: "",
     lugar_nacimiento: "",
@@ -94,6 +94,7 @@ export default function Estudiantes() {
         }
         const payload = {
             ...form,
+            sexo: form.sexo || "Masculino",
             fecha_nacimiento: form.fecha_nacimiento || null,
             puede_traer_pc: form.posee_pc ? form.puede_traer_pc : false,
             lugar_trabajo: form.trabaja ? form.lugar_trabajo : "",
@@ -120,13 +121,14 @@ export default function Estudiantes() {
             // Clean data: replace nulls with empty strings to prevent controlled input issues and data loss
             const cleanedData = { ...initialFormState };
             Object.keys(data).forEach(key => {
-                if (data[key] !== null && data[key] !== undefined) {
+                if (data[key] !== null && data[key] !== undefined && data[key] !== "") {
                     cleanedData[key] = data[key];
                 } else if (typeof cleanedData[key] === 'boolean') {
-                    cleanedData[key] = false;
-                } else {
-                    cleanedData[key] = "";
+                    cleanedData[key] = data[key] ?? false;
+                } else if (cleanedData[key] === "") {
+                    cleanedData[key] = data[key] ?? "";
                 }
+                // If cleanedData already has a non-empty default (from initialFormState) and data is null/empty, we keep the default.
             });
 
             setForm(cleanedData);
