@@ -260,6 +260,10 @@ export default function PreinscripcionPublica() {
     if (s === 3) {
       if (!form.email.trim()) return setError("El email es obligatorio para el contacto."), false;
     }
+    if (s === 4) {
+      if (!dniFile) return setError("Debés adjuntar la digitalización del DNI."), false;
+      if (requiresTitle && !tituloFile) return setError("Esta oferta requiere adjuntar el título secundario."), false;
+    }
     return true;
   };
 
@@ -348,7 +352,21 @@ export default function PreinscripcionPublica() {
       setDniFile(null);
       setTituloFile(null);
     } catch (eReq) {
-      setError(eReq?.response?.data?.detail || "Error al enviar el formulario.");
+      console.error("Error completo:", eReq);
+      let msg = "Error al enviar el formulario.";
+      const data = eReq?.response?.data;
+      if (data) {
+        if (typeof data === "string") msg = data;
+        else if (data.detail) msg = data.detail;
+        else if (typeof data === "object") {
+          // Tomar el primer error que encontremos en el objeto (formato DRF)
+          const firstKey = Object.keys(data)[0];
+          const firstError = data[firstKey];
+          msg = Array.isArray(firstError) ? `${firstKey}: ${firstError[0]}` : String(firstError);
+        }
+      }
+      setError(msg);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally { setSaving(false); }
   };
 

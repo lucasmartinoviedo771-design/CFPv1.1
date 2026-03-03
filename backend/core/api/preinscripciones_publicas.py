@@ -441,7 +441,16 @@ def crear_preinscripcion_publica(request):
         }
 
         serializer = EstudianteSerializer(instance=estudiante, data=serializer_data, partial=True)
-        serializer.is_valid(raise_exception=True)
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            serializer.is_valid(raise_exception=True)
+        except DRFValidationError as ve:
+            # Convertir errores de DRF a un mensaje legible
+            errors = serializer.errors
+            first_field = list(errors.keys())[0]
+            first_msg = errors[first_field]
+            msg = f"{first_field}: {first_msg[0]}" if isinstance(first_msg, list) else str(first_msg)
+            raise HttpError(400, msg)
         estudiante = serializer.save()
 
         todas_habilitadas = _cohortes_habilitadas()
