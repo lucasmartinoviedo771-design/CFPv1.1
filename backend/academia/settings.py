@@ -113,7 +113,7 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = False  # Cambiado a False para HTTP
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
+    # X_FRAME_OPTIONS = 'DENY' # Deshabilitado para permitir embebido en sitios oficiales
 
 ROOT_URLCONF = "academia.urls"
 

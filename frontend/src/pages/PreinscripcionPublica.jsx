@@ -1,5 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, ChevronDown, ChevronUp, Moon, Sun, CheckCircle2 } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Moon,
+  Sun,
+  CheckCircle2,
+  User,
+  FileText,
+  GraduationCap,
+  Smartphone,
+  UploadCloud,
+  X
+} from "lucide-react";
 import { apiClientV2 } from "../api/client";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
@@ -15,9 +29,42 @@ const NIVEL_EDUCATIVO_OPTIONS = [
   "Terciaria/Universitaria",
 ];
 
+async function compressImage(file) {
+  if (!file.type.startsWith("image/")) return file;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const MAX_WIDTH = 1200;
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          resolve(new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() }));
+        }, "image/jpeg", 0.7);
+      };
+    };
+  });
+}
+
 function validateFile(file, label) {
   if (!file) return `${label}: archivo requerido.`;
-  if (file.size > MAX_MB * 1024 * 1024) return `${label}: tamaño máximo ${MAX_MB}MB.`;
+  // Solo validamos tamaño aquí para el feedback visual inicial, 
+  // pero el proceso de carga manejará la compresión de ser necesario.
+  if (file.size > 5 * 1024 * 1024 && !file.type.startsWith("image/")) {
+    return `${label}: el PDF no debe superar los 5MB.`;
+  }
   if (!ACCEPTED_TYPES.includes(file.type)) return `${label}: formato permitido PDF/JPG/PNG/WEBP.`;
   return "";
 }
@@ -49,48 +96,104 @@ function DropFileField({ label, required, file, onFileChange, isDark }) {
   };
 
   return (
-    <div>
-      <label className={`block text-sm mb-2 ${isDark ? "text-indigo-200" : "text-slate-700"}`}>{label}</label>
+    <div className="space-y-3">
+      <div className="flex justify-between items-center">
+        <label className={`block text-sm font-semibold ${isDark ? "text-indigo-200" : "text-slate-700"}`}>
+          {label} {required && <span className="text-brand-accent">*</span>}
+        </label>
+        {file && (
+          <button
+            type="button"
+            onClick={() => onFileChange(null)}
+            className="text-xs flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
+          >
+            <X size={12} /> Limpiar
+          </button>
+        )}
+      </div>
       <label
-        className={`block rounded-xl border-2 border-dashed p-4 cursor-pointer transition-colors ${dragOver
-          ? isDark
-            ? "border-brand-cyan bg-indigo-900/40"
-            : "border-sky-500 bg-sky-50"
+        className={`group relative block rounded-2xl border-2 border-dashed p-8 cursor-pointer transition-all duration-300 overflow-hidden ${dragOver
+          ? "border-brand-cyan bg-brand-cyan/10"
           : isDark
-            ? "border-indigo-400/40 bg-indigo-950/20"
-            : "border-slate-300 bg-white"
+            ? "border-indigo-500/30 bg-white/5 hover:border-brand-cyan/50"
+            : "border-slate-300 bg-white hover:border-sky-500"
           }`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
       >
-        <input
-          type="file"
-          accept=".pdf,image/*"
-          className="hidden"
-          onChange={(e) => onFileChange(e.target.files?.[0] || null)}
-        />
-        <div className="text-sm">
-          <p className={`font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>Arrastrá y soltá el archivo acá</p>
-          <p className={isDark ? "text-indigo-200" : "text-slate-600"}>o hacé clic para abrir el explorador</p>
-          <p className={`mt-1 text-xs ${isDark ? "text-indigo-300" : "text-slate-500"}`}>PDF/JPG/PNG/WEBP - Máximo 3MB</p>
-          <p className={`mt-2 text-xs ${isDark ? "text-emerald-300" : "text-emerald-700"}`}>
-            {file ? `Seleccionado: ${file.name}` : "Ningún archivo seleccionado"}
-          </p>
+        <input type="file" accept=".pdf,image/*" className="hidden" onChange={(e) => onFileChange(e.target.files?.[0] || null)} />
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className={`p-4 rounded-full transition-transform group-hover:scale-110 ${isDark ? "bg-indigo-500/10 text-brand-cyan" : "bg-sky-50 text-sky-600"}`}>
+            <UploadCloud size={32} />
+          </div>
+          <div>
+            <p className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
+              {file ? "¡Archivo detectado!" : "Arrastrá y soltá el archivo acá"}
+            </p>
+            <p className={`text-xs mt-1 ${isDark ? "text-indigo-300" : "text-slate-500"}`}>
+              PDF, JPG o PNG hasta 3MB
+            </p>
+          </div>
+          {file && (
+            <div className="mt-4 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 animate-in fade-in slide-in-from-bottom-2">
+              <p className="text-sm font-bold text-emerald-400 line-clamp-1">
+                {file.name}
+              </p>
+            </div>
+          )}
         </div>
       </label>
     </div>
   );
 }
 
+const ProgressBar = ({ currentStep, totalSteps, isDark }) => {
+  const steps = [
+    { n: 1, label: "Oferta", icon: <GraduationCap size={18} /> },
+    { n: 2, label: "Identidad", icon: <User size={18} /> },
+    { n: 3, label: "Datos", icon: <Smartphone size={18} /> },
+    { n: 4, label: "Documentación", icon: <FileText size={18} /> }
+  ];
+
+  const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
+
+  return (
+    <div className="w-full mb-12">
+      <div className="flex justify-between items-center relative mb-4">
+        <div className={`absolute top-1/2 left-0 w-full h-1 -translate-y-1/2 rounded-full ${isDark ? "bg-white/5" : "bg-slate-200"}`} />
+        <div
+          className="absolute top-1/2 left-0 h-1 -translate-y-1/2 bg-gradient-to-r from-brand-cyan to-brand-accent transition-all duration-700 ease-out shadow-[0_0_15px_#00ffff]"
+          style={{ width: `${progress}%` }}
+        />
+
+        {steps.map((s) => (
+          <div key={s.n} className="relative z-10 flex flex-col items-center">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${s.n < currentStep
+              ? "bg-brand-cyan text-white shadow-[0_0_15px_rgba(0,255,255,0.4)]"
+              : s.n === currentStep
+                ? "bg-brand-accent text-white shadow-[0_0_15px_rgba(255,102,0,0.4)] scale-110"
+                : isDark ? "bg-indigo-950 border border-indigo-500/30 text-indigo-400" : "bg-white border border-slate-300 text-slate-400"
+              }`}>
+              {s.n < currentStep ? <CheckCircle2 size={24} /> : s.icon}
+            </div>
+            <span className={`absolute -bottom-7 text-[10px] font-black uppercase tracking-widest ${s.n <= currentStep ? "text-brand-cyan" : "text-slate-500"
+              }`}>
+              {s.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function PreinscripcionPublica() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+  const [step, setStep] = useState(1);
   const [oferta, setOferta] = useState([]);
   const [isDark, setIsDark] = useState(() => localStorage.getItem("preins_theme") !== "light");
 
@@ -102,208 +205,142 @@ export default function PreinscripcionPublica() {
   const [tituloFile, setTituloFile] = useState(null);
 
   const [form, setForm] = useState({
-    apellido: "",
-    nombre: "",
-    email: "",
-    dni: "",
-    cuit: "",
-    sexo: "",
-    fecha_nacimiento: "",
-    pais_nacimiento: "Argentina",
-    pais_nacimiento_otro: "",
-    nacionalidad: "Argentina",
-    nacionalidad_otra: "",
-    lugar_nacimiento: "",
-    domicilio: "",
-    barrio: "",
-    ciudad: "",
-    telefono: "",
-    nivel_educativo: "Secundaria Completa",
-    posee_pc: false,
-    posee_conectividad: false,
-    puede_traer_pc: false,
-    trabaja: false,
-    lugar_trabajo: "",
+    apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "",
+    fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
+    nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
+    domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
+    posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
   });
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
-      setError("");
+      setLoading(true); setError("");
       try {
         const { data } = await apiClientV2.get("/preinscripcion/oferta");
-        const items = Array.isArray(data?.items) ? data.items : [];
-        setOferta(items);
-      } catch {
-        setError("No se pudo cargar la oferta de preinscripción.");
-      } finally {
-        setLoading(false);
-      }
+        setOferta(Array.isArray(data?.items) ? data.items : []);
+      } catch { setError("No se pudo cargar la oferta."); }
+      finally { setLoading(false); }
     };
     load();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("preins_theme", isDark ? "dark" : "light");
-  }, [isDark]);
+  useEffect(() => { localStorage.setItem("preins_theme", isDark ? "dark" : "light"); }, [isDark]);
 
-  const selectedProgramas = useMemo(
-    () => oferta.filter((p) => selectedProgramaIds.includes(String(p.programa_id))),
-    [oferta, selectedProgramaIds]
-  );
+  const selectedProgramas = useMemo(() => oferta.filter((p) => selectedProgramaIds.includes(String(p.programa_id))), [oferta, selectedProgramaIds]);
   const selectedProgramaSet = useMemo(() => new Set(selectedProgramaIds), [selectedProgramaIds]);
-  const ofertaView = useMemo(
-    () =>
-      oferta.map((p) => ({
+  const requiresTitle = selectedProgramas.some(p => Boolean(p.requiere_titulo_secundario) || isProgramadorNivelIII(p.programa_nombre));
+
+  const ofertaView = useMemo(() =>
+    oferta
+      .filter((p) => normalizeText(p.programa_nombre) !== "sistemas de representacion")
+      .map((p) => ({
         ...p,
-        bloquesOrdenados: [...(p.bloques || [])].sort((a, b) => {
-          const aLast = isProgramacionII(a.bloque_nombre) ? 1 : 0;
-          const bLast = isProgramacionII(b.bloque_nombre) ? 1 : 0;
-          return aLast - bLast;
-        }),
+        bloquesOrdenados: [...(p.bloques || [])].sort((a, b) => (isProgramacionII(a.bloque_nombre) ? 1 : 0) - (isProgramacionII(b.bloque_nombre) ? 1 : 0)),
       })).sort((a, b) => {
-        const aProg = normalizeText(a.programa_nombre) === "programador de nivel iii" ? 0 : 1;
-        const bProg = normalizeText(b.programa_nombre) === "programador de nivel iii" ? 0 : 1;
-        if (aProg !== bProg) return aProg - bProg;
-        return a.programa_nombre.localeCompare(b.programa_nombre, "es");
-      }),
-    [oferta]
+        const aProg = isProgramadorNivelIII(a.programa_nombre) ? 0 : 1;
+        const bProg = isProgramadorNivelIII(b.programa_nombre) ? 0 : 1;
+        return aProg !== bProg ? aProg - bProg : a.programa_nombre.localeCompare(b.programa_nombre, "es");
+      }), [oferta]
   );
-  const requiereTitulo = selectedProgramas.some(
-    (p) => Boolean(p.requiere_titulo_secundario) || isProgramadorNivelIII(p.programa_nombre)
-  );
+
+  const validateStep = (s) => {
+    setError("");
+    if (s === 1) {
+      if (!selectedProgramaIds.length) return setError("Seleccioná al menos una oferta formativa."), false;
+      for (const pid of selectedProgramaIds) {
+        if (!(bloquesPorPrograma[String(pid)] || []).length) {
+          const p = oferta.find(x => String(x.programa_id) === String(pid));
+          return setError(`Debés elegir al menos un bloque en ${p?.programa_nombre}.`), false;
+        }
+      }
+    }
+    if (s === 2) {
+      if (!form.apellido.trim() || !form.nombre.trim() || !form.dni.trim()) return setError("Completá los campos obligatorios (Nombre, Apellido, DNI)."), false;
+    }
+    if (s === 3) {
+      if (!form.email.trim()) return setError("El email es obligatorio para el contacto."), false;
+    }
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validateStep(step)) {
+      setStep(prev => Math.min(prev + 1, 4));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const prevStep = () => {
+    setStep(prev => Math.max(prev - 1, 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setForm(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
   const openPrograma = (p) => {
     const id = String(p.programa_id);
-    const isSelected = selectedProgramaIds.includes(id);
-
-    if (isSelected) {
-      setSelectedProgramaIds((prev) => prev.filter((x) => x !== id));
-      setBloquesPorPrograma((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-      setExpandedProgramaId((curr) => (curr === id ? "" : curr));
+    if (selectedProgramaSet.has(id)) {
+      setSelectedProgramaIds(prev => prev.filter(x => x !== id));
+      setBloquesPorPrograma(prev => { const n = { ...prev }; delete n[id]; return n; });
+      setExpandedProgramaId(curr => curr === id ? "" : curr);
       return;
     }
-
-    setSelectedProgramaIds((prev) => [...prev, id]);
+    setSelectedProgramaIds(prev => [...prev, id]);
     setExpandedProgramaId(id);
-    const prevSeleccion = bloquesPorPrograma[id];
-    if (Array.isArray(prevSeleccion)) return;
-    const defaultBloques = (p.bloques || [])
-      .filter((b) => (b.correlativas_ids || []).length === 0 && !isProgramacionII(b.bloque_nombre))
-      .map((b) => b.bloque_id);
-    setBloquesPorPrograma((prev) => ({ ...prev, [id]: defaultBloques }));
+    const defaults = (p.bloques || [])
+      .filter(b => (b.correlativas_ids || []).length === 0 && !isProgramacionII(b.bloque_nombre))
+      .map(b => b.bloque_id);
+    setBloquesPorPrograma(prev => ({ ...prev, [id]: defaults }));
   };
 
-  const toggleBloque = (programaId, bloqueId) => {
-    const key = String(programaId);
-    if (!selectedProgramaSet.has(key)) return;
-    const actuales = bloquesPorPrograma[key] || [];
-    const next = (() => {
-      const exists = actuales.includes(bloqueId);
-      if (exists && actuales.length <= 1) return actuales;
-      return exists ? actuales.filter((x) => x !== bloqueId) : [...actuales, bloqueId];
-    })();
-    setBloquesPorPrograma((prev) => ({ ...prev, [key]: next }));
+  const toggleBloque = (pid, bid) => {
+    const actuales = bloquesPorPrograma[String(pid)] || [];
+    const next = actuales.includes(bid)
+      ? (actuales.length <= 1 ? actuales : actuales.filter(x => x !== bid))
+      : [...actuales, bid];
+    setBloquesPorPrograma(prev => ({ ...prev, [String(pid)]: next }));
   };
-
-  const resumenSeleccion = useMemo(() => {
-    return selectedProgramas.map((p) => {
-      const sel = bloquesPorPrograma[String(p.programa_id)] || [];
-      const bloques = (p.bloques || []).filter((b) => sel.includes(b.bloque_id));
-      return { programa: p, bloques };
-    });
-  }, [selectedProgramas, bloquesPorPrograma]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setOk("");
-
-    if (!selectedProgramaIds.length) {
-      setError("Seleccioná al menos una oferta formativa.");
-      return;
-    }
-    for (const pid of selectedProgramaIds) {
-      const sel = bloquesPorPrograma[String(pid)] || [];
-      if (!sel.length) {
-        const p = oferta.find((x) => String(x.programa_id) === String(pid));
-        setError(`Debés dejar al menos un bloque en ${p?.programa_nombre || "la oferta seleccionada"}.`);
-        return;
-      }
-    }
+    if (!validateStep(1)) return setStep(1);
+    if (!validateStep(2)) return setStep(2);
+    if (!validateStep(3)) return setStep(3);
 
     const dniErr = validateFile(dniFile, "DNI");
-    if (dniErr) {
-      setError(dniErr);
-      return;
-    }
-    if (requiereTitulo) {
-      const titleErr = validateFile(tituloFile, "Título secundario");
-      if (titleErr) {
-        setError(titleErr);
-        return;
-      }
-    } else if (tituloFile) {
-      const titleErr = validateFile(tituloFile, "Título secundario");
-      if (titleErr) {
-        setError(titleErr);
-        return;
-      }
+    if (dniErr) return setError(dniErr), setStep(4);
+    if (requiresTitle) {
+      const tErr = validateFile(tituloFile, "Título secundario");
+      if (tErr) return setError(tErr), setStep(4);
     }
 
     try {
       setSaving(true);
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, typeof v === "boolean" ? String(v) : (v || "")));
-      const seleccion = selectedProgramaIds.map((pid) => ({
-        programa_id: Number(pid),
-        bloque_ids: bloquesPorPrograma[String(pid)] || [],
-      }));
+      const seleccion = selectedProgramaIds.map(pid => ({ programa_id: Number(pid), bloque_ids: bloquesPorPrograma[pid] }));
       fd.append("seleccion_programas_json", JSON.stringify(seleccion));
-      fd.append("dni_digitalizado", dniFile);
-      if (tituloFile) fd.append("titulo_secundario_digitalizado", tituloFile);
 
-      const { data } = await apiClientV2.post("/preinscripcion", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const processedDni = await compressImage(dniFile);
+      fd.append("dni_digitalizado", processedDni);
 
-      setOk(
-        `Preinscripción enviada. Estudiante #${data?.estudiante_id}. Inscripciones nuevas: ${data?.inscripciones_creadas?.length || 0
-        }.`
-      );
-      // Resetear el formulario
+      if (tituloFile) {
+        const processedTitulo = await compressImage(tituloFile);
+        fd.append("titulo_secundario_digitalizado", processedTitulo);
+      }
+
+      const { data } = await apiClientV2.post("/preinscripcion", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setOk(`¡Éxito! Estudiante registrado. ID: ${data?.estudiante_id}`);
+      setStep(1);
       setForm({
-        apellido: "",
-        nombre: "",
-        email: "",
-        dni: "",
-        cuit: "",
-        sexo: "",
-        fecha_nacimiento: "",
-        pais_nacimiento: "Argentina",
-        pais_nacimiento_otro: "",
-        nacionalidad: "Argentina",
-        nacionalidad_otra: "",
-        lugar_nacimiento: "",
-        domicilio: "",
-        barrio: "",
-        ciudad: "",
-        telefono: "",
-        nivel_educativo: "Secundaria Completa",
-        posee_pc: false,
-        posee_conectividad: false,
-        puede_traer_pc: false,
-        trabaja: false,
-        lugar_trabajo: "",
+        apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "",
+        fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
+        nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
+        domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
+        posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
       });
       setSelectedProgramaIds([]);
       setExpandedProgramaId("");
@@ -311,281 +348,251 @@ export default function PreinscripcionPublica() {
       setDniFile(null);
       setTituloFile(null);
     } catch (eReq) {
-      setError(String(eReq?.response?.data?.detail || "No se pudo enviar la preinscripción."));
-    } finally {
-      setSaving(false);
-    }
+      setError(eReq?.response?.data?.detail || "Error al enviar el formulario.");
+    } finally { setSaving(false); }
   };
 
   const theme = isDark
     ? {
       page: "bg-[#090026] text-white",
-      section: "bg-brand-primary/20 border-white/10",
+      glass: "bg-brand-primary/20 border-white/10 backdrop-blur-xl shadow-2xl shadow-indigo-500/10",
       help: "text-indigo-200",
       title: "text-white",
-      input: "bg-indigo-950/40 border-indigo-500/30 text-white placeholder-indigo-300",
+      input: "bg-indigo-950/40 border-indigo-500/30 text-white placeholder-indigo-300 focus:border-brand-cyan/70 focus:ring-1 focus:ring-brand-cyan/20",
       card: "border-white/10 bg-black/30",
       cardActive: "border-emerald-400 bg-emerald-900/20",
       summary: "border-indigo-400/40 bg-indigo-950/30 text-indigo-100",
     }
     : {
       page: "bg-[#cfe3f2] text-[#0f172a]",
-      section: "bg-[#b8d6ea] border-[#6ba3c7] shadow-sm",
+      glass: "bg-[#b8d6ea] border-[#6ba3c7] backdrop-blur-xl shadow-xl shadow-[#6ba3c7]/20",
       help: "text-[#1e3a5f]",
       title: "text-[#0f172a]",
-      input: "bg-[#a8cce3] border-[#6ba3c7] text-[#0f172a] placeholder-[#355a78]",
+      input: "bg-[#a8cce3] border-[#6ba3c7] text-[#0f172a] placeholder-[#355a78] focus:border-sky-600 focus:ring-1 focus:ring-sky-400",
       card: "border-[#6ba3c7] bg-[#a8cce3]",
       cardActive: "border-emerald-600 bg-emerald-100",
       summary: "border-[#6ba3c7] bg-[#a8cce3] text-[#0f172a]",
     };
 
   return (
-    <div className={`flex flex-col min-h-screen ${theme.page}`}>
+    <div className={`flex flex-col min-h-screen font-sans selection:bg-brand-cyan/30 transition-colors duration-500 ${theme.page}`}>
       <Navbar
         rightSlot={
           <button
-            type="button"
-            onClick={() => setIsDark((v) => !v)}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${isDark ? "border-indigo-400/40 bg-indigo-900/30 text-indigo-100" : "border-slate-300 bg-white text-slate-700"}`}
+            onClick={() => setIsDark(!isDark)}
+            className={`p-2 rounded-xl border ${isDark ? "bg-white/5 border-white/10 text-brand-cyan" : "bg-white border-[#6ba3c7] text-[#1e3a5f]"} transition-all hover:scale-110 shadow-lg`}
           >
-            {isDark ? <Sun size={16} /> : <Moon size={16} />} {isDark ? "Vista clara" : "Vista oscura"}
+            {isDark ? <Sun size={20} /> : <Moon size={20} />}
           </button>
         }
       />
-      <div className="fixed inset-0 z-0 pointer-events-none">
+
+      <div className="fixed inset-0 z-0">
         <div className={`absolute top-0 left-0 w-full h-full ${isDark ? "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#0a0033] to-[#0a0033]" : "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-200 via-slate-100 to-slate-100"}`}></div>
+        <div className={`absolute top-0 left-1/4 w-96 h-96 rounded-full blur-[120px] transition-opacity duration-1000 ${isDark ? 'bg-brand-cyan/20' : 'bg-sky-400/20 opacity-40'}`} />
+        <div className={`absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-[120px] transition-opacity duration-1000 ${isDark ? 'bg-brand-accent/10' : 'bg-orange-300/20 opacity-30'}`} />
       </div>
 
-      <div className="relative z-10 flex-grow pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-[1500px] mx-auto space-y-6">
-          <div className="animate-fade-in-up">
-            <div className="inline-block px-4 py-1 rounded-full border border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan text-xs font-bold tracking-wider uppercase mb-3">
-              Inscripciones Abiertas
+      <main className="relative z-10 flex-grow pt-28 pb-20 px-4 flex flex-col items-center">
+        <div className="max-w-4xl w-full space-y-8">
+          <header className="text-center space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan text-xs font-black tracking-widest uppercase">
+              <div className="w-2 h-2 rounded-full bg-brand-cyan animate-pulse" /> CFP Malvinas Argentinas
             </div>
-            <h1 className={`text-4xl md:text-5xl font-extrabold leading-tight ${theme.title}`}>
-              Formulario de <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-purple-500">Preinscripción</span>
+            <h1 className={`text-4xl md:text-6xl font-black ${theme.title} tracking-tight`}>
+              Inscripción <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan via-purple-400 to-brand-accent">2026</span>
             </h1>
-          </div>
+            <p className={`${theme.help} text-lg font-medium`}>Completá los pasos para formar parte del CFP Malvinas Argentinas.</p>
+          </header>
 
-          {/* Alertas fijas flotantes (Toasts) */}
-          {error && (
-            <div className="fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-[100] animate-fade-in-up max-w-sm md:max-w-md rounded-xl bg-red-600 px-5 py-4 text-white shadow-2xl shadow-red-900/50 flex items-start gap-3 border border-red-500">
-              <div className="flex-1">
-                <p className="font-bold mb-1">Oops, falta algo</p>
-                <p className="text-sm text-red-100 leading-relaxed">{error}</p>
+          <div className={`${theme.glass} rounded-[2rem] p-6 md:p-12 relative overflow-hidden transition-all duration-700`}>
+            <ProgressBar currentStep={step} totalSteps={4} isDark={isDark} />
+
+            {error && (
+              <div className="mb-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-3 text-red-400 font-medium text-sm">
+                  <div className="p-2 bg-red-500 rounded-lg text-white"><X size={16} /></div> {error}
+                </div>
               </div>
-              <button className="text-red-300 hover:text-white transition-colors p-1" onClick={() => setError("")}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
-          )}
+            )}
 
-          {ok && (
-            <div className="fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-[100] animate-fade-in-up max-w-sm md:max-w-md rounded-xl bg-emerald-600 px-5 py-4 text-white shadow-2xl shadow-emerald-900/50 flex items-start gap-3 border border-emerald-500">
-              <div className="flex-1">
-                <p className="font-bold mb-1">¡Preinscripción Exitosa!</p>
-                <p className="text-sm text-emerald-100 leading-relaxed">{ok}</p>
-              </div>
-              <button className="text-emerald-300 hover:text-white transition-colors p-1" onClick={() => setOk("")}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
-          )}
+            <form onSubmit={onSubmit} className="space-y-10 min-h-[400px]">
+              {step === 1 && (
+                <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
+                  <div className="space-y-2">
+                    <h2 className={`text-2xl font-black ${theme.title}`}>Oferta Formativa</h2>
+                    <p className={theme.help}>Seleccioná los programas de tu interés.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {ofertaView.map((p) => {
+                      const active = selectedProgramaSet.has(String(p.programa_id));
+                      const expanded = active && String(p.programa_id) === String(expandedProgramaId);
+                      return (
+                        <div
+                          key={p.programa_id}
+                          className={`group relative rounded-3xl border-2 p-6 transition-all duration-500 cursor-pointer overflow-hidden ${active
+                            ? `${theme.cardActive} ring-2 ring-emerald-500 shadow-lg`
+                            : `${theme.card} hover:border-brand-cyan/70 hover:shadow-md hover:scale-[1.01]`
+                            }`}
+                          onClick={() => openPrograma(p)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1 flex-grow">
+                              <h3 className={`font-black text-xl leading-tight ${theme.title}`}>{p.programa_nombre}</h3>
+                              <p className={`text-xs font-bold ${active ? 'text-brand-cyan' : theme.help}`}>{p.bloques?.length || 0} BLOQUES DISPONIBLES</p>
+                            </div>
+                            <div className={`p-2 rounded-xl transition-colors ${active ? "bg-brand-cyan shadow-lg shadow-brand-cyan/50 text-white" : "bg-indigo-500/10 text-indigo-400 group-hover:text-brand-cyan"}`}>
+                              {active ? <CheckCircle2 size={24} /> : (expanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />)}
+                            </div>
+                          </div>
+                          {expanded && (
+                            <div className="mt-6 pt-6 border-t border-white/10 space-y-4 animate-in fade-in zoom-in-95 duration-500" onClick={(e) => e.stopPropagation()}>
+                              {p.bloquesOrdenados.map((b) => (
+                                <label
+                                  key={b.bloque_id}
+                                  className={`flex items-start gap-4 p-4 rounded-2xl transition-all ${isDark ? "bg-white/5 hover:bg-white/10" : "bg-white/40 hover:bg-white/60"
+                                    }`}
+                                >
+                                  <input type="checkbox" className="mt-1 w-5 h-5 rounded-lg border-2 border-brand-cyan text-brand-cyan focus:ring-0 cursor-pointer" checked={(bloquesPorPrograma[String(p.programa_id)] || []).includes(b.bloque_id)} disabled={isProgramacionII(b.bloque_nombre)} onChange={() => toggleBloque(p.programa_id, b.bloque_id)} />
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-sm tracking-tight">{b.bloque_nombre}</span>
+                                    <span className={`text-[10px] uppercase font-black tracking-widest ${isDark ? 'text-indigo-400' : 'text-slate-400'}`}>Inicio: {b.cohorte_nombre}</span>
+                                    {isProgramacionII(b.bloque_nombre) && <span className="text-[10px] text-brand-accent mt-1 font-bold">REQUISITO: PROG. I Y BD APROBADA</span>}
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-          <form onSubmit={onSubmit} className={`preins-form ${isDark ? "preins-dark" : "preins-light"} space-y-6 border rounded-2xl p-6 md:p-8 ${theme.section}`}>
-            <section className="space-y-3">
-              <h2 className={`text-xl font-bold ${theme.title}`}>Oferta Formativa</h2>
-              <p className={`text-sm ${theme.help}`}>Primero seleccioná una oferta.</p>
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                {ofertaView.map((p) => {
-                  const pid = String(p.programa_id);
-                  const active = selectedProgramaSet.has(pid);
-                  const expanded = active && String(p.programa_id) === String(expandedProgramaId);
-                  return (
-                    <div
-                      key={p.programa_id}
-                      className={`relative rounded-xl border p-4 transition-all duration-200 cursor-pointer overflow-hidden ${active
-                        ? `${theme.cardActive} ring-2 ring-emerald-500 shadow-md`
-                        : `${theme.card} hover:border-brand-cyan/70 hover:shadow-sm hover:scale-[1.01]`
-                        }`}
-                      onClick={() => openPrograma(p)}
-                    >
-                      {active && (
-                        <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none">
-                          <div className={`absolute top-0 right-0 w-0 h-0 border-t-[40px] border-l-[40px] border-l-transparent ${isDark ? 'border-t-emerald-600/80' : 'border-t-emerald-500'}`}></div>
-                          <CheckCircle2 size={16} strokeWidth={3} className="absolute top-2 right-2 text-white" />
+              {step === 2 && (
+                <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
+                  <div className="space-y-2">
+                    <h2 className={`text-2xl font-black ${theme.title}`}>Identidad</h2>
+                    <p className={theme.help}>Tus datos personales básicos.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-cyan">Apellido</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input} transition-all`} name="apellido" placeholder="Pérez" value={form.apellido} onChange={onChange} required /></div>
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-cyan">Nombre</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input} transition-all`} name="nombre" placeholder="Juan" value={form.nombre} onChange={onChange} required /></div>
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-cyan">DNI</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input} transition-all`} name="dni" placeholder="Sin puntos ni espacios" value={form.dni} onChange={onChange} required /></div>
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">CUIT (Opcional)</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="cuit" placeholder="20XXXXXXXXX" value={form.cuit} onChange={onChange} /></div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Sexo</label>
+                      <select className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="sexo" value={form.sexo} onChange={onChange}>
+                        <option value="">Seleccione...</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro/X</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Fecha de Nacimiento</label><input type="date" className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange} /></div>
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Nacionalidad</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="nacionalidad" value={form.nacionalidad} onChange={onChange} /></div>
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Lugar de Nacim. (Provincia)</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="lugar_nacimiento" placeholder="Ej: Tierra del Fuego" value={form.lugar_nacimiento} onChange={onChange} /></div>
+                  </div>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
+                  <div className="space-y-2">
+                    <h2 className={`text-2xl font-black ${theme.title}`}>Contacto y Situación</h2>
+                    <p className={theme.help}>¿Cómo te contactamos y cuál es tu perfil?</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2 space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-cyan">Email</label><input type="email" className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="email" placeholder="usuario@ejemplo.com" value={form.email} onChange={onChange} required /></div>
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Teléfono</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="telefono" value={form.telefono} onChange={onChange} /></div>
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Nivel Educativo</label><select className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="nivel_educativo" value={form.nivel_educativo} onChange={onChange}>{NIVEL_EDUCATIVO_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}</select></div>
+
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Ciudad</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="ciudad" placeholder="Ej: Río Grande" value={form.ciudad} onChange={onChange} /></div>
+                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Barrio</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="barrio" placeholder="Ej: Chacra II" value={form.barrio} onChange={onChange} /></div>
+
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Domicilio Particular</label>
+                      <input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="domicilio" placeholder="Calle y número" value={form.domicilio} onChange={onChange} />
+                    </div>
+                    <div className="md:col-span-2 p-6 rounded-[2rem] bg-brand-cyan/5 border border-brand-cyan/10 space-y-4">
+                      <p className="text-xs font-black uppercase tracking-tighter text-brand-cyan">Equipamiento y Trabajo</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-5 h-5 rounded border-indigo-500/30 text-brand-cyan" name="posee_pc" checked={form.posee_pc} onChange={onChange} /><span className="text-sm font-bold">Poseo PC</span></label>
+                        <label className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-5 h-5 rounded border-indigo-500/30 text-brand-cyan" name="posee_conectividad" checked={form.posee_conectividad} onChange={onChange} /><span className="text-sm font-bold">Tengo Internet</span></label>
+                        <label className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-5 h-5 rounded border-indigo-500/30 text-brand-accent" name="trabaja" checked={form.trabaja} onChange={onChange} /><span className="text-sm font-bold">Actualmente Trabajo</span></label>
+                      </div>
+                      {form.trabaja && (
+                        <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">Lugar de Trabajo</label>
+                          <input className={`w-full rounded-2xl px-5 py-4 mt-1 ${theme.input} border-brand-accent/30`} name="lugar_trabajo" placeholder="Nombre de la empresa o institución" value={form.lugar_trabajo} onChange={onChange} />
                         </div>
                       )}
-
-                      <button
-                        type="button"
-                        className="w-full flex items-center justify-between text-left pr-6"
-                      >
-                        <div>
-                          <p className={`font-bold text-lg ${theme.title}`}>{p.programa_nombre}</p>
-                          <p className={`text-xs ${theme.help}`}>{p.bloques?.length || 0} bloque(s) disponible(s)</p>
-                        </div>
-                        {expanded ? <ChevronUp size={18} className={theme.help} /> : <ChevronDown size={18} className={theme.help} />}
-                      </button>
-
-                      {expanded ? (
-                        <div className={`mt-3 space-y-2 border-t pt-3 ${isDark ? "border-white/10" : "border-slate-300"}`}>
-                          {p.bloquesOrdenados.map((b) => {
-                            const hasCorrelativas = (b.correlativas_ids || []).length > 0;
-                            const programacionIILocked = isProgramacionII(b.bloque_nombre);
-                            const checked = active && (bloquesPorPrograma[pid] || []).includes(b.bloque_id);
-                            return (
-                              <label key={b.bloque_id} className={`flex items-start gap-2 text-sm rounded-lg px-2 py-1 ${checked ? (isDark ? "bg-emerald-500/15 text-emerald-300" : "bg-emerald-100 text-emerald-900") : theme.help}`}>
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  disabled={programacionIILocked}
-                                  onChange={() => toggleBloque(pid, b.bloque_id)}
-                                />
-                                <span>
-                                  <strong>{b.bloque_nombre}</strong> - cohorte automática: {b.cohorte_nombre}
-                                  {programacionIILocked ? (
-                                    <em className="block text-amber-300">Requiere Programación I y Base de Datos aprobada.</em>
-                                  ) : null}
-                                  {hasCorrelativas && !programacionIILocked ? <em className="block text-amber-300">No se selecciona por defecto (requiere correlativas)</em> : null}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      ) : null}
                     </div>
-                  );
-                })}
-              </div>
-              <div className={`rounded-xl border p-4 ${theme.summary}`}>
-                <h3 className={`font-bold mb-2 ${theme.title}`}>Resumen de inscripción</h3>
-                {!resumenSeleccion.length ? (
-                  <p className={`text-sm ${theme.help}`}>Todavía no seleccionaste una oferta formativa.</p>
-                ) : (
-                  <div className={`text-sm space-y-3 ${theme.help}`}>
-                    {resumenSeleccion.map(({ programa, bloques }) => (
-                      <div key={programa.programa_id} className={`rounded-lg border p-3 space-y-2 ${isDark ? "border-indigo-400/30 bg-indigo-900/20" : "border-slate-300 bg-white"}`}>
-                        <p className={`font-semibold ${theme.title}`}>{programa.programa_nombre}</p>
-                        <p><strong>Bloques seleccionados:</strong> {bloques.length}</p>
-                        <ul className="space-y-1">
-                          {bloques.map((b) => (
-                            <li key={b.bloque_id} className={`rounded px-2 py-1 ${isDark ? "bg-indigo-700/20" : "bg-slate-100"}`}>
-                              {b.bloque_nombre} - cohorte automática: {b.cohorte_nombre}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
                   </div>
+                </div>
+              )}
+
+              {step === 4 && (
+                <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
+                  <div className="space-y-2">
+                    <h2 className={`text-2xl font-black ${theme.title}`}>Documentación</h2>
+                    <p className={theme.help}>Subí copias digitales legibles.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <DropFileField label="Digitalización de DNI" required file={dniFile} onFileChange={setDniFile} isDark={isDark} />
+                    <DropFileField label={`Título Secundario ${requiresTitle ? "(Obligatorio)" : "(Opcional)"}`} required={requiresTitle} file={tituloFile} onFileChange={setTituloFile} isDark={isDark} />
+                  </div>
+                  <div className={`p-6 rounded-3xl ${isDark ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"><CheckCircle2 size={24} /></div>
+                      <div>
+                        <p className="font-black tracking-tight leading-none">Listo para enviar</p>
+                        <p className="text-sm opacity-70">Al hacer clic en enviar, confirmás que tus datos son verídicos.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <footer className="pt-8 border-t border-white/5 flex flex-col-reverse sm:flex-row justify-between gap-4">
+                {step > 1 && (
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    className={`flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${isDark ? "bg-white/5 hover:bg-white/10 text-white" : "bg-white/50 hover:bg-white/80 text-[#1e3a5f]"
+                      }`}
+                    disabled={saving}
+                  >
+                    <ArrowLeft size={16} /> Volver
+                  </button>
                 )}
-              </div>
-            </section>
+                <div className="flex-grow" />
+                {step < 4 ? (
+                  <button type="button" onClick={nextStep} className="group relative flex items-center justify-center gap-3 px-10 py-4 bg-brand-cyan border-b-4 border-cyan-700 text-[#05011a] font-black uppercase tracking-widest text-xs rounded-2xl transition-all hover:scale-[1.02] hover:-translate-y-1 active:border-b-0 active:translate-y-0.5">
+                    Siguiente Paso <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                ) : (
+                  <button type="submit" disabled={saving} className="group relative flex items-center justify-center gap-3 px-12 py-4 bg-gradient-to-r from-brand-cyan to-brand-accent text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:scale-105 active:scale-95 disabled:grayscale">
+                    {saving ? "Procesando..." : "Confirmar Preinscripción"} <CheckCircle2 size={16} />
+                  </button>
+                )}
+              </footer>
+            </form>
+          </div>
 
-            <section className="space-y-3">
-              <h2 className={`text-xl font-bold ${theme.title}`}>Datos Personales</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="apellido" placeholder="Apellido" value={form.apellido} onChange={onChange} required />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="nombre" placeholder="Nombre" value={form.nombre} onChange={onChange} required />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="dni" placeholder="DNI (8 dígitos)" value={form.dni} onChange={onChange} required />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="cuit" placeholder="CUIT (opcional)" value={form.cuit} onChange={onChange} />
-                <select className={`border rounded-lg px-3 py-2 ${theme.input}`} name="sexo" value={form.sexo} onChange={onChange}>
-                  <option value="">Sexo (opcional)</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option>
-                </select>
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="fecha_nacimiento" type="date" value={form.fecha_nacimiento} onChange={onChange} />
-                <select className={`border rounded-lg px-3 py-2 ${theme.input}`} name="pais_nacimiento" value={form.pais_nacimiento} onChange={onChange}>
-                  <option value="Argentina">Argentina</option>
-                  <option value="Bolivia">Bolivia</option>
-                  <option value="Brasil">Brasil</option>
-                  <option value="Chile">Chile</option>
-                  <option value="Paraguay">Paraguay</option>
-                  <option value="Uruguay">Uruguay</option>
-                  <option value="Otro">Otro</option>
-                </select>
-                <input className={`border rounded-lg px-3 py-2 ${theme.input} transition-opacity duration-300 ${form.pais_nacimiento === 'Otro' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`} name="pais_nacimiento_otro" placeholder="Especifique país de nacimiento" value={form.pais_nacimiento_otro} onChange={onChange} tabIndex={form.pais_nacimiento === 'Otro' ? 0 : -1} />
-                <select className={`border rounded-lg px-3 py-2 ${theme.input}`} name="nacionalidad" value={form.nacionalidad} onChange={onChange}>
-                  <option value="Argentina">Argentina</option>
-                  <option value="Boliviana">Boliviana</option>
-                  <option value="Brasileña">Brasileña</option>
-                  <option value="Chilena">Chilena</option>
-                  <option value="Paraguaya">Paraguaya</option>
-                  <option value="Uruguaya">Uruguaya</option>
-                  <option value="Otra">Otra</option>
-                </select>
-                <input className={`border rounded-lg px-3 py-2 ${theme.input} transition-opacity duration-300 ${form.nacionalidad === 'Otra' || form.nacionalidad === 'Otro' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`} name="nacionalidad_otra" placeholder="Especifique nacionalidad" value={form.nacionalidad_otra} onChange={onChange} tabIndex={form.nacionalidad === 'Otra' || form.nacionalidad === 'Otro' ? 0 : -1} />
-                <input className={`border rounded-lg px-3 py-2 md:col-span-2 ${theme.input}`} name="lugar_nacimiento" placeholder="Lugar de nacimiento" value={form.lugar_nacimiento} onChange={onChange} />
-              </div>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className={`text-xl font-bold ${theme.title}`}>Contacto y Domicilio</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="email" type="email" placeholder="Email" value={form.email} onChange={onChange} required />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="telefono" placeholder="Teléfono" value={form.telefono} onChange={onChange} />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="ciudad" placeholder="Ciudad" value={form.ciudad} onChange={onChange} />
-                <input className={`border rounded-lg px-3 py-2 ${theme.input}`} name="barrio" placeholder="Barrio" value={form.barrio} onChange={onChange} />
-                <input className={`border rounded-lg px-3 py-2 md:col-span-2 ${theme.input}`} name="domicilio" placeholder="Domicilio" value={form.domicilio} onChange={onChange} />
-              </div>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className={`text-xl font-bold ${theme.title}`}>Situación Académica</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className={`block text-sm mb-1 ${theme.help}`}>Nivel Educativo</label>
-                  <select className={`w-full border rounded-lg px-3 py-2 ${theme.input}`} name="nivel_educativo" value={form.nivel_educativo} onChange={onChange}>
-                    <option value="">Seleccionar...</option>
-                    {NIVEL_EDUCATIVO_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+          {ok && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+              <div className={`${isDark ? 'bg-indigo-950/90 border-brand-cyan/30' : 'bg-white border-slate-200'} border-2 rounded-[3rem] p-10 max-w-md w-full text-center space-y-6 shadow-2xl`}>
+                <div className="relative mx-auto w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40">
+                  <CheckCircle2 size={50} className="text-white" />
+                  <div className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-25" />
                 </div>
+                <h3 className="text-3xl font-black tracking-tight">¡Genial!</h3>
+                <p className="opacity-80 font-medium">{ok}</p>
+                <button onClick={() => setOk("")} className="w-full py-4 bg-brand-cyan text-[#05011a] font-black rounded-2xl uppercase tracking-widest text-xs">Cerrar</button>
               </div>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className={`text-xl font-bold ${theme.title}`}>Recursos</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className={`flex items-center gap-2 text-sm ${theme.help}`}><input type="checkbox" name="posee_pc" checked={form.posee_pc} onChange={onChange} />Posee PC</label>
-                <label className={`flex items-center gap-2 text-sm ${theme.help}`}><input type="checkbox" name="posee_conectividad" checked={form.posee_conectividad} onChange={onChange} />Posee conectividad</label>
-                <label className={`flex items-center gap-2 text-sm md:col-span-2 ${theme.help}`}><input type="checkbox" name="puede_traer_pc" checked={form.puede_traer_pc} onChange={onChange} />Puede traer esa PC a clase</label>
-              </div>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className={`text-xl font-bold ${theme.title}`}>Situación Laboral</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <p className={`text-sm mb-2 ${theme.help}`}>Actualmente trabaja</p>
-                  <label className={`mr-5 text-sm ${theme.help}`}>
-                    <input type="radio" name="trabaja_radio" checked={form.trabaja === true} onChange={() => setForm((prev) => ({ ...prev, trabaja: true }))} /> Si
-                  </label>
-                  <label className={`text-sm ${theme.help}`}>
-                    <input type="radio" name="trabaja_radio" checked={form.trabaja === false} onChange={() => setForm((prev) => ({ ...prev, trabaja: false, lugar_trabajo: "" }))} /> No
-                  </label>
-                </div>
-                {form.trabaja ? <input className={`border rounded-lg px-3 py-2 md:col-span-2 ${theme.input}`} name="lugar_trabajo" placeholder="Lugar de trabajo" value={form.lugar_trabajo} onChange={onChange} /> : null}
-              </div>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className={`text-xl font-bold ${theme.title}`}>Documentación (PDF o imagen, máx 3MB)</h2>
-              <div className="grid grid-cols-1 gap-4">
-                <DropFileField label="DNI (obligatorio)" required file={dniFile} onFileChange={setDniFile} isDark={isDark} />
-                <DropFileField label={`Título secundario ${requiereTitulo ? "(obligatorio para este programa)" : "(opcional)"}`} required={requiereTitulo} file={tituloFile} onFileChange={setTituloFile} isDark={isDark} />
-              </div>
-            </section>
-
-            <button
-              type="submit"
-              disabled={saving || loading}
-              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-brand-accent to-red-500 text-white px-8 py-3 rounded-xl font-bold hover:shadow-[0_0_20px_rgba(255,102,0,0.5)] transition-all disabled:opacity-60"
-            >
-              {saving ? "Enviando..." : "Enviar preinscripción"} <ArrowRight size={18} />
-            </button>
-          </form>
+            </div>
+          )}
         </div>
-      </div>
+      </main>
       <Footer />
     </div>
   );

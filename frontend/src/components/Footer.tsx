@@ -34,8 +34,10 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-white/5 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
-          <p>lucasoviedodev@gmail.com</p>
+        <div className="border-t border-white/5 mt-10 pt-6 flex flex-col md:flex-row justify-center items-center">
+          <p className="text-sm font-bold text-white tracking-widest uppercase opacity-90 hover:text-brand-cyan transition-colors duration-300">
+            Desarrollado por: <span className="text-brand-cyan">lucasoviedodev@gmail.com</span>
+          </p>
         </div>
       </div>
     </footer>
