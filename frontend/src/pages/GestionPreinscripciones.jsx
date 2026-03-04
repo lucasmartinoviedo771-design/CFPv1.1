@@ -262,82 +262,165 @@ export default function GestionPreinscripciones() {
                         </button>
 
                         <div className="p-2">
-                            <h2 className="text-2xl font-bold text-white mb-1">{viewStudent.apellido}, {viewStudent.nombre}</h2>
-                            <p className="text-indigo-300 mb-6 font-mono">{viewStudent.dni}</p>
+                            {(() => {
+                                const hoy = new Date();
+                                const nac = viewStudent.fecha_nacimiento ? new Date(viewStudent.fecha_nacimiento) : null;
+                                let edad = 18;
+                                if (nac) {
+                                    edad = hoy.getFullYear() - nac.getFullYear();
+                                    const m = hoy.getMonth() - nac.getMonth();
+                                    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+                                }
+                                const esMenor = edad < 18;
+                                return (
+                                    <>
+                                        <h2 className="text-2xl font-bold text-white mb-1">{viewStudent.apellido}, {viewStudent.nombre}</h2>
+                                        <p className="text-indigo-300 mb-6 font-mono">
+                                            {viewStudent.dni}
+                                            {esMenor && <span className="ml-3 text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-black animate-pulse">MENOR DE EDAD</span>}
+                                        </p>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div>
-                                    <SectionDivider title="Datos Personales" icon={Search} />
-                                    <div className="space-y-2 text-sm">
-                                        <p><span className="text-indigo-400">Email:</span> <span className="text-white">{viewStudent.email}</span></p>
-                                        <p><span className="text-indigo-400">Teléfono:</span> <span className="text-white">{viewStudent.telefono || '-'}</span></p>
-                                        <p><span className="text-indigo-400">Fecha Nac.:</span> <span className="text-white">{viewStudent.fecha_nacimiento || '-'}</span></p>
-                                        <p><span className="text-indigo-400">Domicilio:</span> <span className="text-white">{viewStudent.domicilio || '-'}, {viewStudent.ciudad || '-'}</span></p>
-                                    </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div>
+                                                <SectionDivider title="Datos Personales" icon={Search} />
+                                                <div className="space-y-2 text-sm">
+                                                    <p><span className="text-indigo-400">Email:</span> <span className="text-white">{viewStudent.email}</span></p>
+                                                    <p><span className="text-indigo-400">Teléfono:</span> <span className="text-white">{viewStudent.telefono || '-'}</span></p>
+                                                    <p><span className="text-indigo-400">Fecha Nac.:</span> <span className="text-white">{viewStudent.fecha_nacimiento || '-'}</span></p>
+                                                    <p><span className="text-indigo-400">Domicilio:</span> <span className="text-white">{viewStudent.domicilio || '-'}, {viewStudent.ciudad || '-'}</span></p>
+                                                </div>
 
-                                    <SectionDivider title="Trayectos Solicitados" icon={FileText} />
-                                    <div className="flex flex-wrap gap-2">
-                                        {viewStudent.trayectos?.map((t, idx) => (
-                                            <span key={idx} className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30 text-xs">
-                                                {t}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
+                                                <SectionDivider title="Trayectos Solicitados" icon={FileText} />
+                                                <div className="flex flex-wrap gap-2">
+                                                    {viewStudent.trayectos?.map((t, idx) => (
+                                                        <span key={idx} className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30 text-xs">
+                                                            {t}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
 
-                                <div>
-                                    <SectionDivider title="Documentación" icon={Download} />
-                                    <div className="space-y-3">
-                                        {viewStudent.dni_digitalizado ? (
-                                            <a href={getMediaUrl(viewStudent.dni_digitalizado)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-cyan-300 transition-all border border-cyan-500/30">
-                                                <span className="flex items-center gap-2"><FileText size={18} /> DNI Digitalizado</span>
-                                                <Download size={18} />
-                                            </a>
-                                        ) : (
-                                            <div className="p-3 rounded-lg border border-red-500/30 text-red-400 bg-red-900/20 text-sm">DNI no cargado</div>
-                                        )}
+                                            <div>
+                                                <SectionDivider title="Documentación" icon={Download} />
+                                                <div className="space-y-3">
+                                                    {viewStudent.dni_digitalizado ? (
+                                                        <a href={getMediaUrl(viewStudent.dni_digitalizado)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-cyan-300 transition-all border border-cyan-500/30">
+                                                            <span className="flex items-center gap-2"><FileText size={18} /> DNI Digitalizado</span>
+                                                            <Download size={18} />
+                                                        </a>
+                                                    ) : (
+                                                        <div className="p-3 rounded-lg border border-red-500/30 text-red-400 bg-red-900/20 text-sm">DNI no cargado</div>
+                                                    )}
 
-                                        {viewStudent.titulo_secundario_digitalizado ? (
-                                            <a href={getMediaUrl(viewStudent.titulo_secundario_digitalizado)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-emerald-300 transition-all border border-emerald-500/30">
-                                                <span className="flex items-center gap-2"><FileText size={18} /> Título Secundario</span>
-                                                <Download size={18} />
-                                            </a>
-                                        ) : (
-                                            <div className="p-3 rounded-lg border border-white/10 text-gray-500 bg-white/5 text-sm">Título no cargado</div>
-                                        )}
-                                    </div>
+                                                    {viewStudent.titulo_secundario_digitalizado ? (
+                                                        <a href={getMediaUrl(viewStudent.titulo_secundario_digitalizado)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-emerald-300 transition-all border border-emerald-500/30">
+                                                            <span className="flex items-center gap-2"><FileText size={18} /> Título Secundario</span>
+                                                            <Download size={18} />
+                                                        </a>
+                                                    ) : (
+                                                        !esMenor && <div className="p-3 rounded-lg border border-white/10 text-gray-500 bg-white/5 text-sm">Título no cargado</div>
+                                                    )}
 
-                                    <SectionDivider title="Información Adicional" icon={AlertCircle} />
-                                    <div className="space-y-2 text-sm text-indigo-200">
-                                        <p>Posee PC: {viewStudent.posee_pc ? 'Sí' : 'No'}</p>
-                                        <p>Conectividad: {viewStudent.posee_conectividad ? 'Sí' : 'No'}</p>
-                                        <p>Trabaja: {viewStudent.trabaja ? 'Sí' : 'No'}</p>
-                                        <p>Nivel Educativo: {viewStudent.nivel_educativo || '-'}</p>
-                                    </div>
-                                </div>
-                            </div>
+                                                    {esMenor && (
+                                                        <>
+                                                            <SectionDivider title="Datos del Tutor (Menor)" icon={UserCheck} />
+                                                            <div className="space-y-3 p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
+                                                                <p className="text-sm"><span className="text-orange-300/70">Nombre:</span> <span className="text-white font-bold">{viewStudent.tutor_nombre}</span></p>
+                                                                <p className="text-sm"><span className="text-orange-300/70">DNI:</span> <span className="text-white font-bold">{viewStudent.tutor_dni}</span></p>
 
-                            <div className="mt-8 flex justify-end gap-3">
-                                <Button variant="ghost" onClick={() => setViewStudent(null)}>Cerrar</Button>
-                                <Button
-                                    className="bg-emerald-600 hover:bg-emerald-500"
-                                    onClick={async () => {
-                                        setApproving(true);
-                                        try {
-                                            await apiClientV2.post('/estudiantes/bulk_approve/', { ids: [viewStudent.id] });
-                                            setFeedback({ open: true, message: `Estudiante aprobado con éxito.`, severity: "success" });
-                                            setViewStudent(null);
-                                            refetch();
-                                        } catch (e) {
-                                            setFeedback({ open: true, message: "Error al aprobar.", severity: "error" });
-                                        } finally {
-                                            setApproving(false);
-                                        }
-                                    }}
-                                >
-                                    Aprobar Estudiante
-                                </Button>
-                            </div>
+                                                                {viewStudent.dni_tutor_digitalizado ? (
+                                                                    <a href={getMediaUrl(viewStudent.dni_tutor_digitalizado)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-orange-500/20 hover:bg-orange-500/40 p-3 rounded-lg text-orange-200 transition-all border border-orange-500/30">
+                                                                        <span className="flex items-center gap-2"><FileText size={18} /> DNI del Tutor</span>
+                                                                        <Download size={18} />
+                                                                    </a>
+                                                                ) : (
+                                                                    <div className="p-3 rounded-lg border border-red-500/30 text-red-300 bg-red-900/20 text-xs">DNI Tutor no cargado</div>
+                                                                )}
+
+                                                                <SectionDivider title="Autorización Parental" icon={UploadCloud} />
+                                                                {viewStudent.nota_parental_firmada ? (
+                                                                    <a href={getMediaUrl(viewStudent.nota_parental_firmada)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-emerald-500/20 hover:bg-emerald-500/40 p-3 rounded-lg text-emerald-300 transition-all border border-emerald-500/30">
+                                                                        <span className="flex items-center gap-2"><CheckCircle size={18} /> Nota Autorización OK</span>
+                                                                        <Download size={18} />
+                                                                    </a>
+                                                                ) : (
+                                                                    <div className="space-y-2">
+                                                                        <div className="p-3 rounded-lg border border-dashed border-indigo-500/50 text-indigo-300 text-center text-xs">
+                                                                            Esperando recepción de nota firmada
+                                                                        </div>
+                                                                        <input
+                                                                            type="file"
+                                                                            id="upload-nota"
+                                                                            className="hidden"
+                                                                            onChange={async (e) => {
+                                                                                const f = e.target.files?.[0];
+                                                                                if (!f) return;
+                                                                                setApproving(true);
+                                                                                try {
+                                                                                    const fd = new FormData();
+                                                                                    fd.append('nota_parental_firmada', f);
+                                                                                    await apiClientV2.post(`/estudiantes/${viewStudent.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                                                                    setFeedback({ open: true, message: "Nota guardada con éxito.", severity: "success" });
+                                                                                    refetch();
+                                                                                    setViewStudent(null);
+                                                                                } catch (err) {
+                                                                                    setFeedback({ open: true, message: "Error al subir nota.", severity: "error" });
+                                                                                } finally {
+                                                                                    setApproving(false);
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            fullWidth
+                                                                            onClick={() => document.getElementById('upload-nota').click()}
+                                                                            className="text-xs border-indigo-500/50 hover:bg-indigo-500/20"
+                                                                            startIcon={<Download size={14} className="rotate-180" />}
+                                                                        >
+                                                                            Subir nota recibida
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <SectionDivider title="Información Adicional" icon={AlertCircle} />
+                                                <div className="space-y-2 text-sm text-indigo-200">
+                                                    <p>Posee PC: {viewStudent.posee_pc ? 'Sí' : 'No'}</p>
+                                                    <p>Conectividad: {viewStudent.posee_conectividad ? 'Sí' : 'No'}</p>
+                                                    <p>Trabaja: {viewStudent.trabaja ? 'Sí' : 'No'}</p>
+                                                    <p>Nivel Educativo: {viewStudent.nivel_educativo || '-'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-8 flex justify-end gap-3">
+                                            <Button variant="ghost" onClick={() => setViewStudent(null)}>Cerrar</Button>
+                                            <Button
+                                                className="bg-emerald-600 hover:bg-emerald-500"
+                                                onClick={async () => {
+                                                    setApproving(true);
+                                                    try {
+                                                        await apiClientV2.post('/estudiantes/bulk_approve/', { ids: [viewStudent.id] });
+                                                        setFeedback({ open: true, message: `Estudiante aprobado con éxito.`, severity: "success" });
+                                                        setViewStudent(null);
+                                                        refetch();
+                                                    } catch (e) {
+                                                        setFeedback({ open: true, message: "Error al aprobar.", severity: "error" });
+                                                    } finally {
+                                                        setApproving(false);
+                                                    }
+                                                }}
+                                            >
+                                                Aprobar Estudiante
+                                            </Button>
+                                        </div>
+                                    </>
+                                );
+                            })()}
                         </div>
                     </Card>
                 </div>,

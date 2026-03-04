@@ -20,6 +20,14 @@ def titulo_upload_path(instance, filename):
     return _documento_upload_path(instance, filename, "titulo_secundario")
 
 
+def dni_tutor_upload_path(instance, filename):
+    return _documento_upload_path(instance, filename, "dni_tutor")
+
+
+def nota_parental_upload_path(instance, filename):
+    return _documento_upload_path(instance, filename, "autorizacion_parental")
+
+
 class TimeStamped(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -207,6 +215,20 @@ class Estudiante(TimeStamped):
         upload_to=titulo_upload_path,
         blank=True,
         verbose_name="Título secundario digitalizado (Archivo)",
+    )
+
+    # --- Datos de Tutor (para Menores de 18) ---
+    tutor_nombre = models.CharField(max_length=200, blank=True, verbose_name="Nombre del Tutor")
+    tutor_dni = models.CharField(max_length=20, blank=True, verbose_name="DNI del Tutor")
+    dni_tutor_digitalizado = models.FileField(
+        upload_to=dni_tutor_upload_path,
+        blank=True,
+        verbose_name="DNI del Tutor digitalizado (Archivo)",
+    )
+    nota_parental_firmada = models.FileField(
+        upload_to=nota_parental_upload_path,
+        blank=True,
+        verbose_name="Nota de Autorización Parental Firmada (Archivo)",
     )
 
     def get_approved_bloques(self):

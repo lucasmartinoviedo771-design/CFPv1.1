@@ -167,6 +167,10 @@ class EstudianteIn(Schema):
     lugar_trabajo: Optional[str] = None
     dni_digitalizado: Optional[str] = None
     titulo_secundario_digitalizado: Optional[str] = None
+    tutor_nombre: Optional[str] = None
+    tutor_dni: Optional[str] = None
+    dni_tutor_digitalizado: Optional[str] = None
+    nota_parental_firmada: Optional[str] = None
 
 
 class InscripcionIn(Schema):
@@ -230,6 +234,10 @@ class EstudianteDetailOut(EstudianteOut):
     lugar_trabajo: Optional[str] = None
     dni_digitalizado: Optional[str] = None
     titulo_secundario_digitalizado: Optional[str] = None
+    tutor_nombre: Optional[str] = None
+    tutor_dni: Optional[str] = None
+    dni_tutor_digitalizado: Optional[str] = None
+    nota_parental_firmada: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     trayectos: List[str] = []

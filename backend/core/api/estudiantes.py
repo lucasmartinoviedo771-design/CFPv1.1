@@ -92,19 +92,29 @@ def actualizar_estudiante_patch(request, estudiante_id: int, payload: Estudiante
 
 @router.post("/{estudiante_id}/documentos", response=EstudianteDetailOut)
 @require_authenticated_group
-def subir_documentos_estudiante(request, estudiante_id: int):
-    estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
-    
-    dni_file = request.FILES.get('dni_digitalizado')
-    titulo_file = request.FILES.get('titulo_secundario_digitalizado')
+def actualizar_documentos(
+    request,
+    estudiante_id: int,
+    dni_digitalizado: UploadedFile = File(None),
+    titulo_secundario_digitalizado: UploadedFile = File(None),
+    dni_tutor_digitalizado: UploadedFile = File(None),
+    nota_parental_firmada: UploadedFile = File(None),
+):
+    estudiante = get_object_or_404(Estudiante, id=estudiante_id)
     
     update_fields = []
-    if dni_file:
-        estudiante.dni_digitalizado = dni_file
+    if dni_digitalizado:
+        estudiante.dni_digitalizado = dni_digitalizado
         update_fields.append("dni_digitalizado")
-    if titulo_file:
-        estudiante.titulo_secundario_digitalizado = titulo_file
+    if titulo_secundario_digitalizado:
+        estudiante.titulo_secundario_digitalizado = titulo_secundario_digitalizado
         update_fields.append("titulo_secundario_digitalizado")
+    if dni_tutor_digitalizado:
+        estudiante.dni_tutor_digitalizado = dni_tutor_digitalizado
+        update_fields.append("dni_tutor_digitalizado")
+    if nota_parental_firmada:
+        estudiante.nota_parental_firmada = nota_parental_firmada
+        update_fields.append("nota_parental_firmada")
         
     if update_fields:
         update_fields.append("updated_at")

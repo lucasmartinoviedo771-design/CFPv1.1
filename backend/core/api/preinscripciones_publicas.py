@@ -64,6 +64,9 @@ class PreinscripcionIn(Schema):
     bloque_ids: Optional[List[int]] = None
     dni_digitalizado: str
     titulo_secundario_digitalizado: Optional[str] = None
+    tutor_nombre: Optional[str] = None
+    tutor_dni: Optional[str] = None
+    dni_tutor_digitalizado: Optional[str] = None
 
 
 class PreinscripcionOut(Schema):
@@ -280,9 +283,43 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
     Envía un email de confirmación con archivos adjuntos basados en los trayectos seleccionados.
     """
     try:
+        hoy = date.today()
+        nac = estudiante.fecha_nacimiento
+        edad = hoy.year - nac.year - ((hoy.month, hoy.day) < (nac.month, nac.day)) if nac else 18
+        es_menor = edad < 18
+        
         subject = "Confirmación de Preinscripción - CFP Malvinas Argentinas"
+        if es_menor:
+            subject = "ACCION REQUERIDA: Preinscripción de Menor - CFP Malvinas Argentinas"
         
         trayectos_html = "".join([f"<li><strong>{c.programa.nombre}</strong> ({c.bloque.nombre})</li>" for c in cohortes])
+
+        info_pdf_html = ""
+        if es_menor:
+            info_pdf_html = f"""
+            <div class="info-pdf" style="background-color: #fff7ed; border: 1px solid #ffedd5;">
+                <h3 style="color: #c2410c;">⚠️ ACCIÓN REQUERIDA PARA MENORES</h3>
+                <p style="margin-top: 0;">Al ser menor de edad, para completar tu inscripción es **obligatorio** que tu padre, madre o tutor responsable:</p>
+                <ul>
+                    <li>1. Descargue y lea las <strong>Condiciones CODE3</strong> y las <strong>Normas de Convivencia</strong> adjuntas.</li>
+                    <li>2. Imprima, complete y firme la autorizacion que figura al final del documento de condiciones.</li>
+                    <li>3. Envíe una foto o escaneo de la nota firmada a: <a href="mailto:estudiantes.cfp@malvinastdf.edu.ar">estudiantes.cfp@malvinastdf.edu.ar</a></li>
+                </ul>
+            </div>
+            """
+        else:
+            info_pdf_html = """
+            <div class="info-pdf">
+                <h3>📄 ¡No olvides revisar el PDF adjunto!</h3>
+                <p style="margin-top: 0;">En este correo te hemos adjuntado un documento muy importante con toda la información que necesitas sobre tu cursada. Allí encontrarás:</p>
+                <ul>
+                    <li><strong>🗓️ Horarios de los encuentros sincrónicos:</strong> Para que puedas organizarte y no perderte ninguna clase.</li>
+                    <li><strong>📅 Cronograma de evaluaciones:</strong> Fechas exactas de parciales, finales virtuales y finales sincrónicos.</li>
+                    <li><strong>📋 Requisitos y Correlatividades:</strong> Las condiciones necesarias para poder cursar y aprobar los módulos.</li>
+                    <li><strong>📌 Condiciones de Cursado:</strong> Información detallada sobre el funcionamiento del campus virtual y los periodos de receso.</li>
+                </ul>
+            </div>
+            """
         
         html_content = f"""
         <!DOCTYPE html>
@@ -324,16 +361,7 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
                         <ul>{trayectos_html}</ul>
                     </div>
 
-                    <div class="info-pdf">
-                        <h3>📄 ¡No olvides revisar el PDF adjunto!</h3>
-                        <p style="margin-top: 0;">En este correo te hemos adjuntado un documento muy importante con toda la información que necesitas sobre tu cursada. Allí encontrarás:</p>
-                        <ul>
-                            <li><strong>🗓️ Horarios de los encuentros sincrónicos:</strong> Para que puedas organizarte y no perderte ninguna clase.</li>
-                            <li><strong>📅 Cronograma de evaluaciones:</strong> Fechas exactas de parciales, finales virtuales y finales sincrónicos.</li>
-                            <li><strong>📋 Requisitos y Correlatividades:</strong> Las condiciones necesarias para poder cursar y aprobar los módulos.</li>
-                            <li><strong>📌 Condiciones de Cursado:</strong> Información detallada sobre el funcionamiento del campus virtual y los periodos de receso.</li>
-                        </ul>
-                    </div>
+                    {info_pdf_html}
 
                     <p style="font-size: 16px; margin-top: 35px;"><strong>Ante cualquier duda o consulta, recuerda mantenerte comunicado. Aquí tienes todos nuestros canales de contacto oficiales:</strong></p>
                     
@@ -373,11 +401,15 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
         tiene_otros = any(_normalize_text(c.programa.nombre) not in nIII_names for c in cohortes)
 
         pdf_paths = []
-        if tiene_nivel_III:
-            pdf_paths.append(os.path.join(resources_dir, "CODE III 2026.pdf"))
-        
-        if tiene_otros:
-            pdf_paths.append(os.path.join(resources_dir, "Capacitaciones laborales 2026.pdf"))
+        if es_menor:
+            # Archivos específicos para menores
+            pdf_paths.append(os.path.join(resources_dir, "Condiciones CODE3.pdf"))
+            pdf_paths.append(os.path.join(resources_dir, "Normas de Convivencia Digital.pdf"))
+        else:
+            if tiene_nivel_III:
+                pdf_paths.append(os.path.join(resources_dir, "CODE III 2026.pdf"))
+            if tiene_otros:
+                pdf_paths.append(os.path.join(resources_dir, "Capacitaciones laborales 2026.pdf"))
 
         for pdf_path in pdf_paths:
             if os.path.exists(pdf_path):
@@ -399,16 +431,47 @@ def crear_preinscripcion_publica(request):
     if len(dni) != 8:
         raise HttpError(400, "El DNI debe tener 8 dígitos.")
 
+    fecha_nac = _as_optional_date(post.get("fecha_nacimiento"))
+    if not fecha_nac:
+        raise HttpError(400, "Debe ingresar fecha de nacimiento.")
+    
+    hoy = date.today()
+    edad = hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
+    es_menor = edad < 18
+
     seleccion_programas = _parse_seleccion_programas(request)
     if not seleccion_programas:
         raise HttpError(400, "Debe seleccionar al menos una oferta formativa.")
 
+    # Validar que si es menor solo se anote a Nivel III
+    if es_menor:
+        if edad < 16:
+            raise HttpError(400, "La edad mínima para participar es de 16 años.")
+        
+        nIII_names = ["programador de nivel iii", "programacion de nivel iii", "programación de nivel iii"]
+        programas_ids = [s["programa_id"] for s in seleccion_programas]
+        from core.models import Programa
+        for pid in programas_ids:
+            p = Programa.objects.get(id=pid)
+            if _normalize_text(p.nombre) not in nIII_names:
+                raise HttpError(400, f"Los menores de 18 años solo pueden inscribirse en el trayecto de Programación Nivel III. '{p.nombre}' no está permitido para menores.")
+
     dni_file = files.get("dni_digitalizado")
     titulo_file = files.get("titulo_secundario_digitalizado")
+    dni_tutor_file = files.get("dni_tutor_digitalizado")
+    
     if not dni_file:
         raise HttpError(400, "Debe adjuntar archivo de DNI.")
     _validar_archivo_documento(dni_file, "DNI")
-    _validar_archivo_documento(titulo_file, "Título secundario")
+    
+    if es_menor:
+        if not dni_tutor_file:
+            raise HttpError(400, "Al ser menor de edad, debe adjuntar el DNI del padre/tutor.")
+        _validar_archivo_documento(dni_tutor_file, "DNI del Tutor")
+        if not post.get("tutor_nombre") or not post.get("tutor_dni"):
+            raise HttpError(400, "Al ser menor de edad, debe ingresar nombre y DNI del tutor.")
+    else:
+        _validar_archivo_documento(titulo_file, "Título secundario")
 
     with transaction.atomic():
         estudiante = Estudiante.objects.filter(dni=dni).first()
@@ -422,7 +485,7 @@ def crear_preinscripcion_publica(request):
             "dni": dni,
             "cuit": post.get("cuit", ""),
             "sexo": post.get("sexo", ""),
-            "fecha_nacimiento": _as_optional_date(post.get("fecha_nacimiento")),
+            "fecha_nacimiento": fecha_nac,
             "pais_nacimiento": post.get("pais_nacimiento", ""),
             "pais_nacimiento_otro": post.get("pais_nacimiento_otro", ""),
             "nacionalidad": post.get("nacionalidad", ""),
@@ -438,6 +501,8 @@ def crear_preinscripcion_publica(request):
             "puede_traer_pc": _as_bool(post.get("puede_traer_pc"), False),
             "trabaja": _as_bool(post.get("trabaja"), False),
             "lugar_trabajo": post.get("lugar_trabajo", ""),
+            "tutor_nombre": post.get("tutor_nombre", ""),
+            "tutor_dni": post.get("tutor_dni", ""),
         }
 
         serializer = EstudianteSerializer(instance=estudiante, data=serializer_data, partial=True)
@@ -474,22 +539,31 @@ def crear_preinscripcion_publica(request):
             cohortes.extend([cohortes_por_bloque[b] for b in bloques_seleccionados])
 
         _validar_correlativas(estudiante.id, cohortes)
-        requiere_titulo = any(_programa_requiere_titulo(c.programa) for c in cohortes)
-        if requiere_titulo and not (titulo_file or estudiante.titulo_secundario_digitalizado):
-            raise HttpError(
-                400,
-                "Al menos un bloque seleccionado requiere archivo de título secundario.",
-            )
+        
+        # Validación de título solo para mayores
+        if not es_menor:
+            requiere_titulo = any(_programa_requiere_titulo(c.programa) for c in cohortes)
+            if requiere_titulo and not (titulo_file or estudiante.titulo_secundario_digitalizado):
+                raise HttpError(
+                    400,
+                    "Al menos un bloque seleccionado requiere archivo de título secundario.",
+                )
 
         estudiante.dni_digitalizado = dni_file
-        if titulo_file:
+        if not es_menor and titulo_file:
             estudiante.titulo_secundario_digitalizado = titulo_file
+        
+        if es_menor and dni_tutor_file:
+            estudiante.dni_tutor_digitalizado = dni_tutor_file
 
         estudiante.estatus = "Preinscripto"
 
         update_fields = ["dni_digitalizado", "estatus", "updated_at"]
-        if titulo_file:
+        if not es_menor and titulo_file:
             update_fields.append("titulo_secundario_digitalizado")
+        if es_menor and dni_tutor_file:
+            update_fields.append("dni_tutor_digitalizado")
+            
         estudiante.save(update_fields=update_fields)
 
         inscripciones_creadas = []

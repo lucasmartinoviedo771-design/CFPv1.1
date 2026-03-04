@@ -82,7 +82,8 @@ function isProgramacionII(bloqueNombre) {
 }
 
 function isProgramadorNivelIII(programaNombre) {
-  return normalizeText(programaNombre) === "programador de nivel iii";
+  const norm = normalizeText(programaNombre);
+  return norm === "programador de nivel iii" || norm === "programacion de nivel iii" || norm === "programacion (nivel iii)";
 }
 
 function DropFileField({ label, required, file, onFileChange, isDark }) {
@@ -203,6 +204,7 @@ export default function PreinscripcionPublica() {
 
   const [dniFile, setDniFile] = useState(null);
   const [tituloFile, setTituloFile] = useState(null);
+  const [dniTutorFile, setDniTutorFile] = useState(null);
 
   const [form, setForm] = useState({
     apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "",
@@ -210,6 +212,7 @@ export default function PreinscripcionPublica() {
     nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
     domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
     posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
+    tutor_nombre: "", tutor_dni: "",
   });
 
   useEffect(() => {
@@ -228,7 +231,23 @@ export default function PreinscripcionPublica() {
 
   const selectedProgramas = useMemo(() => oferta.filter((p) => selectedProgramaIds.includes(String(p.programa_id))), [oferta, selectedProgramaIds]);
   const selectedProgramaSet = useMemo(() => new Set(selectedProgramaIds), [selectedProgramaIds]);
-  const requiresTitle = selectedProgramas.some(p => Boolean(p.requiere_titulo_secundario) || isProgramadorNivelIII(p.programa_nombre));
+
+  const edad = useMemo(() => {
+    if (!form.fecha_nacimiento) return 18;
+    const nac = new Date(form.fecha_nacimiento);
+    const hoy = new Date();
+    let e = hoy.getFullYear() - nac.getFullYear();
+    const m = hoy.getMonth() - nac.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) e--;
+    return e;
+  }, [form.fecha_nacimiento]);
+
+  const esMenor = edad < 18;
+
+  const requiresTitle = useMemo(() => {
+    if (esMenor) return false;
+    return selectedProgramas.some(p => Boolean(p.requiere_titulo_secundario) || isProgramadorNivelIII(p.programa_nombre));
+  }, [selectedProgramas, esMenor]);
 
   const ofertaView = useMemo(() =>
     oferta
@@ -255,13 +274,26 @@ export default function PreinscripcionPublica() {
       }
     }
     if (s === 2) {
-      if (!form.apellido.trim() || !form.nombre.trim() || !form.dni.trim()) return setError("Completá los campos obligatorios (Nombre, Apellido, DNI)."), false;
+      if (!form.apellido.trim() || !form.nombre.trim() || !form.dni.trim() || !form.fecha_nacimiento) {
+        return setError("Completá los campos obligatorios (Nombre, Apellido, DNI y Fecha de Nacimiento)."), false;
+      }
+      if (esMenor) {
+        if (edad < 16) return setError("La edad mínima para preinscribirse es de 16 años."), false;
+        // Solo Nivel III
+        const soloNivelIII = selectedProgramas.every(p => isProgramadorNivelIII(p.programa_nombre));
+        if (!soloNivelIII) return setError("Atención: Los menores de 18 años solo pueden inscribirse en el curso de 'Programación de Nivel III'."), false;
+
+        if (!form.tutor_nombre.trim() || !form.tutor_dni.trim()) {
+          return setError("Al ser menor de edad, debés completar los datos del padre/tutor."), false;
+        }
+      }
     }
     if (s === 3) {
       if (!form.email.trim()) return setError("El email es obligatorio para el contacto."), false;
     }
     if (s === 4) {
       if (!dniFile) return setError("Debés adjuntar la digitalización del DNI."), false;
+      if (esMenor && !dniTutorFile) return setError("Debés adjuntar la digitalización del DNI del Tutor."), false;
       if (requiresTitle && !tituloFile) return setError("Esta oferta requiere adjuntar el título secundario."), false;
     }
     return true;
@@ -331,9 +363,14 @@ export default function PreinscripcionPublica() {
       const processedDni = await compressImage(dniFile);
       fd.append("dni_digitalizado", processedDni);
 
-      if (tituloFile) {
+      if (tituloFile && !esMenor) {
         const processedTitulo = await compressImage(tituloFile);
         fd.append("titulo_secundario_digitalizado", processedTitulo);
+      }
+
+      if (dniTutorFile && esMenor) {
+        const processedDniTutor = await compressImage(dniTutorFile);
+        fd.append("dni_tutor_digitalizado", processedDniTutor);
       }
 
       const { data } = await apiClientV2.post("/preinscripcion", fd, { headers: { "Content-Type": "multipart/form-data" } });
@@ -345,7 +382,11 @@ export default function PreinscripcionPublica() {
         nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
         domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
         posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
+        tutor_nombre: "", tutor_dni: "",
       });
+      setDniFile(null);
+      setTituloFile(null);
+      setDniTutorFile(null);
       setSelectedProgramaIds([]);
       setExpandedProgramaId("");
       setBloquesPorPrograma({});
@@ -505,7 +546,27 @@ export default function PreinscripcionPublica() {
                         <option value="">Seleccione...</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro/X</option>
                       </select>
                     </div>
-                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Fecha de Nacimiento</label><input type="date" className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange} /></div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Fecha de Nacimiento *</label>
+                      <input type="date" className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange} required />
+                      {esMenor && (
+                        <p className="mt-2 text-[10px] text-orange-400 font-bold animate-pulse">
+                          ⚠️ MENOR DE EDAD DETECTADO (CODE 3). SE REQUIERE TUTOR.
+                        </p>
+                      )}
+                    </div>
+                    {esMenor && (
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">Nombre del Padre, Madre o Tutor *</label>
+                          <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-brand-accent/30`} name="tutor_nombre" placeholder="Nombre completo" value={form.tutor_nombre} onChange={onChange} required />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">DNI del Tutor *</label>
+                          <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-brand-accent/30`} name="tutor_dni" placeholder="DNI del responsable" value={form.tutor_dni} onChange={onChange} required />
+                        </div>
+                      </>
+                    )}
                     <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Nacionalidad</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="nacionalidad" value={form.nacionalidad} onChange={onChange} /></div>
                     <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Lugar de Nacim. (Provincia)</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="lugar_nacimiento" placeholder="Ej: Tierra del Fuego" value={form.lugar_nacimiento} onChange={onChange} /></div>
                   </div>
@@ -556,7 +617,13 @@ export default function PreinscripcionPublica() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <DropFileField label="Digitalización de DNI" required file={dniFile} onFileChange={setDniFile} isDark={isDark} />
-                    <DropFileField label={`Título Secundario ${requiresTitle ? "(Obligatorio)" : "(Opcional)"}`} required={requiresTitle} file={tituloFile} onFileChange={setTituloFile} isDark={isDark} />
+                    {esMenor ? (
+                      <DropFileField label="DNI del Padre/Madre o Tutor (Obligatorio)" required file={dniTutorFile} onFileChange={setDniTutorFile} isDark={isDark} />
+                    ) : (
+                      requiresTitle && (
+                        <DropFileField label="Digitalización de Título Secundario" required file={tituloFile} onFileChange={setTituloFile} isDark={isDark} />
+                      )
+                    )}
                   </div>
                   <div className={`p-6 rounded-3xl ${isDark ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
                     <div className="flex items-center gap-4">

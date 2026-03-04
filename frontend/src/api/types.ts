@@ -27,6 +27,10 @@ export type EstudianteDetail = Estudiante & {
   lugar_trabajo?: string | null;
   dni_digitalizado?: string | null;
   titulo_secundario_digitalizado?: string | null;
+  tutor_nombre?: string | null;
+  tutor_dni?: string | null;
+  dni_tutor_digitalizado?: string | null;
+  nota_parental_firmada?: string | null;
 };
 
 export type Programa = {
