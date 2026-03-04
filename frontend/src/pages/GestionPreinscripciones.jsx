@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useContext } from "react";
 import { createPortal } from "react-dom";
+import { UserContext } from "../App";
 import { useEstudiantes, useSaveEstudiante } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
 import { Card, Button, Input, Select } from '../components/UI';
 import {
     CheckCircle, XCircle, Search, Eye, FileText,
-    Download, Check, AlertCircle, Loader, UserCheck
+    Download, Check, AlertCircle, Loader, UserCheck, Trash2
 } from 'lucide-react';
 import { formatDateDisplay } from "../utils/dateFormat";
 import { getMediaUrl } from "../utils/media";
@@ -23,6 +24,8 @@ export default function GestionPreinscripciones() {
     const [approving, setApproving] = useState(false);
     const [feedback, setFeedback] = useState({ open: false, message: "", severity: "success" });
     const [viewStudent, setViewStudent] = useState(null);
+    const { user } = useContext(UserContext);
+    const isAdmin = user?.groups?.includes('Admin');
 
     // Fetch only students with status 'Preinscripto'
     const { data: preinscriptos = [], isLoading, refetch } = useEstudiantes({
@@ -53,6 +56,23 @@ export default function GestionPreinscripciones() {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+        if (!window.confirm(`¿Seguro que deseas ELIMINAR COMPLETAMENTE a ${selectedIds.size} estudiante(s)? Esta acción no se puede deshacer.`)) return;
+
+        setApproving(true);
+        try {
+            await apiClientV2.post('/estudiantes/bulk_delete/', { ids: Array.from(selectedIds) });
+            setFeedback({ open: true, message: `${selectedIds.size} estudiante(s) eliminados con éxito.`, severity: "success" });
+            setSelectedIds(new Set());
+            refetch();
+        } catch (error) {
+            setFeedback({ open: true, message: "Error al eliminar estudiantes.", severity: "error" });
+        } finally {
+            setApproving(false);
+        }
+    };
+
     const handleBulkApprove = async () => {
         if (selectedIds.size === 0) return;
         if (!window.confirm(`¿Seguro que deseas aprobar a ${selectedIds.size} estudiante(s)?`)) return;
@@ -78,6 +98,17 @@ export default function GestionPreinscripciones() {
                     <p className="text-indigo-300">Revisión y aprobación masiva de nuevos Estudiantes.</p>
                 </div>
                 <div className="flex gap-3">
+                    {isAdmin && (
+                        <Button
+                            onClick={handleBulkDelete}
+                            disabled={selectedIds.size === 0 || approving}
+                            variant="danger"
+                            className="bg-red-600 hover:bg-red-500 border-none px-6"
+                            startIcon={<Trash2 size={18} />}
+                        >
+                            Borrar ({selectedIds.size})
+                        </Button>
+                    )}
                     <Button
                         onClick={handleBulkApprove}
                         disabled={selectedIds.size === 0 || approving}
@@ -173,13 +204,34 @@ export default function GestionPreinscripciones() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-3 text-right">
-                                        <button
-                                            onClick={() => setViewStudent(s)}
-                                            className="p-2 text-brand-cyan hover:text-white transition-colors"
-                                            title="Ver detalle completo"
-                                        >
-                                            <Eye size={18} />
-                                        </button>
+                                        <div className="flex justify-end gap-1">
+                                            <button
+                                                onClick={() => setViewStudent(s)}
+                                                className="p-2 text-brand-cyan hover:text-white transition-colors"
+                                                title="Ver detalle completo"
+                                            >
+                                                <Eye size={18} />
+                                            </button>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={async () => {
+                                                        if (window.confirm(`¿Eliminar permanentemente a ${s.apellido}, ${s.nombre}?`)) {
+                                                            try {
+                                                                await apiClientV2.post('/estudiantes/bulk_delete/', { ids: [s.id] });
+                                                                setFeedback({ open: true, message: "Estudiante eliminado.", severity: "success" });
+                                                                refetch();
+                                                            } catch (e) {
+                                                                setFeedback({ open: true, message: "Error al eliminar.", severity: "error" });
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="p-2 text-red-400 hover:text-red-200 transition-colors"
+                                                    title="Eliminar permanentemente"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

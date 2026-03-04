@@ -144,6 +144,20 @@ class EstudianteViewSet(viewsets.ModelViewSet):
             
         return Response({'updated': updated}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        if not (request.user.is_superuser or request.user.groups.filter(name='Admin').exists()):
+            return Response({'error': 'Solo administradores pueden realizar esta acción.'}, status=status.HTTP_403_FORBIDDEN)
+            
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'error': 'No se proporcionaron IDs.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        with transaction.atomic():
+            deleted_count, _ = Estudiante.objects.filter(id__in=ids).delete()
+            
+        return Response({'deleted': deleted_count}, status=status.HTTP_200_OK)
+
     def perform_destroy(self, instance):
         """En lugar de borrar, cambia el estatus a 'Baja' (soft delete)."""
         instance.estatus = 'Baja'

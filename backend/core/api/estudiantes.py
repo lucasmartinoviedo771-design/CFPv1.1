@@ -2,12 +2,17 @@ from typing import List, Optional
 
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from ninja import Router
+from django.db import transaction
+from django.utils import timezone
+from ninja import Router, Schema
 from core.api.permissions import require_authenticated_group
 
 from core.models import Estudiante
 from core.serializers import EstudianteSerializer
 from .schemas import EstudianteOut, EstudianteDetailOut, EstudianteIn
+
+class BulkIdsIn(Schema):
+    ids: List[int]
 
 router = Router(tags=["estudiantes"])
 
@@ -104,3 +109,26 @@ def subir_documentos_estudiante(request, estudiante_id: int):
         estudiante.save(update_fields=update_fields)
         
     return detalle_estudiante(request, estudiante.id)
+
+
+@router.post("/bulk_approve/", response=dict)
+@require_authenticated_group
+def bulk_approve(request, data: BulkIdsIn):
+    with transaction.atomic():
+        updated = Estudiante.objects.filter(id__in=data.ids, estatus="Preinscripto").update(
+            estatus="Regular", updated_at=timezone.now()
+        )
+    return {"updated": updated}
+
+
+@router.post("/bulk_delete/", response=dict)
+@require_authenticated_group
+def bulk_delete(request, data: BulkIdsIn):
+    # Verificar si el usuario es Admin o superusuario
+    if not (request.user.is_superuser or request.user.groups.filter(name="Admin").exists()):
+        from ninja.errors import HttpError
+        raise HttpError(403, "Solo administradores pueden realizar esta acción.")
+
+    with transaction.atomic():
+        deleted_count, _ = Estudiante.objects.filter(id__in=data.ids).delete()
+    return {"deleted": deleted_count}
