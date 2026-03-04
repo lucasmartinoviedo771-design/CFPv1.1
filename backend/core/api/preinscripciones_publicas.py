@@ -405,14 +405,15 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
 
         pdf_paths = []
         if es_menor:
-            # Archivos específicos para menores
+            # Archivos obligatorios extra para menores
             pdf_paths.append(os.path.join(resources_dir, "Condiciones CODE3.pdf"))
             pdf_paths.append(os.path.join(resources_dir, "Normas de Convivencia Digital.pdf"))
-        else:
-            if tiene_nivel_III:
-                pdf_paths.append(os.path.join(resources_dir, "CODE III 2026.pdf"))
-            if tiene_otros:
-                pdf_paths.append(os.path.join(resources_dir, "Capacitaciones laborales 2026.pdf"))
+        
+        # Archivos de trayectoria (se envían a todos según su elección)
+        if tiene_nivel_III:
+            pdf_paths.append(os.path.join(resources_dir, "CODE III 2026.pdf"))
+        if tiene_otros:
+            pdf_paths.append(os.path.join(resources_dir, "Capacitaciones laborales 2026.pdf"))
 
         for pdf_path in pdf_paths:
             if os.path.exists(pdf_path):
