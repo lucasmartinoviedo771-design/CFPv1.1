@@ -37,3 +37,17 @@ def delete_estudiante_files(sender, instance, **kwargs):
                     os.remove(file_field.path)
                 except Exception as e:
                     print(f"Error eliminando archivo {file_field.path}: {e}")
+
+
+@receiver(post_save, sender=Estudiante)
+def activate_inscripciones_on_regular(sender, instance, **kwargs):
+    """
+    Cuando un estudiante pasa a ser 'Regular', activamos sus inscripciones
+    que estén en estado 'INSCRIPTO'.
+    """
+    if instance.estatus == 'Regular':
+        from .models import Inscripcion
+        Inscripcion.objects.filter(
+            estudiante=instance,
+            estado=Inscripcion.INSCRIPTO
+        ).update(estado=Inscripcion.ACTIVO)

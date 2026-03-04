@@ -7,7 +7,7 @@ from django.utils import timezone
 from ninja import Router, Schema, File, UploadedFile
 from core.api.permissions import require_authenticated_group
 
-from core.models import Estudiante
+from core.models import Estudiante, Inscripcion
 from core.serializers import EstudianteSerializer
 from .schemas import EstudianteOut, EstudianteDetailOut, EstudianteIn
 
@@ -99,9 +99,30 @@ def actualizar_documentos(
 @require_authenticated_group
 def bulk_approve(request, data: BulkIdsIn):
     with transaction.atomic():
-        updated = Estudiante.objects.filter(id__in=data.ids, estatus="Preinscripto").update(
+        # Capturamos los IDs de los estudiantes que realmente vamos a actualizar
+        estudiantes_ids = list(Estudiante.objects.filter(
+            id__in=data.ids, 
+            estatus="Preinscripto"
+        ).values_list("id", flat=True))
+        
+        if not estudiantes_ids:
+            return {"updated": 0}
+            
+        # Actualizamos Estudiantes
+        updated = Estudiante.objects.filter(id__in=estudiantes_ids).update(
             estatus="Regular", updated_at=timezone.now()
         )
+        
+        # Actualizamos Inscripciones de esos estudiantes: Inscripto -> Activo
+        from core.models import Inscripcion
+        Inscripcion.objects.filter(
+            estudiante_id__in=estudiantes_ids,
+            estado=Inscripcion.INSCRIPTO
+        ).update(
+            estado=Inscripcion.ACTIVO,
+            updated_at=timezone.now()
+        )
+        
     return {"updated": updated}
 
 
