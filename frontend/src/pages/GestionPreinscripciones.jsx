@@ -6,7 +6,7 @@ import { apiClientV2 } from "../api/client";
 import { Card, Button, Input, Select } from '../components/UI';
 import {
     CheckCircle, XCircle, Search, Eye, FileText,
-    Download, Check, AlertCircle, Loader, UserCheck, Trash2
+    Download, Check, AlertCircle, Loader, UserCheck, Trash2, UploadCloud
 } from 'lucide-react';
 import { formatDateDisplay } from "../utils/dateFormat";
 import { getMediaUrl } from "../utils/media";

@@ -40,39 +40,7 @@ def listar_estudiantes(request, search: Optional[str] = None, dni: Optional[str]
 @router.get("/{estudiante_id}", response=EstudianteDetailOut)
 @require_authenticated_group
 def detalle_estudiante(request, estudiante_id: int):
-    e = get_object_or_404(Estudiante.objects.all(), pk=estudiante_id)
-    return EstudianteDetailOut(
-        id=e.id,
-        apellido=e.apellido,
-        nombre=e.nombre,
-        email=e.email,
-        dni=e.dni,
-        estatus=e.estatus,
-        ciudad=e.ciudad,
-        telefono=e.telefono,
-        cuit=e.cuit,
-        sexo=e.sexo,
-        fecha_nacimiento=e.fecha_nacimiento,
-        pais_nacimiento=e.pais_nacimiento,
-        nacionalidad=e.nacionalidad,
-        lugar_nacimiento=e.lugar_nacimiento,
-        domicilio=e.domicilio,
-        barrio=e.barrio,
-        nivel_educativo=e.nivel_educativo,
-        posee_pc=e.posee_pc,
-        posee_conectividad=e.posee_conectividad,
-        puede_traer_pc=e.puede_traer_pc,
-        trabaja=e.trabaja,
-        lugar_trabajo=e.lugar_trabajo,
-        dni_digitalizado=e.dni_digitalizado,
-        titulo_secundario_digitalizado=e.titulo_secundario_digitalizado,
-        tutor_nombre=e.tutor_nombre,
-        tutor_dni=e.tutor_dni,
-        dni_tutor_digitalizado=e.dni_tutor_digitalizado,
-        nota_parental_firmada=e.nota_parental_firmada,
-        created_at=e.created_at,
-        updated_at=e.updated_at,
-    )
+    return get_object_or_404(Estudiante, pk=estudiante_id)
 
 
 @router.post("", response=EstudianteDetailOut)
