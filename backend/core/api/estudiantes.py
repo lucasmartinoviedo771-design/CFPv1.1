@@ -20,7 +20,9 @@ router = Router(tags=["estudiantes"])
 @router.get("", response=List[EstudianteDetailOut])
 @require_authenticated_group
 def listar_estudiantes(request, search: Optional[str] = None, dni: Optional[str] = None, estatus: Optional[str] = None):
-    qs = Estudiante.objects.all().order_by("apellido", "nombre")
+    qs = Estudiante.objects.all().prefetch_related(
+        "inscripciones__cohorte__programa", "inscripciones__cohorte__bloque"
+    ).order_by("apellido", "nombre")
     if dni:
         qs = qs.filter(dni__iexact=dni)
     if estatus:

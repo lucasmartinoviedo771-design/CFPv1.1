@@ -232,6 +232,11 @@ class EstudianteDetailOut(EstudianteOut):
     titulo_secundario_digitalizado: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    trayectos: List[str] = []
+
+    @staticmethod
+    def resolve_trayectos(obj):
+        return [f"{i.cohorte.programa.nombre} ({i.cohorte.bloque.nombre})" for i in obj.inscripciones.all()]
 
 
 class InscripcionOut(Schema):

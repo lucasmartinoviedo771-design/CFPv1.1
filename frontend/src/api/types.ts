@@ -7,6 +7,7 @@ export type Estudiante = {
   estatus: string;
   ciudad?: string | null;
   telefono?: string | null;
+  trayectos?: string[];
 };
 
 export type EstudianteDetail = Estudiante & {
