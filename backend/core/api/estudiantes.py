@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.utils import timezone
-from ninja import Router, Schema
+from ninja import Router, Schema, File, UploadedFile
 from core.api.permissions import require_authenticated_group
 
 from core.models import Estudiante

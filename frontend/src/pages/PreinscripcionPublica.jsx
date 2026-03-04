@@ -83,7 +83,7 @@ function isProgramacionII(bloqueNombre) {
 
 function isProgramadorNivelIII(programaNombre) {
   const norm = normalizeText(programaNombre);
-  return norm === "programador de nivel iii" || norm === "programacion de nivel iii" || norm === "programacion (nivel iii)";
+  return norm.includes("programador de nivel iii") || norm.includes("programacion de nivel iii") || norm.includes("programacion (nivel iii)");
 }
 
 function DropFileField({ label, required, file, onFileChange, isDark }) {
@@ -234,12 +234,22 @@ export default function PreinscripcionPublica() {
 
   const edad = useMemo(() => {
     if (!form.fecha_nacimiento) return 18;
-    const nac = new Date(form.fecha_nacimiento);
-    const hoy = new Date();
-    let e = hoy.getFullYear() - nac.getFullYear();
-    const m = hoy.getMonth() - nac.getMonth();
-    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) e--;
-    return e;
+    try {
+      // Soportar formatos YYYY-MM-DD (estándar) y otros posibles
+      const parts = form.fecha_nacimiento.split(/[-/]/).map(Number);
+      let y, m, d;
+      if (parts[0] > 1000) { [y, m, d] = parts; }
+      else { [d, m, y] = parts; }
+
+      const nac = new Date(y, m - 1, d);
+      if (isNaN(nac.getTime())) return 18;
+
+      const hoy = new Date();
+      let e = hoy.getFullYear() - nac.getFullYear();
+      const mm = hoy.getMonth() - nac.getMonth();
+      if (mm < 0 || (mm === 0 && hoy.getDate() < nac.getDate())) e--;
+      return e;
+    } catch { return 18; }
   }, [form.fecha_nacimiento]);
 
   const esMenor = edad < 18;
@@ -549,14 +559,21 @@ export default function PreinscripcionPublica() {
                     <div className="space-y-2">
                       <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Fecha de Nacimiento *</label>
                       <input type="date" className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange} required />
-                      {esMenor && (
-                        <p className="mt-2 text-[10px] text-orange-400 font-bold animate-pulse">
-                          ⚠️ MENOR DE EDAD DETECTADO (CODE 3). SE REQUIERE TUTOR.
-                        </p>
+                      {form.fecha_nacimiento && (
+                        <div className="flex items-center justify-between mt-2">
+                          <p className={`text-[10px] font-bold ${esMenor ? "text-orange-400" : "text-brand-cyan"}`}>
+                            EDAD CALCULADA: {edad} AÑOS
+                          </p>
+                          {esMenor && (
+                            <p className="text-[10px] text-orange-400 font-black animate-pulse">
+                              ⚠️ REQUIERE TUTOR (CODE 3)
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                     {esMenor && (
-                      <>
+                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/20 animate-in zoom-in-95 duration-300">
                         <div className="space-y-2">
                           <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">Nombre del Padre, Madre o Tutor *</label>
                           <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-brand-accent/30`} name="tutor_nombre" placeholder="Nombre completo" value={form.tutor_nombre} onChange={onChange} required />
@@ -565,7 +582,7 @@ export default function PreinscripcionPublica() {
                           <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">DNI del Tutor *</label>
                           <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-brand-accent/30`} name="tutor_dni" placeholder="DNI del responsable" value={form.tutor_dni} onChange={onChange} required />
                         </div>
-                      </>
+                      </div>
                     )}
                     <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Nacionalidad</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="nacionalidad" value={form.nacionalidad} onChange={onChange} /></div>
                     <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Lugar de Nacim. (Provincia)</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="lugar_nacimiento" placeholder="Ej: Tierra del Fuego" value={form.lugar_nacimiento} onChange={onChange} /></div>

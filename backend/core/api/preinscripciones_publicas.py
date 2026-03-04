@@ -394,11 +394,14 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
         resources_dir = os.path.join(settings.BASE_DIR, "core", "resources", "emails")
         
         # Lógica de adjuntos
-        nIII_names = ["programador de nivel iii", "programacion de nivel iii", "programación de nivel iii"]
         
         # Check what the student enrolled in
-        tiene_nivel_III = any(_normalize_text(c.programa.nombre) in nIII_names for c in cohortes)
-        tiene_otros = any(_normalize_text(c.programa.nombre) not in nIII_names for c in cohortes)
+        def es_nIII(p_name):
+            norm = _normalize_text(p_name)
+            return any(n in norm for n in ["programador de nivel iii", "programacion de nivel iii"])
+
+        tiene_nivel_III = any(es_nIII(c.programa.nombre) for c in cohortes)
+        tiene_otros = any(not es_nIII(c.programa.nombre) for c in cohortes)
 
         pdf_paths = []
         if es_menor:
@@ -448,12 +451,13 @@ def crear_preinscripcion_publica(request):
         if edad < 16:
             raise HttpError(400, "La edad mínima para participar es de 16 años.")
         
-        nIII_names = ["programador de nivel iii", "programacion de nivel iii", "programación de nivel iii"]
         programas_ids = [s["programa_id"] for s in seleccion_programas]
         from core.models import Programa
         for pid in programas_ids:
             p = Programa.objects.get(id=pid)
-            if _normalize_text(p.nombre) not in nIII_names:
+            norm_name = _normalize_text(p.nombre)
+            is_nIII = any(n in norm_name for n in ["programador de nivel iii", "programacion de nivel iii"])
+            if not is_nIII:
                 raise HttpError(400, f"Los menores de 18 años solo pueden inscribirse en el trayecto de Programación Nivel III. '{p.nombre}' no está permitido para menores.")
 
     dni_file = files.get("dni_digitalizado")
