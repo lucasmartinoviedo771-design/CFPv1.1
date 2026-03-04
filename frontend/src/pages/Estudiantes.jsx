@@ -371,12 +371,11 @@ export default function Estudiantes() {
                             {editId ? "Guardar Cambios" : "Crear Estudiante"}
                         </Button>
                     </div>
+                </Card>
             </div>
-        </Card>
-            </div >
 
-        {/* Listado y Filtros */ }
-        < div className = "space-y-4" >
+            {/* Listado y Filtros */}
+            <div className="space-y-4">
                 <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="flex-1"><Input placeholder="Buscar por Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
                     <div className="w-full md:w-48"><Input placeholder="Buscar DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
@@ -442,15 +441,14 @@ export default function Estudiantes() {
                         </div>
                     </div>
                 </Card>
-            </div >
+            </div>
 
-        {/* Modal Confirmación Delete */ }
-        < Modal
-    isOpen = {!!deleteTarget
-}
-onClose = {() => setDeleteTarget(null)}
-title = "Confirmar Baja"
-actions = {
+            {/* Modal Confirmación Delete */}
+            <Modal
+                isOpen={!!deleteTarget}
+                onClose={() => setDeleteTarget(null)}
+                title="Confirmar Baja"
+                actions={
                     <>
                         <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
                         <Button onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700 text-white border-none">Dar de Baja</Button>
@@ -461,210 +459,210 @@ actions = {
                 <p className="text-sm text-gray-400 mt-2">El estudiante no aparecerá en las listas activas pero su historial se conservará.</p>
             </Modal >
 
-    <Modal
-        isOpen={!!viewStudentId}
-        onClose={() => setViewStudentId(null)}
-        title={viewData.student ? `Detalle: ${viewData.student.apellido}, ${viewData.student.nombre}` : "Detalle del Estudiante"}
-        maxWidthClass="max-w-5xl"
-        actions={<Button variant="ghost" onClick={() => setViewStudentId(null)}>Cerrar</Button>}
-    >
-        {viewData.loading && <p className="text-indigo-200">Cargando detalle...</p>}
-        {!!viewData.error && <p className="text-red-300">{viewData.error}</p>}
+            <Modal
+                isOpen={!!viewStudentId}
+                onClose={() => setViewStudentId(null)}
+                title={viewData.student ? `Detalle: ${viewData.student.apellido}, ${viewData.student.nombre}` : "Detalle del Estudiante"}
+                maxWidthClass="max-w-5xl"
+                actions={<Button variant="ghost" onClick={() => setViewStudentId(null)}>Cerrar</Button>}
+            >
+                {viewData.loading && <p className="text-indigo-200">Cargando detalle...</p>}
+                {!!viewData.error && <p className="text-red-300">{viewData.error}</p>}
 
-        {!viewData.loading && !viewData.error && viewData.student && (
-            <div className="space-y-6">
-                <div>
-                    <SectionDivider title="Datos Personales" icon={User} />
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                        <p><span className="text-indigo-300">DNI:</span> {viewData.student.dni || "-"}</p>
-                        <p><span className="text-indigo-300">CUIT:</span> {viewData.student.cuit || "-"}</p>
-                        <p><span className="text-indigo-300">Email:</span> {viewData.student.email || "-"}</p>
-                        <p><span className="text-indigo-300">Sexo:</span> {viewData.student.sexo || "-"}</p>
-                        <p><span className="text-indigo-300">Fecha Nacimiento:</span> {formatDateDisplay(viewData.student.fecha_nacimiento)}</p>
-                        <p><span className="text-indigo-300">Estatus:</span> {viewData.student.estatus || "-"}</p>
-                        <p><span className="text-indigo-300">País Nacimiento:</span> {viewData.student.pais_nacimiento || "-"}</p>
-                        <p><span className="text-indigo-300">Nacionalidad:</span> {viewData.student.nacionalidad || "-"}</p>
-                        <p><span className="text-indigo-300">Lugar Nacimiento:</span> {viewData.student.lugar_nacimiento || "-"}</p>
-                        <p><span className="text-indigo-300">Domicilio:</span> {viewData.student.domicilio || "-"}</p>
-                        <p><span className="text-indigo-300">Ciudad:</span> {viewData.student.ciudad || "-"}</p>
-                        <p><span className="text-indigo-300">Barrio:</span> {viewData.student.barrio || "-"}</p>
-                        <p><span className="text-indigo-300">Teléfono:</span> {viewData.student.telefono || "-"}</p>
-                        <p><span className="text-indigo-300">Nivel Educativo:</span> {viewData.student.nivel_educativo || "-"}</p>
-                        <p><span className="text-indigo-300">Lugar de trabajo:</span> {viewData.student.lugar_trabajo || "-"}</p>
-                    </div>
-
-                    <SectionDivider title="Documentación" icon={FileText} />
-                    <div className="flex gap-4">
-                        {viewData.student.dni_digitalizado ? (
-                            <a
-                                href={getMediaUrl(viewData.student.dni_digitalizado)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-4 py-2 rounded-lg text-cyan-300 transition-all border border-cyan-500/30"
-                            >
-                                <Download size={18} /> Ver DNI Digitalizado
-                            </a>
-                        ) : (
-                            <div className="flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-lg text-red-400 border border-red-500/20">
-                                <X size={18} /> DNI no disponible
+                {!viewData.loading && !viewData.error && viewData.student && (
+                    <div className="space-y-6">
+                        <div>
+                            <SectionDivider title="Datos Personales" icon={User} />
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                <p><span className="text-indigo-300">DNI:</span> {viewData.student.dni || "-"}</p>
+                                <p><span className="text-indigo-300">CUIT:</span> {viewData.student.cuit || "-"}</p>
+                                <p><span className="text-indigo-300">Email:</span> {viewData.student.email || "-"}</p>
+                                <p><span className="text-indigo-300">Sexo:</span> {viewData.student.sexo || "-"}</p>
+                                <p><span className="text-indigo-300">Fecha Nacimiento:</span> {formatDateDisplay(viewData.student.fecha_nacimiento)}</p>
+                                <p><span className="text-indigo-300">Estatus:</span> {viewData.student.estatus || "-"}</p>
+                                <p><span className="text-indigo-300">País Nacimiento:</span> {viewData.student.pais_nacimiento || "-"}</p>
+                                <p><span className="text-indigo-300">Nacionalidad:</span> {viewData.student.nacionalidad || "-"}</p>
+                                <p><span className="text-indigo-300">Lugar Nacimiento:</span> {viewData.student.lugar_nacimiento || "-"}</p>
+                                <p><span className="text-indigo-300">Domicilio:</span> {viewData.student.domicilio || "-"}</p>
+                                <p><span className="text-indigo-300">Ciudad:</span> {viewData.student.ciudad || "-"}</p>
+                                <p><span className="text-indigo-300">Barrio:</span> {viewData.student.barrio || "-"}</p>
+                                <p><span className="text-indigo-300">Teléfono:</span> {viewData.student.telefono || "-"}</p>
+                                <p><span className="text-indigo-300">Nivel Educativo:</span> {viewData.student.nivel_educativo || "-"}</p>
+                                <p><span className="text-indigo-300">Lugar de trabajo:</span> {viewData.student.lugar_trabajo || "-"}</p>
                             </div>
-                        )}
 
-                        {viewData.student.titulo_secundario_digitalizado ? (
-                            <a
-                                href={getMediaUrl(viewData.student.titulo_secundario_digitalizado)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-4 py-2 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
-                            >
-                                <Download size={18} /> Ver Título Secundario
-                            </a>
-                        ) : (
-                            <div className="flex items-center gap-2 bg-indigo-900/40 px-4 py-2 rounded-lg text-gray-500 border border-white/10">
-                                <X size={18} /> Título no disponible
+                            <SectionDivider title="Documentación" icon={FileText} />
+                            <div className="flex gap-4">
+                                {viewData.student.dni_digitalizado ? (
+                                    <a
+                                        href={getMediaUrl(viewData.student.dni_digitalizado)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-4 py-2 rounded-lg text-cyan-300 transition-all border border-cyan-500/30"
+                                    >
+                                        <Download size={18} /> Ver DNI Digitalizado
+                                    </a>
+                                ) : (
+                                    <div className="flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-lg text-red-400 border border-red-500/20">
+                                        <X size={18} /> DNI no disponible
+                                    </div>
+                                )}
+
+                                {viewData.student.titulo_secundario_digitalizado ? (
+                                    <a
+                                        href={getMediaUrl(viewData.student.titulo_secundario_digitalizado)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-4 py-2 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
+                                    >
+                                        <Download size={18} /> Ver Título Secundario
+                                    </a>
+                                ) : (
+                                    <div className="flex items-center gap-2 bg-indigo-900/40 px-4 py-2 rounded-lg text-gray-500 border border-white/10">
+                                        <X size={18} /> Título no disponible
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
 
-                    {(() => {
-                        const hoy = new Date();
-                        const nac = viewData.student.fecha_nacimiento ? new Date(viewData.student.fecha_nacimiento) : null;
-                        let edad = 18;
-                        if (nac) {
-                            edad = hoy.getFullYear() - nac.getFullYear();
-                            const mm = hoy.getMonth() - nac.getMonth();
-                            if (mm < 0 || (mm === 0 && hoy.getDate() < nac.getDate())) edad--;
-                        }
-                        if (edad >= 18) return null;
+                            {(() => {
+                                const hoy = new Date();
+                                const nac = viewData.student.fecha_nacimiento ? new Date(viewData.student.fecha_nacimiento) : null;
+                                let edad = 18;
+                                if (nac) {
+                                    edad = hoy.getFullYear() - nac.getFullYear();
+                                    const mm = hoy.getMonth() - nac.getMonth();
+                                    if (mm < 0 || (mm === 0 && hoy.getDate() < nac.getDate())) edad--;
+                                }
+                                if (edad >= 18) return null;
 
-                        return (
-                            <>
-                                <SectionDivider title="Información del Tutor (Menor de Edad)" icon={User} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
-                                    <p><span className="text-indigo-300">Responsable:</span> <span className="text-white font-bold">{viewData.student.tutor_nombre || "No cargado"}</span></p>
-                                    <p><span className="text-indigo-300">DNI Responsable:</span> <span className="text-white font-bold">{viewData.student.tutor_dni || "No cargado"}</span></p>
-                                </div>
-                                <div className="flex flex-wrap gap-4">
-                                    {viewData.student.dni_tutor_digitalizado ? (
-                                        <a
-                                            href={getMediaUrl(viewData.student.dni_tutor_digitalizado)}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex items-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 px-4 py-2 rounded-lg text-orange-300 transition-all border border-orange-500/30"
-                                        >
-                                            <Download size={18} /> Ver DNI del Tutor
-                                        </a>
-                                    ) : (
-                                        <div className="flex items-center gap-2 bg-orange-900/20 px-4 py-2 rounded-lg text-orange-400/50 border border-orange-500/10 italic text-xs">
-                                            DNI Tutor pendiente
+                                return (
+                                    <>
+                                        <SectionDivider title="Información del Tutor (Menor de Edad)" icon={User} />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
+                                            <p><span className="text-indigo-300">Responsable:</span> <span className="text-white font-bold">{viewData.student.tutor_nombre || "No cargado"}</span></p>
+                                            <p><span className="text-indigo-300">DNI Responsable:</span> <span className="text-white font-bold">{viewData.student.tutor_dni || "No cargado"}</span></p>
                                         </div>
-                                    )}
+                                        <div className="flex flex-wrap gap-4">
+                                            {viewData.student.dni_tutor_digitalizado ? (
+                                                <a
+                                                    href={getMediaUrl(viewData.student.dni_tutor_digitalizado)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="flex items-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 px-4 py-2 rounded-lg text-orange-300 transition-all border border-orange-500/30"
+                                                >
+                                                    <Download size={18} /> Ver DNI del Tutor
+                                                </a>
+                                            ) : (
+                                                <div className="flex items-center gap-2 bg-orange-900/20 px-4 py-2 rounded-lg text-orange-400/50 border border-orange-500/10 italic text-xs">
+                                                    DNI Tutor pendiente
+                                                </div>
+                                            )}
 
-                                    {viewData.student.nota_parental_firmada ? (
-                                        <a
-                                            href={getMediaUrl(viewData.student.nota_parental_firmada)}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 px-4 py-2 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
-                                        >
-                                            <Check size={18} /> Autorización Parental OK
-                                        </a>
-                                    ) : (
-                                        <div className="flex flex-col gap-2">
-                                            <div className="flex items-center gap-2 bg-red-900/20 px-4 py-2 rounded-lg text-red-300 border border-red-500/20 italic text-xs">
-                                                <AlertCircle size={14} /> Falta Autorización Firmada
+                                            {viewData.student.nota_parental_firmada ? (
+                                                <a
+                                                    href={getMediaUrl(viewData.student.nota_parental_firmada)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 px-4 py-2 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
+                                                >
+                                                    <Check size={18} /> Autorización Parental OK
+                                                </a>
+                                            ) : (
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex items-center gap-2 bg-red-900/20 px-4 py-2 rounded-lg text-red-300 border border-red-500/20 italic text-xs">
+                                                        <AlertCircle size={14} /> Falta Autorización Firmada
+                                                    </div>
+                                                    <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-3 py-1.5 rounded-full text-center transition-all flex items-center justify-center gap-1">
+                                                        <Download size={12} className="rotate-180" /> SUBIR NOTA ESCANEADA
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            onChange={async (e) => {
+                                                                const f = e.target.files?.[0];
+                                                                if (!f) return;
+                                                                try {
+                                                                    const fd = new FormData();
+                                                                    fd.append('nota_parental_firmada', f);
+                                                                    await apiClientV2.post(`/estudiantes/${viewData.student.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                                                    setFeedback({ open: true, message: "Nota de autorización guardada.", severity: "success" });
+                                                                    handleOpenDetail(viewData.student); // Refrescar modal
+                                                                } catch {
+                                                                    setFeedback({ open: true, message: "Error al subir la nota.", severity: "error" });
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                );
+                            })()}
+                        </div>
+
+                        <div>
+                            <SectionDivider title="Trayectoria Académica" icon={Briefcase} />
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
+                                    <p className="text-xs text-indigo-300">Inscripciones activas</p>
+                                    <p className="text-xl font-bold text-white">{trayectoria.inscripcionesActivas.length}</p>
+                                </div>
+                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
+                                    <p className="text-xs text-indigo-300">Módulos aprobados</p>
+                                    <p className="text-xl font-bold text-green-400">{trayectoria.modulosAprobados.length}</p>
+                                </div>
+                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
+                                    <p className="text-xs text-indigo-300">Módulos pendientes</p>
+                                    <p className="text-xl font-bold text-amber-300">{trayectoria.modulosPendientes.length}</p>
+                                </div>
+                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
+                                    <p className="text-xs text-indigo-300">Notas aprobadas</p>
+                                    <p className="text-xl font-bold text-cyan-300">{trayectoria.notasAprobadas.length}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <Card className="bg-indigo-950/30 border-indigo-500/20">
+                                    <h4 className="text-white font-semibold mb-2">Inscripciones</h4>
+                                    <div className="space-y-2 text-sm">
+                                        {viewData.inscripciones.length ? viewData.inscripciones.map(i => (
+                                            <div key={i.id} className="border-b border-indigo-500/10 pb-2">
+                                                <p className="text-indigo-100">{i?.cohorte?.programa?.nombre || "Programa"} - {i?.cohorte?.nombre || "Cohorte"}</p>
+                                                <p className="text-indigo-300">Bloque: {i?.modulo?.bloque?.nombre || i?.cohorte?.bloque?.nombre || "-"}</p>
+                                                <p className="text-indigo-300">Módulo: {i?.modulo?.nombre || "-"}</p>
+                                                <p className="text-indigo-300">Estado: {i.estado}</p>
                                             </div>
-                                            <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-3 py-1.5 rounded-full text-center transition-all flex items-center justify-center gap-1">
-                                                <Download size={12} className="rotate-180" /> SUBIR NOTA ESCANEADA
-                                                <input
-                                                    type="file"
-                                                    className="hidden"
-                                                    onChange={async (e) => {
-                                                        const f = e.target.files?.[0];
-                                                        if (!f) return;
-                                                        try {
-                                                            const fd = new FormData();
-                                                            fd.append('nota_parental_firmada', f);
-                                                            await apiClientV2.post(`/estudiantes/${viewData.student.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-                                                            setFeedback({ open: true, message: "Nota de autorización guardada.", severity: "success" });
-                                                            handleOpenDetail(viewData.student); // Refrescar modal
-                                                        } catch {
-                                                            setFeedback({ open: true, message: "Error al subir la nota.", severity: "error" });
-                                                        }
-                                                    }}
-                                                />
-                                            </label>
-                                        </div>
-                                    )}
-                                </div>
-                            </>
-                        );
-                    })()}
-                </div>
+                                        )) : <p className="text-indigo-300">Sin inscripciones registradas.</p>}
+                                    </div>
+                                </Card>
 
-                <div>
-                    <SectionDivider title="Trayectoria Académica" icon={Briefcase} />
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                        <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
-                            <p className="text-xs text-indigo-300">Inscripciones activas</p>
-                            <p className="text-xl font-bold text-white">{trayectoria.inscripcionesActivas.length}</p>
-                        </div>
-                        <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
-                            <p className="text-xs text-indigo-300">Módulos aprobados</p>
-                            <p className="text-xl font-bold text-green-400">{trayectoria.modulosAprobados.length}</p>
-                        </div>
-                        <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
-                            <p className="text-xs text-indigo-300">Módulos pendientes</p>
-                            <p className="text-xl font-bold text-amber-300">{trayectoria.modulosPendientes.length}</p>
-                        </div>
-                        <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
-                            <p className="text-xs text-indigo-300">Notas aprobadas</p>
-                            <p className="text-xl font-bold text-cyan-300">{trayectoria.notasAprobadas.length}</p>
+                                <Card className="bg-indigo-950/30 border-indigo-500/20">
+                                    <h4 className="text-white font-semibold mb-2">Qué le falta aprobar</h4>
+                                    <div className="space-y-2 text-sm">
+                                        {trayectoria.modulosPendientes.length ? trayectoria.modulosPendientes.map(m => (
+                                            <div key={m.id} className="border-b border-indigo-500/10 pb-1 mb-1">
+                                                <p className="text-indigo-300 text-xs">{m._programa_nombre || "Programa"} - {m._bloque_nombre || "Bloque"}</p>
+                                                <p className="text-amber-300">{m.nombre}</p>
+                                            </div>
+                                        )) : <p className="text-green-300">No tiene módulos pendientes en sus inscripciones activas.</p>}
+                                    </div>
+                                </Card>
+                            </div>
                         </div>
                     </div>
+                )}
+            </Modal>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card className="bg-indigo-950/30 border-indigo-500/20">
-                            <h4 className="text-white font-semibold mb-2">Inscripciones</h4>
-                            <div className="space-y-2 text-sm">
-                                {viewData.inscripciones.length ? viewData.inscripciones.map(i => (
-                                    <div key={i.id} className="border-b border-indigo-500/10 pb-2">
-                                        <p className="text-indigo-100">{i?.cohorte?.programa?.nombre || "Programa"} - {i?.cohorte?.nombre || "Cohorte"}</p>
-                                        <p className="text-indigo-300">Bloque: {i?.modulo?.bloque?.nombre || i?.cohorte?.bloque?.nombre || "-"}</p>
-                                        <p className="text-indigo-300">Módulo: {i?.modulo?.nombre || "-"}</p>
-                                        <p className="text-indigo-300">Estado: {i.estado}</p>
-                                    </div>
-                                )) : <p className="text-indigo-300">Sin inscripciones registradas.</p>}
-                            </div>
-                        </Card>
-
-                        <Card className="bg-indigo-950/30 border-indigo-500/20">
-                            <h4 className="text-white font-semibold mb-2">Qué le falta aprobar</h4>
-                            <div className="space-y-2 text-sm">
-                                {trayectoria.modulosPendientes.length ? trayectoria.modulosPendientes.map(m => (
-                                    <div key={m.id} className="border-b border-indigo-500/10 pb-1 mb-1">
-                                        <p className="text-indigo-300 text-xs">{m._programa_nombre || "Programa"} - {m._bloque_nombre || "Bloque"}</p>
-                                        <p className="text-amber-300">{m.nombre}</p>
-                                    </div>
-                                )) : <p className="text-green-300">No tiene módulos pendientes en sus inscripciones activas.</p>}
-                            </div>
-                        </Card>
+            {/* Toast Feedback */}
+            {
+                feedback.open && (
+                    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in z-[60] ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-green-900/90 border-green-500 text-white'}`}>
+                        {feedback.severity === 'error' ? <AlertCircle size={20} /> : <Check size={20} />}
+                        {feedback.message}
+                        <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
                     </div>
-                </div>
-            </div>
-        )}
-    </Modal>
-
-{/* Toast Feedback */ }
-{
-    feedback.open && (
-        <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in z-[60] ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-green-900/90 border-green-500 text-white'}`}>
-            {feedback.severity === 'error' ? <AlertCircle size={20} /> : <Check size={20} />}
-            {feedback.message}
-            <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
-        </div>
-    )
-}
+                )
+            }
         </div >
     );
 }
