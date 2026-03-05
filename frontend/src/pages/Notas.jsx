@@ -4,6 +4,18 @@ import HistorialAcademico from '../components/HistorialAcademico';
 import { Card, Select } from '../components/UI';
 import { UserSearch, FileText } from 'lucide-react';
 
+const calculateAge = (birthDate) => {
+  if (!birthDate) return null;
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 async function fetchEstudiantes() {
   try {
     const { data } = await apiClient.get('/estudiantes');
@@ -47,10 +59,14 @@ export default function Notas() {
   }, [selEstudiante]);
 
   // Student options for Select
-  const studentOptions = estudiantes.map(e => ({
-    value: e.id,
-    label: `${e.apellido}, ${e.nombre} (${e.dni})`
-  }));
+  const studentOptions = estudiantes.map(e => {
+    const age = calculateAge(e.fecha_nacimiento);
+    const ageLabel = age !== null ? (age < 18 ? ` - ${age} años 👶` : ` - ${age} años`) : "";
+    return {
+      value: e.id,
+      label: `${e.apellido}, ${e.nombre} (${e.dni})${ageLabel}`
+    };
+  });
 
   return (
     <div className="space-y-6 animate-fade-in-up">

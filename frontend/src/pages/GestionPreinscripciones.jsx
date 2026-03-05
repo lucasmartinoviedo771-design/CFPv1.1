@@ -6,7 +6,7 @@ import { apiClientV2 } from "../api/client";
 import { Card, Button, Input, Select } from '../components/UI';
 import {
     CheckCircle, XCircle, Search, Eye, FileText,
-    Download, Check, AlertCircle, Loader, UserCheck, Trash2, UploadCloud
+    Download, Check, AlertCircle, Loader, UserCheck, Trash2, UploadCloud, Baby
 } from 'lucide-react';
 import { formatDateDisplay } from "../utils/dateFormat";
 import { getMediaUrl } from "../utils/media";
@@ -17,6 +17,18 @@ const SectionDivider = ({ title, icon: Icon }) => (
         <span className="text-sm font-bold uppercase tracking-wider">{title}</span>
     </div>
 );
+
+const calculateAge = (birthDate) => {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+};
 
 export default function GestionPreinscripciones() {
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -171,8 +183,25 @@ export default function GestionPreinscripciones() {
                                     </td>
                                     <td className="px-6 py-3 font-mono text-indigo-200">{s.dni}</td>
                                     <td className="px-6 py-3">
-                                        <div className="text-white font-medium">{s.apellido}, {s.nombre}</div>
-                                        <div className="text-xs text-indigo-400">{s.email}</div>
+                                        <div className="flex flex-col">
+                                            {(() => {
+                                                const age = calculateAge(s.fecha_nacimiento);
+                                                const isMinor = age !== null && age < 18;
+                                                return (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={isMinor ? "text-orange-400 font-bold" : "text-white font-medium"}>
+                                                            {s.apellido}, {s.nombre}
+                                                        </span>
+                                                        {age !== null && (
+                                                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "bg-indigo-500/20 text-indigo-300"}`}>
+                                                                {age} años {isMinor && <Baby size={10} className="inline ml-0.5" />}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+                                            <div className="text-xs text-indigo-400">{s.email}</div>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-3">
                                         <div className="flex flex-wrap gap-1">

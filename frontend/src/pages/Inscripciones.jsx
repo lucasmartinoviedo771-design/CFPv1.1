@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Trash2, CheckCircle, AlertCircle, Loader, Edit2, X, Save, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, Trash2, CheckCircle, AlertCircle, Loader, Edit2, X, Save, Search, Baby } from 'lucide-react';
 
 import { useCohortes, useDeleteInscripcion, useInscripciones, useProgramas, useSaveInscripcion, useEstudiantes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
@@ -34,6 +34,18 @@ const Checkbox = ({ checked, onChange, disabled, label }) => (
         <span className={`text-sm ${checked ? 'text-white font-medium' : 'text-indigo-300'}`}>{label}</span>
     </label>
 );
+
+const calculateAge = (birthDate) => {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+};
 
 export default function Inscripciones() {
     const [selectedStudent, setSelectedStudent] = useState("");
@@ -261,7 +273,11 @@ export default function Inscripciones() {
         });
     }, [estudiantes, studentSearch]);
 
-    const studentOptions = filteredEstudiantes.map(s => ({ value: s.id, label: `${s.apellido}, ${s.nombre} (${s.dni})` }));
+    const studentOptions = filteredEstudiantes.map(s => {
+        const age = calculateAge(s.fecha_nacimiento);
+        const ageLabel = age !== null ? (age < 18 ? ` - ${age} años 👶` : ` - ${age} años`) : "";
+        return { value: s.id, label: `${s.apellido}, ${s.nombre} (${s.dni})${ageLabel}` };
+    });
 
     const todayIso = useMemo(() => {
         const d = new Date();
@@ -570,8 +586,25 @@ export default function Inscripciones() {
                                     <tbody className="divide-y divide-indigo-500/10">
                                         {paginatedInscripciones.map((r) => (
                                             <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                                                <td className="px-6 py-3 font-medium text-white">
-                                                    {r.estudiante ? `${r.estudiante.apellido}, ${r.estudiante.nombre}` : r.estudiante_id}
+                                                <td className="px-6 py-3 font-medium">
+                                                    {r.estudiante ? (() => {
+                                                        const age = calculateAge(r.estudiante.fecha_nacimiento);
+                                                        const isMinor = age !== null && age < 18;
+                                                        return (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={isMinor ? "text-orange-400 font-bold" : "text-white"}>
+                                                                    {r.estudiante.apellido}, {r.estudiante.nombre}
+                                                                </span>
+                                                                {age !== null && (
+                                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "bg-indigo-500/20 text-indigo-300"}`}>
+                                                                        {age} {isMinor && <Baby size={10} className="inline ml-0.5" />}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })() : (
+                                                        <span className="text-white">{r.estudiante_id}</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-3 text-gray-300">
                                                     {r.cohorte ? (

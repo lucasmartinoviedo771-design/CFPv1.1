@@ -2,7 +2,19 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { listAsistencias, createAsistencia, updateAsistencia } from "../services/asistenciasService";
 import api from '../api/client';
 import { Card, Select, Button, Input } from '../components/UI';
-import { Check, X, Save, CheckSquare, AlertCircle, Loader } from 'lucide-react';
+import { Check, X, Save, CheckSquare, AlertCircle, Loader, Baby } from 'lucide-react';
+
+const calculateAge = (birthDate) => {
+  if (!birthDate) return null;
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 export default function Asistencia() {
   const [programas, setProgramas] = useState([]);
@@ -289,8 +301,23 @@ export default function Asistencia() {
               <tbody className="divide-y divide-indigo-500/10">
                 {students.map(student => (
                   <tr key={student.id} className="hover:bg-white/5 transition-colors">
-                    <td className="px-4 py-3 font-medium text-white sticky left-0 bg-[#0a0033]/90 md:bg-transparent z-10">
-                      {student.apellido}, {student.nombre}
+                    <td className="px-4 py-3 font-medium sticky left-0 bg-[#0a0033]/90 md:bg-transparent z-10">
+                      {(() => {
+                        const age = calculateAge(student.fecha_nacimiento);
+                        const isMinor = age !== null && age < 18;
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className={isMinor ? "text-orange-400 font-bold" : "text-white"}>
+                              {student.apellido}, {student.nombre}
+                            </span>
+                            {age !== null && (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "bg-indigo-500/20 text-indigo-300"}`}>
+                                {age} {isMinor && <Baby size={10} className="inline ml-0.5" />}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     {modulos.map(mod => {
                       const isEnrolled = studentEnrolledModules[student.id]?.includes(mod.id);
