@@ -388,7 +388,16 @@ class Inscripcion(TimeStamped):
     ACTIVO = "ACTIVO"
     INACTIVO = "INACTIVO"
     LIBRE = "LIBRE"
-    ESTADOS = [(INSCRIPTO,"Inscripto"), (ACTIVO,"Activo"), (INACTIVO,"Inactivo"), (LIBRE,"Libre")]
+    PAUSADO = "PAUSADO"
+    EGRESADO = "EGRESADO"
+    ESTADOS = [
+        (INSCRIPTO, "Inscripto"),
+        (ACTIVO, "Activo"),
+        (INACTIVO, "Inactivo"),
+        (LIBRE, "Libre"),
+        (PAUSADO, "Pausado"),
+        (EGRESADO, "Egresado"),
+    ]
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE, related_name="inscripciones")
     cohorte = models.ForeignKey(Cohorte, on_delete=models.CASCADE, related_name="inscripciones")
     modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name="inscripciones", null=True, blank=True)

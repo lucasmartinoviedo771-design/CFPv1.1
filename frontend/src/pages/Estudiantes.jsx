@@ -129,7 +129,7 @@ export default function Estudiantes() {
     const handleStartEdit = async (student) => {
         setLoadingEditId(student.id);
         try {
-            const { data } = await apiClientV2.get(`/ estudiantes / ${student.id} `);
+            const { data } = await apiClientV2.get(`/estudiantes/${student.id}`);
             setEditId(student.id);
 
             // Clean data: replace nulls with empty strings to prevent controlled input issues and data loss
@@ -174,9 +174,9 @@ export default function Estudiantes() {
         setViewData({ loading: true, error: "", student: null, inscripciones: [], notas: [] });
         try {
             const [studentRes, inscripcionesRes, notasRes] = await Promise.all([
-                apiClientV2.get(`/ estudiantes / ${student.id} `),
-                apiClientV2.get(`/ inscripciones`, { params: { estudiante_id: student.id } }),
-                apiClientV2.get(`/ examenes / notas`, { params: { estudiante_id: student.id } }),
+                apiClientV2.get(`/estudiantes/${student.id}`),
+                apiClientV2.get(`/inscripciones`, { params: { estudiante_id: student.id } }),
+                apiClientV2.get(`/examenes/notas`, { params: { estudiante_id: student.id } }),
             ]);
             setViewData({
                 loading: false,
@@ -422,7 +422,7 @@ export default function Estudiantes() {
                                                             {r.apellido}, {r.nombre}
                                                         </span>
                                                         {age !== null && (
-                                                            <span className={`text - [10px] px - 1.5 py - 0.5 rounded - full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "bg-indigo-500/20 text-indigo-300"} `}>
+                                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "bg-indigo-500/20 text-indigo-300"}`}>
                                                                 {age} años {isMinor && <Baby size={10} className="inline ml-1" />}
                                                             </span>
                                                         )}
@@ -433,11 +433,11 @@ export default function Estudiantes() {
                                         <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.email}</td>
                                         <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.ciudad}</td>
                                         <td className="px-6 py-3">
-                                            <span className={`px - 2 py - 1 rounded text - xs font - bold ${r.estatus === 'Baja' ? 'bg-red-500/20 text-red-400' :
-                                                    r.estatus === 'Condicional' ? 'bg-yellow-500/20 text-yellow-500' :
-                                                        r.estatus === 'Preinscripto' ? 'bg-blue-500/20 text-blue-400' :
-                                                            'bg-green-500/20 text-green-400'
-                                                } `}>
+                                            <span className={`px-2 py-1 rounded text-xs font-bold ${r.estatus === 'Baja' ? 'bg-red-500/20 text-red-400' :
+                                                r.estatus === 'Condicional' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                    r.estatus === 'Preinscripto' ? 'bg-blue-500/20 text-blue-400' :
+                                                        'bg-green-500/20 text-green-400'
+                                                }`}>
                                                 {r.estatus}
                                             </span>
                                         </td>
@@ -612,7 +612,7 @@ export default function Estudiantes() {
                                                                 try {
                                                                     const fd = new FormData();
                                                                     fd.append('nota_parental_firmada', f);
-                                                                    await apiClientV2.post(`/ estudiantes / ${viewData.student.id} /documentos`, fd, { headers: { 'Content-Type': 'multipart/form - data' } });
+                                                                    await apiClientV2.post(`/estudiantes/${viewData.student.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
                                                                     setFeedback({ open: true, message: "Nota de autorización guardada.", severity: "success" });
                                                                     handleOpenDetail(viewData.student); // Refrescar modal
                                                                 } catch {

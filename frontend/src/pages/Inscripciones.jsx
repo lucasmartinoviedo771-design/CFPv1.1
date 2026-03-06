@@ -642,13 +642,17 @@ export default function Inscripciones() {
                                                             <option value="ACTIVO">ACTIVO</option>
                                                             <option value="INACTIVO">INACTIVO</option>
                                                             <option value="LIBRE">LIBRE</option>
+                                                            <option value="PAUSADO">PAUSADO</option>
+                                                            <option value="EGRESADO">EGRESADO</option>
                                                         </select>
                                                     ) : (
                                                         <span className={`px-2 py-1 rounded text-xs font-bold ${r.estado === 'ACTIVO' ? 'bg-green-500/20 text-green-400' :
                                                             r.estado === 'INACTIVO' ? 'bg-red-500/20 text-red-400' :
                                                                 r.estado === 'LIBRE' ? 'bg-yellow-500/20 text-yellow-500' :
                                                                     r.estado === 'INSCRIPTO' ? 'bg-blue-500/20 text-blue-400' :
-                                                                        'bg-gray-700 text-gray-400'
+                                                                        r.estado === 'EGRESADO' ? 'bg-purple-500/20 text-purple-400' :
+                                                                            r.estado === 'PAUSADO' ? 'bg-orange-500/20 text-orange-400' :
+                                                                                'bg-gray-700 text-gray-400'
                                                             }`}>
                                                             {r.estado}
                                                         </span>
