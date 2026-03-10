@@ -27,6 +27,7 @@ import Usuarios from './pages/Usuarios.jsx';
 import Resoluciones from './pages/Resoluciones.jsx';
 import PreinscripcionPublica from './pages/PreinscripcionPublica.jsx';
 import GestionPreinscripciones from './pages/GestionPreinscripciones.jsx';
+import AutorizacionParental from './pages/AutorizacionParental.jsx';
 
 // Services
 import authService from "./services/authService";
@@ -107,6 +108,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/preinscripcion" element={<PreinscripcionPublica />} />
+            <Route path="/autorizar/:token" element={<AutorizacionParental />} />
 
             {/* Protected Routes */}
             <Route path="/set-password" element={<PrivateRoute><WithLayout title="Actualizar Contraseña"><SetPassword /></WithLayout></PrivateRoute>} />

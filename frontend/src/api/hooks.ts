@@ -39,11 +39,11 @@ export const useSaveEstudiante = () => {
     mutationFn: async (payload: Partial<EstudianteDetail> & { id?: number, dniFile?: File | null, tituloFile?: File | null, dniTutorFile?: File | null, notaParentalFile?: File | null }) => {
       const { dniFile, tituloFile, dniTutorFile, notaParentalFile, ...jsonPayload } = payload;
 
-      // Prevent passing empty strings to DRF FileFields natively if no file is uploaded.
-      if (!jsonPayload.dni_digitalizado) delete jsonPayload.dni_digitalizado;
-      if (!jsonPayload.titulo_secundario_digitalizado) delete jsonPayload.titulo_secundario_digitalizado;
-      if (!jsonPayload.dni_tutor_digitalizado) delete jsonPayload.dni_tutor_digitalizado;
-      if (!jsonPayload.nota_parental_firmada) delete jsonPayload.nota_parental_firmada;
+      // Always remove file fields from JSON payload - files are only sent via FormData to /documentos endpoint
+      delete jsonPayload.dni_digitalizado;
+      delete jsonPayload.titulo_secundario_digitalizado;
+      delete jsonPayload.dni_tutor_digitalizado;
+      delete jsonPayload.nota_parental_firmada;
 
       let estId = jsonPayload.id;
       let resultData;

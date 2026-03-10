@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEstudiantes, useSaveEstudiante } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
-import { formatDateDisplay } from "../utils/dateFormat";
+import { formatDateDisplay, formatDateTimeDisplay } from "../utils/dateFormat";
 import { Card, Select, Button, Input } from '../components/UI';
 import {
     UserPlus, Edit2, Trash2, Search, Save, X, AlertCircle,
@@ -43,7 +43,7 @@ const initialFormState = {
     posee_pc: false, posee_conectividad: false, puede_traer_pc: false,
     trabaja: false, lugar_trabajo: "",
     dni_digitalizado: "",
-    tutor_nombre: "", tutor_dni: "",
+    tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
     dni_tutor_digitalizado: "", nota_parental_firmada: ""
 };
 
@@ -62,6 +62,7 @@ const calculateAge = (birthDate) => {
 export default function Estudiantes() {
     const [filters, setFilters] = useState({ dni: "", nombre_apellido: "", estatus: "" });
     const [ordering, setOrdering] = useState({ field: "apellido", direction: "asc" });
+    const [qrModal, setQrModal] = useState({ open: false, url: "", studentName: "" });
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [editId, setEditId] = useState(null);
     const [form, setForm] = useState(initialFormState);
@@ -359,14 +360,15 @@ export default function Estudiantes() {
 
                         return (
                             <div className="space-y-4 animate-in zoom-in-95 duration-300">
-                                <SectionDivider title="Datos del Tutor (Obligatorio para Menores)" icon={User} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <Input name="tutor_nombre" label="Nombre del Tutor" value={form.tutor_nombre} onChange={onChange} />
-                                    <Input name="tutor_dni" label="DNI del Tutor" value={form.tutor_dni} onChange={onChange} />
+                                <SectionDivider title="Datos del Padre/Madre o Tutor (Obligatorio para Menores)" icon={User} />
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <Input name="tutor_nombre" label="Nombre del Padre/Madre o Tutor" value={form.tutor_nombre} onChange={onChange} />
+                                    <Input name="tutor_dni" label="DNI del Padre/Madre o Tutor" value={form.tutor_dni} onChange={onChange} />
+                                    <Input name="tutor_telefono" label="Teléfono del Padre/Madre o Tutor" value={form.tutor_telefono} onChange={onChange} />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-orange-300 mb-1">DNI del Tutor (PDF/Imagen)</label>
+                                        <label className="block text-sm font-medium text-orange-300 mb-1">DNI del Padre/Madre o Tutor (PDF/Imagen)</label>
                                         <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniTutorFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
                                     </div>
                                     <div>
@@ -566,26 +568,50 @@ export default function Estudiantes() {
 
                                 return (
                                     <>
-                                        <SectionDivider title="Información del Tutor (Menor de Edad)" icon={User} />
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
+                                        <SectionDivider title="Información del Padre/Madre o Tutor (Menor de Edad)" icon={User} />
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-4">
                                             <p><span className="text-indigo-300">Responsable:</span> <span className="text-white font-bold">{viewData.student.tutor_nombre || "No cargado"}</span></p>
                                             <p><span className="text-indigo-300">DNI Responsable:</span> <span className="text-white font-bold">{viewData.student.tutor_dni || "No cargado"}</span></p>
+                                            <p><span className="text-indigo-300">WhatsApp Tutor:</span> <span className="text-emerald-400 font-bold">{viewData.student.tutor_telefono || "No cargado"}</span></p>
                                         </div>
                                         <div className="flex flex-wrap gap-4">
-                                            {viewData.student.dni_tutor_digitalizado ? (
-                                                <a
-                                                    href={getMediaUrl(viewData.student.dni_tutor_digitalizado)}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="flex items-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 px-4 py-2 rounded-lg text-orange-300 transition-all border border-orange-500/30"
-                                                >
-                                                    <Download size={18} /> Ver DNI del Tutor
-                                                </a>
-                                            ) : (
-                                                <div className="flex items-center gap-2 bg-orange-900/20 px-4 py-2 rounded-lg text-orange-400/50 border border-orange-500/10 italic text-xs">
-                                                    DNI Tutor pendiente
-                                                </div>
-                                            )}
+                                            <div className="flex flex-col gap-2">
+                                                {viewData.student.dni_tutor_digitalizado ? (
+                                                    <a
+                                                        href={getMediaUrl(viewData.student.dni_tutor_digitalizado)}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="flex items-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 px-4 py-2 rounded-lg text-orange-300 transition-all border border-orange-500/30"
+                                                    >
+                                                        <Download size={18} /> Ver DNI del Padre/Madre o Tutor
+                                                    </a>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 bg-orange-900/20 px-4 py-2 rounded-lg text-orange-400/50 border border-orange-500/10 italic text-xs">
+                                                        DNI Padre/Madre o Tutor pendiente
+                                                    </div>
+                                                )}
+                                                <label className="cursor-pointer bg-orange-600/80 hover:bg-orange-500 text-white text-[10px] px-3 py-1.5 rounded-full text-center transition-all flex items-center justify-center gap-1">
+                                                    <Download size={12} className="rotate-180" /> {viewData.student.dni_tutor_digitalizado ? "REEMPLAZAR DNI TUTOR" : "SUBIR DNI TUTOR"}
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*,application/pdf"
+                                                        className="hidden"
+                                                        onChange={async (e) => {
+                                                            const f = e.target.files?.[0];
+                                                            if (!f) return;
+                                                            try {
+                                                                const fd = new FormData();
+                                                                fd.append('dni_tutor_digitalizado', f);
+                                                                await apiClientV2.post(`/estudiantes/${viewData.student.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                                                setFeedback({ open: true, message: "DNI del tutor actualizado correctamente.", severity: "success" });
+                                                                handleOpenDetail(viewData.student);
+                                                            } catch {
+                                                                setFeedback({ open: true, message: "Error al subir el DNI.", severity: "error" });
+                                                            }
+                                                        }}
+                                                    />
+                                                </label>
+                                            </div>
 
                                             {viewData.student.nota_parental_firmada ? (
                                                 <a
@@ -623,7 +649,71 @@ export default function Estudiantes() {
                                                     </label >
                                                 </div >
                                             )}
-                                        </div >
+
+                                            {viewData.student.autorizacion_status === 'DIGITAL' && (
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex flex-col gap-1 items-center bg-emerald-500/10 px-4 py-2 rounded-lg border border-emerald-500/20 text-xs shadow-sm">
+                                                        <span className="text-emerald-400 font-bold flex items-center gap-2">
+                                                            <Check size={14} /> Firma Digital Validada
+                                                        </span>
+                                                        <span className="text-[10px] text-emerald-300 opacity-80">
+                                                            {formatDateTimeDisplay(viewData.student.autorizacion_fecha)}
+                                                        </span>
+                                                    </div>
+                                                    {viewData.student.autorizacion_selfie && (
+                                                        <a
+                                                            href={getMediaUrl(viewData.student.autorizacion_selfie)}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-3 py-1.5 rounded-full transition-all"
+                                                        >
+                                                            <Eye size={12} /> VER SELFIE DE FIRMA
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {viewData.student.autorizacion_status === 'PENDIENTE' && (
+                                                <div className="flex flex-col gap-2 p-3 bg-indigo-950/50 border border-indigo-500/20 rounded-xl">
+                                                    <p className="text-[10px] font-bold text-indigo-300 uppercase mb-1">Firma Presencial</p>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={async () => {
+                                                                let token = viewData.student.autorizacion_token;
+                                                                if (!token) {
+                                                                    const { data } = await apiClientV2.post(`/autorizaciones/generate/${viewData.student.id}`);
+                                                                    token = data.token;
+                                                                }
+                                                                const url = `https://politecnico.ar/cfp/autorizar.html?token=${token}`;
+                                                                window.open(url, '_blank');
+                                                            }}
+                                                            className="text-[10px] py-1 h-auto"
+                                                            title="Abrir en este dispositivo"
+                                                        >
+                                                            Abrir Link
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={async () => {
+                                                                let token = viewData.student.autorizacion_token;
+                                                                if (!token) {
+                                                                    const { data } = await apiClientV2.post(`/autorizaciones/generate/${viewData.student.id}`);
+                                                                    token = data.token;
+                                                                }
+                                                                const url = `https://politecnico.ar/cfp/autorizar.html?token=${token}`;
+                                                                setQrModal({ open: true, url, studentName: `${viewData.student.nombre} ${viewData.student.apellido}` });
+                                                            }}
+                                                            className="text-[10px] py-1 h-auto"
+                                                        >
+                                                            Generar QR / Link
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </>
                                 );
                             })()}
@@ -682,11 +772,40 @@ export default function Estudiantes() {
                 )}
             </Modal >
 
+            {/* Modal QR */}
+            <Modal
+                isOpen={qrModal.open}
+                onClose={() => setQrModal({ ...qrModal, open: false })}
+                title="Autorización Presencial"
+                maxWidthClass="max-w-sm"
+                actions={<Button onClick={() => setQrModal({ ...qrModal, open: false })}>Cerrar</Button>}
+            >
+                <div className="flex flex-col items-center text-center space-y-4">
+                    <p className="text-sm text-indigo-200">
+                        Pedile al <b>Padre/Madre o Tutor</b> que escanee este código para firmar la autorización de <b>{qrModal.studentName}</b>
+                    </p>
+                    <div className="p-4 bg-white rounded-2xl shadow-xl">
+                        <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrModal.url)}`}
+                            alt="QR de Autorización"
+                            className="w-48 h-48"
+                        />
+                    </div>
+                    <div className="w-full p-3 bg-black/40 rounded-lg border border-white/5 overflow-hidden">
+                        <p className="text-[10px] text-indigo-400 uppercase font-bold mb-1">Link Directo</p>
+                        <p className="text-[10px] text-gray-400 break-all select-all cursor-pointer font-mono">{qrModal.url}</p>
+                    </div>
+                </div>
+            </Modal>
+
             {/* Toast Feedback */}
             {
                 feedback.open && (
-                    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in z-[60] ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-green-900/90 border-green-500 text-white'}`}>
-                        {feedback.severity === 'error' ? <AlertCircle size={20} /> : <Check size={20} />}
+                    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in z-[100] ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' :
+                        feedback.severity === 'warning' ? 'bg-amber-600/90 border-amber-400 text-white' :
+                            'bg-green-900/90 border-green-500 text-white'
+                        }`}>
+                        {feedback.severity === 'error' ? <AlertCircle size={20} /> : feedback.severity === 'warning' ? <AlertCircle size={20} /> : <Check size={20} />}
                         {feedback.message}
                         <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
                     </div>

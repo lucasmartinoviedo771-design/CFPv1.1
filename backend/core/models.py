@@ -220,6 +220,8 @@ class Estudiante(TimeStamped):
     # --- Datos de Tutor (para Menores de 18) ---
     tutor_nombre = models.CharField(max_length=200, blank=True, verbose_name="Nombre del Tutor")
     tutor_dni = models.CharField(max_length=20, blank=True, verbose_name="DNI del Tutor")
+    tutor_telefono = models.CharField(max_length=15, blank=True, verbose_name="Teléfono del Tutor")
+    
     dni_tutor_digitalizado = models.FileField(
         upload_to=dni_tutor_upload_path,
         blank=True,
@@ -230,6 +232,26 @@ class Estudiante(TimeStamped):
         blank=True,
         verbose_name="Nota de Autorización Parental Firmada (Archivo)",
     )
+    
+    # --- Gestión de Autorización Digital ---
+    AUTORIZACION_ESTADOS = [
+        ('PENDIENTE', 'Pendiente'),
+        ('DIGITAL', 'Firma Digital (Selfie)'),
+        ('MANUAL', 'Firma Manual (Papel)'),
+    ]
+    autorizacion_status = models.CharField(
+        max_length=20, 
+        choices=AUTORIZACION_ESTADOS, 
+        default='PENDIENTE'
+    )
+    autorizacion_token = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    autorizacion_selfie = models.ImageField(
+        upload_to='autorizaciones/selfies/', 
+        blank=True, 
+        null=True,
+        verbose_name="Selfie de Conformidad"
+    )
+    autorizacion_fecha = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Autorización")
 
     def get_approved_bloques(self):
         return Bloque.objects.filter(

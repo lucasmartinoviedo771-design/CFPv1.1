@@ -66,6 +66,7 @@ class PreinscripcionIn(Schema):
     titulo_secundario_digitalizado: Optional[str] = None
     tutor_nombre: Optional[str] = None
     tutor_dni: Optional[str] = None
+    tutor_telefono: Optional[str] = None
     dni_tutor_digitalizado: Optional[str] = None
 
 
@@ -290,7 +291,7 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
         
         subject = "Confirmación de Preinscripción - CFP Malvinas Argentinas"
         if es_menor:
-            subject = "ACCION REQUERIDA: Preinscripción de Menor - CFP Malvinas Argentinas"
+            subject = "Preinscripcion Programador de Nivel III para menor de edad"
         
         trayectos_html = "".join([f"<li><strong>{c.programa.nombre}</strong> ({c.bloque.nombre})</li>" for c in cohortes])
 
@@ -299,12 +300,13 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
             info_pdf_html = f"""
             <div class="info-pdf" style="background-color: #fff7ed; border: 1px solid #ffedd5;">
                 <h3 style="color: #c2410c;">⚠️ ACCIÓN REQUERIDA PARA MENORES</h3>
-                <p style="margin-top: 0;">Al ser menor de edad, para completar tu inscripción es **obligatorio** que tu padre, madre o tutor responsable:</p>
-                <ul>
-                    <li>1. Descargue y lea las <strong>Condiciones CODE3</strong> y las <strong>Normas de Convivencia</strong> adjuntas.</li>
-                    <li>2. Imprima, complete y firme la autorizacion que figura al final del documento de condiciones.</li>
-                    <li>3. Envíe una foto o escaneo de la nota firmada a: <a href="mailto:estudiantes.cfp@malvinastdf.edu.ar">estudiantes.cfp@malvinastdf.edu.ar</a></li>
-                </ul>
+                <p style="margin-top: 0;">Al ser menor de edad, para completar tu inscripción es <strong>obligatorio</strong> contar con la autorización digital de tu Padre/Madre o Tutor responsable.</p>
+                <p style="margin-top: 10px; font-weight: bold; color: #9a3412;">
+                    En la brevedad, nos comunicaremos por WhatsApp al número de {estudiante.tutor_nombre} (Padre/Madre o Tutor) para enviar un enlace seguro donde podrá firmar y autorizar tu inscripción digitalmente.
+                </p>
+                <p style="margin-top: 10px; font-size: 13.5px; color: #c2410c;">
+                    <i>En caso de preferir realizar el trámite de forma presencial, el Padre/Madre o Tutor responsable puede acercarse a nuestra oficina del CFP.</i>
+                </p>
             </div>
             """
         else:
@@ -390,6 +392,7 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
             to=[estudiante.email],
         )
         email.content_subtype = "html"
+        email.encoding = "utf-8"
 
         resources_dir = os.path.join(settings.BASE_DIR, "core", "resources", "emails")
         
@@ -408,10 +411,6 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
         # Todos reciben las Normas de Convivencia Digital
         pdf_paths.append(os.path.join(resources_dir, "Normas de Convivencia Digital.pdf"))
         
-        if es_menor:
-            # Archivo obligatorio extra solo para menores
-            pdf_paths.append(os.path.join(resources_dir, "Condiciones CODE3.pdf"))
-        
         # Archivos de trayectoria (se envían según su elección)
         if tiene_nivel_III:
             pdf_paths.append(os.path.join(resources_dir, "CODE III 2026.pdf"))
@@ -422,6 +421,8 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
             if os.path.exists(pdf_path):
                 email.attach_file(pdf_path)
 
+        # Copia oculta al correo oficial para que quede registro
+        email.bcc = ["estudiantes.cfp@malvinastdf.edu.ar"]
         email.send(fail_silently=True)
     except Exception as e:
         print(f"Error enviando email de confirmación: {e}")
@@ -511,6 +512,7 @@ def crear_preinscripcion_publica(request):
             "lugar_trabajo": post.get("lugar_trabajo", ""),
             "tutor_nombre": post.get("tutor_nombre", ""),
             "tutor_dni": post.get("tutor_dni", ""),
+            "tutor_telefono": post.get("tutor_telefono", ""),
         }
 
         serializer = EstudianteSerializer(instance=estudiante, data=serializer_data, partial=True)

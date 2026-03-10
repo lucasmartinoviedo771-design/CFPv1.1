@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Trash2, CheckCircle, AlertCircle, Loader, Edit2, X, Save, Search, Baby } from 'lucide-react';
+import { ChevronDown, ChevronRight, Trash2, CheckCircle, AlertCircle, Loader, Edit2, X, Save, Search, Baby, MessageCircle } from 'lucide-react';
 
 import { useCohortes, useDeleteInscripcion, useInscripciones, useProgramas, useSaveInscripcion, useEstudiantes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
@@ -157,6 +157,42 @@ export default function Inscripciones() {
         setFilterInicio("");
     };
 
+    const handleSendWhatsApp = async (estudiante) => {
+        if (!estudiante.tutor_telefono) {
+            setFeedback({ open: true, message: "El estudiante no tiene registrado el teléfono del padre, madre o tutor.", severity: "warning" });
+            return;
+        }
+
+        if (estudiante.autorizacion_status === 'DIGITAL') {
+            if (!window.confirm("Este estudiante ya tiene una autorización digital válida. ¿Deseas enviar el link de WhatsApp nuevamente?")) {
+                return;
+            }
+        }
+
+        try {
+            let token = estudiante.autorizacion_token;
+            if (!token) {
+                const { data } = await apiClientV2.post(`/autorizaciones/generate/${estudiante.id}`);
+                token = data.token;
+            }
+
+            const tutorName = estudiante.tutor_nombre || "Tutor";
+            const studentName = `${estudiante.nombre} ${estudiante.apellido}`;
+            const telefono = estudiante.tutor_telefono.replace(/\D/g, ''); // Limpiar no numéricos
+
+            // Si el teléfono no tiene código de país, asumimos Argentina +54 9
+            const fullPhone = telefono.startsWith('54') ? telefono : `549${telefono}`;
+
+            const link = `https://politecnico.ar/cfp/autorizar.html?token=${token}`;
+            const message = `Hola ${tutorName}, te enviamos el link para autorizar la cursada de ${studentName} en el CFP: ${link}. Recordá que debés sacarte una selfie con tu DNI para validar la firma.`;
+
+            window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`, '_blank');
+        } catch (error) {
+            console.error(error);
+            setFeedback({ open: true, message: "Error al generar el link de autorización.", severity: "error" });
+        }
+    };
+
     const handleCohorteToggle = async (cohorteId) => {
         const isSelected = selectedCohortes.includes(cohorteId);
         if (isSelected) {
@@ -222,11 +258,11 @@ export default function Inscripciones() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("¿Seguro que deseas eliminar esta inscripcion?")) return;
         try {
             await deleteInscripcion.mutateAsync(id);
             setFeedback({ open: true, message: "Inscripcion eliminada", severity: "success" });
             refetchInscripciones();
+            setInscToDelete(null); // Close confirmation dialog
         } catch (error) {
             const msg = error?.response?.data ? JSON.stringify(error.response.data) : error?.message || "Error";
             setFeedback({ open: true, message: `No se pudo eliminar: ${msg}`, severity: "error" });
@@ -683,18 +719,31 @@ export default function Inscripciones() {
                                                                 </button>
                                                             </>
                                                         ) : (
-                                                            <>
+                                                            <div className="flex justify-end gap-2">
+                                                                {r.estudiante && calculateAge(r.estudiante.fecha_nacimiento) < 18 && (
+                                                                    <button
+                                                                        onClick={() => handleSendWhatsApp(r.estudiante)}
+                                                                        title="Enviar Autorización WhatsApp"
+                                                                        className={`p-1 transition-colors ${r.estudiante.autorizacion_status === 'DIGITAL' ? 'text-emerald-400' : 'text-orange-400 hover:text-orange-300'}`}
+                                                                    >
+                                                                        <MessageCircle size={18} />
+                                                                    </button>
+                                                                )}
                                                                 <button
                                                                     onClick={() => { setEditingInscripcionId(r.id); setEditingEstado(r.estado || 'ACTIVO'); }}
-                                                                    className="hover:text-blue-400 transition-colors"
+                                                                    className="p-1 hover:text-blue-400 transition-colors"
                                                                     title="Editar estado"
                                                                 >
                                                                     <Edit2 size={18} />
                                                                 </button>
-                                                                <button onClick={() => handleDelete(r.id)} className="hover:text-red-400 transition-colors" title="Eliminar">
+                                                                <button
+                                                                    onClick={() => setInscToDelete(r)}
+                                                                    className="p-1 text-red-500 hover:text-red-400 transition-colors"
+                                                                    title="Eliminar inscripción"
+                                                                >
                                                                     <Trash2 size={18} />
                                                                 </button>
-                                                            </>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </td>
@@ -752,7 +801,10 @@ export default function Inscripciones() {
 
             {
                 feedback.open && (
-                    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-green-900/90 border-green-500 text-white'}`}>
+                    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' :
+                        feedback.severity === 'warning' ? 'bg-amber-600/90 border-amber-400 text-white' :
+                            'bg-green-900/90 border-green-500 text-white'
+                        }`}>
                         {feedback.severity === 'error' ? <AlertCircle /> : <CheckCircle />}
                         {feedback.message}
                         <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><Trash2 size={14} /></button>

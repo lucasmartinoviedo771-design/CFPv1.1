@@ -212,7 +212,7 @@ export default function PreinscripcionPublica() {
     nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
     domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
     posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
-    tutor_nombre: "", tutor_dni: "",
+    tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
   });
 
   useEffect(() => {
@@ -303,7 +303,7 @@ export default function PreinscripcionPublica() {
     }
     if (s === 4) {
       if (!dniFile) return setError("Debés adjuntar la digitalización del DNI."), false;
-      if (esMenor && !dniTutorFile) return setError("Debés adjuntar la digitalización del DNI del Tutor."), false;
+      if (esMenor && !dniTutorFile) return setError("Debés adjuntar la digitalización del DNI del Padre/Madre o Tutor."), false;
       if (requiresTitle && !tituloFile) return setError("Esta oferta requiere adjuntar el título secundario."), false;
     }
     return true;
@@ -392,7 +392,7 @@ export default function PreinscripcionPublica() {
         nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
         domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
         posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
-        tutor_nombre: "", tutor_dni: "",
+        tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
       });
       setDniFile(null);
       setTituloFile(null);
@@ -561,11 +561,11 @@ export default function PreinscripcionPublica() {
                       <input type="date" className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange} required />
                       {form.fecha_nacimiento && (
                         <div className="flex items-center justify-between mt-2">
-                          <p className={`text-[10px] font-bold ${esMenor ? "text-orange-400" : "text-brand-cyan"}`}>
+                          <p className={`text-[10px] font-bold ${esMenor ? (isDark ? "text-orange-400" : "text-orange-700") : "text-brand-cyan"}`}>
                             EDAD CALCULADA: {edad} AÑOS
                           </p>
                           {esMenor && (
-                            <p className="text-[10px] text-orange-400 font-black animate-pulse">
+                            <p className={`text-[10px] font-black animate-pulse ${isDark ? "text-orange-400" : "text-orange-600"}`}>
                               ⚠️ REQUIERE TUTOR (CODE 3)
                             </p>
                           )}
@@ -573,14 +573,27 @@ export default function PreinscripcionPublica() {
                       )}
                     </div>
                     {esMenor && (
-                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/20 animate-in zoom-in-95 duration-300">
+                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/20 animate-in zoom-in-95 duration-300">
+                        <div className="md:col-span-2 flex items-start gap-4 p-4 rounded-2xl bg-orange-500/10 border border-orange-500/30 mb-2">
+                          <Smartphone className={`${isDark ? "text-orange-400" : "text-orange-600"} mt-1 flex-none`} size={20} />
+                          <div>
+                            <p className={`text-xs font-bold uppercase tracking-tight ${isDark ? "text-orange-200" : "text-orange-700"}`}>Autorización del Padre/Madre o Tutor vía WhatsApp</p>
+                            <p className={`text-[11px] leading-relaxed ${isDark ? "text-orange-300/80" : "text-orange-900"}`}>
+                              Al ser menor de edad, el padre, madre o tutor responsable recibirá un enlace por <b>WhatsApp</b> para autorizar la cursada mediante una <b>firma digital (selfie de conformidad)</b>.
+                            </p>
+                          </div>
+                        </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">Nombre del Padre, Madre o Tutor *</label>
+                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">Nombre del Padre/Madre o Tutor *</label>
                           <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-brand-accent/30`} name="tutor_nombre" placeholder="Nombre completo" value={form.tutor_nombre} onChange={onChange} required />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">DNI del Tutor *</label>
+                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">DNI del Padre/Madre o Tutor *</label>
                           <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-brand-accent/30`} name="tutor_dni" placeholder="DNI del responsable" value={form.tutor_dni} onChange={onChange} required />
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-brand-accent">WhatsApp del Padre/Madre o Tutor (Celular) *</label>
+                          <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-brand-accent/30`} name="tutor_telefono" placeholder="2964 XXXXXX (Sin 0 ni 15)" value={form.tutor_telefono} onChange={onChange} required />
                         </div>
                       </div>
                     )}

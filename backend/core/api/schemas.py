@@ -169,8 +169,10 @@ class EstudianteIn(Schema):
     titulo_secundario_digitalizado: Optional[str] = None
     tutor_nombre: Optional[str] = None
     tutor_dni: Optional[str] = None
+    tutor_telefono: Optional[str] = None
     dni_tutor_digitalizado: Optional[str] = None
     nota_parental_firmada: Optional[str] = None
+    autorizacion_status: Optional[str] = "PENDIENTE"
 
 
 class InscripcionIn(Schema):
@@ -236,8 +238,13 @@ class EstudianteDetailOut(EstudianteOut):
     titulo_secundario_digitalizado: Optional[str] = None
     tutor_nombre: Optional[str] = None
     tutor_dni: Optional[str] = None
+    tutor_telefono: Optional[str] = None
     dni_tutor_digitalizado: Optional[str] = None
     nota_parental_firmada: Optional[str] = None
+    autorizacion_status: Optional[str] = None
+    autorizacion_token: Optional[str] = None
+    autorizacion_fecha: Optional[datetime] = None
+    autorizacion_selfie: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     trayectos: List[str] = []

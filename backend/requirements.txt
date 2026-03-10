@@ -34,3 +34,4 @@ typing_extensions==4.15.0
 # Testing (Standardization)
 pytest==8.3.4
 pytest-django==4.9.0
+Pillow>=10.0.0
