@@ -77,7 +77,7 @@ def enviar_correo_bienvenida(estudiante_id: int):
             contenido_opciones.append({
                 'titulo': 'Habilidades Digitales',
                 'clave': 'Hab-CFhg2025',
-                'link': 'https://politecnico.ar/campus/login/index.php'
+                'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12'
             })
 
         # Trayecto: Diseño y Fabricación Digital / Impresión 3D (ID 4)
@@ -85,7 +85,7 @@ def enviar_correo_bienvenida(estudiante_id: int):
             contenido_opciones.append({
                 'titulo': 'Diseño y Fabricación Digital (Impresión 3D)',
                 'clave': '3D-Dpi#$*203g',
-                'link': 'https://politecnico.ar/campus/login/index.php'
+                'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12'
             })
 
         # Trayecto: Programador de Nivel III / CODE 3 (ID 1)
@@ -97,7 +97,7 @@ def enviar_correo_bienvenida(estudiante_id: int):
                     {'nombre': 'Base de Datos', 'clave': 'BaseDatos2025CFP'},
                     {'nombre': 'Relaciones Laborales', 'clave': 'ReLab2025CFP'}
                 ],
-                'link': 'https://politecnico.ar/campus/login/index.php',
+                'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12',
                 'nota_programacion_ii': True
             })
 
@@ -106,7 +106,7 @@ def enviar_correo_bienvenida(estudiante_id: int):
              contenido_opciones.append({
                 'titulo': 'Sistemas de Representación',
                 'clave': 'Sist-Rep2025', # Clave genérica o placeholder
-                'link': 'https://politecnico.ar/campus/login/index.php'
+                'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12'
             })
 
         context = {
