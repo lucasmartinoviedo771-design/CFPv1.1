@@ -9,6 +9,7 @@ from core.api.permissions import require_authenticated_group
 
 from core.models import Estudiante, Inscripcion
 from core.serializers import EstudianteSerializer
+from core.services.email_service import enviar_correo_bienvenida
 from .schemas import EstudianteOut, EstudianteDetailOut, EstudianteIn
 
 class BulkIdsIn(Schema):
@@ -57,9 +58,15 @@ def crear_estudiante(request, payload: EstudianteIn):
 @require_authenticated_group
 def actualizar_estudiante_patch(request, estudiante_id: int, payload: EstudianteIn):
     estudiante = get_object_or_404(Estudiante, pk=estudiante_id)
+    old_status = estudiante.estatus
     serializer = EstudianteSerializer(instance=estudiante, data=payload.dict(exclude_unset=True, exclude_none=True), partial=True)
     serializer.is_valid(raise_exception=True)
-    serializer.save()
+    estudiante = serializer.save()
+    
+    # Si cambió a Regular, enviamos bienvenida
+    if old_status == "Preinscripto" and estudiante.estatus == "Regular":
+        enviar_correo_bienvenida(estudiante.id)
+        
     return detalle_estudiante(request, estudiante.id)
 
 @router.post("/{estudiante_id}/documentos", response=EstudianteDetailOut)
@@ -108,10 +115,17 @@ def bulk_approve(request, data: BulkIdsIn):
         if not estudiantes_ids:
             return {"updated": 0}
             
-        # Actualizamos Estudiantes
-        updated = Estudiante.objects.filter(id__in=estudiantes_ids).update(
-            estatus="Regular", updated_at=timezone.now()
-        )
+        # Actualizamos Estudiantes uno por uno para disparar señales y enviar emails
+        estudiantes = Estudiante.objects.filter(id__in=estudiantes_ids)
+        updated_count = 0
+        for estudiante in estudiantes:
+            estudiante.estatus = "Regular"
+            estudiante.updated_at = timezone.now()
+            estudiante.save()
+            
+            # Enviar correo de bienvenida
+            enviar_correo_bienvenida(estudiante.id)
+            updated_count += 1
         
         # Actualizamos Inscripciones de esos estudiantes: Inscripto -> Activo
         from core.models import Inscripcion
@@ -123,7 +137,7 @@ def bulk_approve(request, data: BulkIdsIn):
             updated_at=timezone.now()
         )
         
-    return {"updated": updated}
+    return {"updated": updated_count}
 
 
 @router.post("/bulk_delete/", response=dict)
