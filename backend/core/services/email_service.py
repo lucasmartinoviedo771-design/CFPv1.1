@@ -82,7 +82,7 @@ def enviar_correo_bienvenida(estudiante_id: int):
             'nombre': estudiante.nombre,
             'opciones': contenido_opciones,
             'campus_url': 'https://politecnico.ar/campus/login/index.php',
-            'tutorial_url': '#' # Placeholder para el tutorial
+            'tutorial_url': 'https://drive.google.com/file/d/1yeBuJ3bHig6-pLYmiqZ0UW1mx9r81Mpe/view'
         }
 
         html_content = render_to_string('emails/bienvenida_campus.html', context)
