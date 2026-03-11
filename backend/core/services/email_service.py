@@ -1,81 +1,112 @@
+import os.path
+import base64
 import logging
-from django.core.mail import EmailMultiAlternatives
+from email.mime.text import MIMEText
+from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.conf import settings
+
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
 from core.models import Estudiante, Inscripcion
 
 logger = logging.getLogger(__name__)
 
+# Si se modifican estos alcances, elimine el archivo token.json.
+SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+
+CREDENTIALS_PATH = os.path.join(settings.BASE_DIR, 'core', 'resources', 'gmail_credentials.json')
+# Usamos el volumen persistente de media para que el token no se borre en deploys
+TOKEN_PATH = os.path.join(settings.BASE_DIR, 'media', 'tokens', 'gmail_token.json')
+
+def get_gmail_service():
+    os.makedirs(os.path.dirname(TOKEN_PATH), exist_ok=True)
+    creds = None
+    if os.path.exists(TOKEN_PATH):
+        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+    
+    # Si no hay credenciales válidas disponibles, deje que el usuario inicie sesión.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            # En un entorno de producción/servidor, esto fallará si no hay token.json
+            logger.error("No se encontró token.json válido para Gmail API. Se requiere autorización inicial.")
+            return None
+        # Guardar las credenciales para la próxima ejecución
+        with open(TOKEN_PATH, 'w') as token:
+            token.write(creds.to_json())
+
+    return build('gmail', 'v1', credentials=creds)
+
 def enviar_correo_bienvenida(estudiante_id: int):
     """
-    Envía el correo de bienvenida y acceso al campus basado en los trayectos 
-    donde el estudiante fue aceptado.
+    Envía el correo de bienvenida usando la API de Gmail (OAuth2).
     """
     try:
+        service = get_gmail_service()
+        if not service:
+            logger.error("No se pudo obtener el servicio de Gmail. Abortando envío.")
+            return False
+
         estudiante = Estudiante.objects.get(id=estudiante_id)
         inscripciones = Inscripcion.objects.filter(
             estudiante=estudiante, 
-            estado__in=[Inscripcion.CURSANDO, Inscripcion.PREINSCRIPTO] # Generalmente se envía cuando pasan a Cursando
+            estado__in=[Inscripcion.CURSANDO, Inscripcion.PREINSCRIPTO]
         ).select_related('cohorte__programa', 'modulo__bloque', 'cohorte__bloque')
 
         if not inscripciones.exists():
-            logger.warning(f"No se encontraron inscripciones para el estudiante {estudiante_id} al intentar enviar correo.")
-            return
+            return False
 
         programas_ids = set()
         bloques_nombres = set()
-        
         for ins in inscripciones:
-            prog = ins.cohorte.programa
-            programas_ids.add(prog.id)
-            # Si tiene bloque directo en la cohorte o vía el módulo
+            programas_ids.add(ins.cohorte.programa.id)
             bloque = ins.cohorte.bloque or (ins.modulo.bloque if ins.modulo else None)
             if bloque:
                 bloques_nombres.add(bloque.nombre)
 
-        # Mapeo de contenidos específicos
         contenido_opciones = []
         
-        # Opción A: Habilidades Digitales (ID 2)
+        # Trayecto: Habilidades Digitales (ID 2)
         if 2 in programas_ids:
             contenido_opciones.append({
                 'titulo': 'Habilidades Digitales',
                 'clave': 'Hab-CFhg2025',
-                'link': 'https://politecnico.ar/campus/login/index.php' # Reemplazar si hay uno específico
+                'link': 'https://politecnico.ar/campus/login/index.php'
             })
 
-        # Opción B: Impresión 3D (ID 4)
+        # Trayecto: Diseño y Fabricación Digital / Impresión 3D (ID 4)
         if 4 in programas_ids:
             contenido_opciones.append({
-                'titulo': 'Impresión 3D',
+                'titulo': 'Diseño y Fabricación Digital (Impresión 3D)',
                 'clave': '3D-Dpi#$*203g',
                 'link': 'https://politecnico.ar/campus/login/index.php'
             })
 
-        # Opción C: CODE 3 (ID 1)
+        # Trayecto: Programador de Nivel III / CODE 3 (ID 1)
         if 1 in programas_ids:
-            especificos = []
-            if 'Programación I' in bloques_nombres:
-                especificos.append({'nombre': 'Programación I', 'clave': 'Prog12025CFP'})
-            if 'Base de Datos' in bloques_nombres:
-                especificos.append({'nombre': 'Base de Datos', 'clave': 'BaseDatos2025CFP'})
-            if 'Relaciones Laborales' in bloques_nombres:
-                especificos.append({'nombre': 'Relaciones Laborales', 'clave': 'ReLab2025CFP'})
-            
-            # Si no detectamos bloques específicos pero está en el programa, mostramos todos por las dudas
-            if not especificos:
-                especificos = [
+            contenido_opciones.append({
+                'titulo': 'CODE 3 (Trayecto de Programación)',
+                'especificos': [
                     {'nombre': 'Programación I', 'clave': 'Prog12025CFP'},
                     {'nombre': 'Base de Datos', 'clave': 'BaseDatos2025CFP'},
                     {'nombre': 'Relaciones Laborales', 'clave': 'ReLab2025CFP'}
-                ]
-
-            contenido_opciones.append({
-                'titulo': 'CODE 3 (Trayecto de Programación)',
-                'especificos': especificos,
+                ],
                 'link': 'https://politecnico.ar/campus/login/index.php',
                 'nota_programacion_ii': True
+            })
+
+        # Trayecto: Sistemas de Representación (ID 3) - Opcional si no tenía clave específica
+        if 3 in programas_ids:
+             contenido_opciones.append({
+                'titulo': 'Sistemas de Representación',
+                'clave': 'Sist-Rep2025', # Clave genérica o placeholder
+                'link': 'https://politecnico.ar/campus/login/index.php'
             })
 
         context = {
@@ -86,19 +117,21 @@ def enviar_correo_bienvenida(estudiante_id: int):
         }
 
         html_content = render_to_string('emails/bienvenida_campus.html', context)
-        text_content = strip_tags(html_content)
-
-        msg = EmailMultiAlternatives(
-            subject='¡Bienvenido/a! Ya puedes comenzar tu cursada virtual en el CFP',
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[estudiante.email]
-        )
-        msg.attach_alternative(html_content, "text/html")
-        msg.send()
-        logger.info(f"Correo de bienvenida enviado a {estudiante.email}")
+        
+        # Crear el mensaje
+        message = MIMEText(html_content, 'html')
+        message['to'] = estudiante.email
+        message['from'] = settings.DEFAULT_FROM_EMAIL
+        message['subject'] = '¡Bienvenido/a! Ya puedes comenzar tu cursada virtual en el CFP'
+        
+        # Codificar en base64
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        
+        # Enviar
+        service.users().messages().send(userId='me', body={'raw': raw}).execute()
+        logger.info(f"Correo OAuth2 enviado a {estudiante.email}")
         return True
 
     except Exception as e:
-        logger.error(f"Error al enviar correo de bienvenida al estudiante {estudiante_id}: {str(e)}")
+        logger.error(f"Error Gmail API: {str(e)}")
         return False
