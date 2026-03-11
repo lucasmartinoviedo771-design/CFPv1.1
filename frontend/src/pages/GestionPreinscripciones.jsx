@@ -366,49 +366,36 @@ export default function GestionPreinscripciones() {
                                                                     <div className="p-3 rounded-lg border border-red-500/30 text-red-300 bg-red-900/20 text-xs">DNI Tutor no cargado</div>
                                                                 )}
 
-                                                                <SectionDivider title="Autorización Parental" icon={UploadCloud} />
-                                                                {viewStudent.nota_parental_firmada ? (
+                                                                <SectionDivider title="Autorización Parental" icon={UserCheck} />
+                                                                {viewStudent.autorizacion_status === 'DIGITAL' ? (
+                                                                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl">
+                                                                        <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm mb-2">
+                                                                            <CheckCircle size={16} /> Firma Digital Validada
+                                                                        </div>
+                                                                        <div className="text-[10px] text-emerald-400/70 mb-3">
+                                                                            {viewStudent.autorizacion_fecha && new Date(viewStudent.autorizacion_fecha).toLocaleString()}
+                                                                        </div>
+                                                                        <Button
+                                                                            size="sm"
+                                                                            fullWidth
+                                                                            as="a"
+                                                                            href={getMediaUrl(viewStudent.autorizacion_selfie)}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white"
+                                                                            startIcon={<Eye size={14} />}
+                                                                        >
+                                                                            VER SELFIE DE FIRMA
+                                                                        </Button>
+                                                                    </div>
+                                                                ) : viewStudent.nota_parental_firmada ? (
                                                                     <a href={getMediaUrl(viewStudent.nota_parental_firmada)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-emerald-500/20 hover:bg-emerald-500/40 p-3 rounded-lg text-emerald-300 transition-all border border-emerald-500/30">
                                                                         <span className="flex items-center gap-2"><CheckCircle size={18} /> Nota Autorización OK</span>
                                                                         <Download size={18} />
                                                                     </a>
                                                                 ) : (
-                                                                    <div className="space-y-2">
-                                                                        <div className="p-3 rounded-lg border border-dashed border-indigo-500/50 text-indigo-300 text-center text-xs">
-                                                                            Esperando recepción de nota firmada
-                                                                        </div>
-                                                                        <input
-                                                                            type="file"
-                                                                            id="upload-nota"
-                                                                            className="hidden"
-                                                                            onChange={async (e) => {
-                                                                                const f = e.target.files?.[0];
-                                                                                if (!f) return;
-                                                                                setApproving(true);
-                                                                                try {
-                                                                                    const fd = new FormData();
-                                                                                    fd.append('nota_parental_firmada', f);
-                                                                                    await apiClientV2.post(`/estudiantes/${viewStudent.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-                                                                                    setFeedback({ open: true, message: "Nota guardada con éxito.", severity: "success" });
-                                                                                    refetch();
-                                                                                    setViewStudent(null);
-                                                                                } catch (err) {
-                                                                                    setFeedback({ open: true, message: "Error al subir nota.", severity: "error" });
-                                                                                } finally {
-                                                                                    setApproving(false);
-                                                                                }
-                                                                            }}
-                                                                        />
-                                                                        <Button
-                                                                            size="sm"
-                                                                            variant="outline"
-                                                                            fullWidth
-                                                                            onClick={() => document.getElementById('upload-nota').click()}
-                                                                            className="text-xs border-indigo-500/50 hover:bg-indigo-500/20"
-                                                                            startIcon={<Download size={14} className="rotate-180" />}
-                                                                        >
-                                                                            Subir nota recibida
-                                                                        </Button>
+                                                                    <div className="p-3 rounded-lg border border-dashed border-red-500/50 text-red-300 text-center text-xs">
+                                                                        Esperando recepción de firma digital
                                                                     </div>
                                                                 )}
                                                             </div>

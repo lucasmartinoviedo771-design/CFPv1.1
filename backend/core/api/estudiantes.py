@@ -117,9 +117,9 @@ def bulk_approve(request, data: BulkIdsIn):
         from core.models import Inscripcion
         Inscripcion.objects.filter(
             estudiante_id__in=estudiantes_ids,
-            estado=Inscripcion.INSCRIPTO
+            estado=Inscripcion.PREINSCRIPTO
         ).update(
-            estado=Inscripcion.ACTIVO,
+            estado=Inscripcion.CURSANDO,
             updated_at=timezone.now()
         )
         

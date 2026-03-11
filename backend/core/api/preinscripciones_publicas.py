@@ -606,7 +606,7 @@ def crear_preinscripcion_publica(request):
                 estudiante=estudiante,
                 cohorte=cohorte,
                 modulo_id=modulo_inicial.id,
-                estado=Inscripcion.INSCRIPTO,
+                estado=Inscripcion.PREINSCRIPTO,
             )
             inscripciones_creadas.append(created.id)
 

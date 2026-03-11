@@ -406,24 +406,29 @@ class Examen(TimeStamped):
         ]
 
 class Inscripcion(TimeStamped):
-    INSCRIPTO = "INSCRIPTO"
-    ACTIVO = "ACTIVO"
+    PREINSCRIPTO = "PREINSCRIPTO"
+    CURSANDO = "CURSANDO"
     INACTIVO = "INACTIVO"
     LIBRE = "LIBRE"
     PAUSADO = "PAUSADO"
     EGRESADO = "EGRESADO"
+    APROBADO = "APROBADO"
+    DESAPROBADO = "DESAPROBADO"
+    
     ESTADOS = [
-        (INSCRIPTO, "Inscripto"),
-        (ACTIVO, "Activo"),
+        (PREINSCRIPTO, "Preinscripto"),
+        (CURSANDO, "Cursando"),
         (INACTIVO, "Inactivo"),
         (LIBRE, "Libre"),
         (PAUSADO, "Pausado"),
         (EGRESADO, "Egresado"),
+        (APROBADO, "Aprobado"),
+        (DESAPROBADO, "Desaprobado"),
     ]
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE, related_name="inscripciones")
     cohorte = models.ForeignKey(Cohorte, on_delete=models.CASCADE, related_name="inscripciones")
     modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name="inscripciones", null=True, blank=True)
-    estado = models.CharField(max_length=10, choices=ESTADOS, default=INSCRIPTO)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default=PREINSCRIPTO)
     class Meta:
         unique_together = ("estudiante","cohorte", "modulo")
         indexes = [models.Index(fields=["cohorte"])]

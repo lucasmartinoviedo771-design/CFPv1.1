@@ -65,64 +65,62 @@ class EvaluacionService:
     def puede_rendir_final_sincronico(estudiante, bloque):
         """
         Verifica si un estudiante puede rendir el Final Sincrónico del bloque.
-        
-        Reglas:
-        1. Debe tener aprobado el Final Virtual del mismo bloque
-        2. El Virtual debe ser del "ciclo actual" (no invalidado por desaprobación previa)
-        3. Si desaprobó un Sincrónico después del Virtual, debe volver a rendir Virtual
-        
-        Args:
-            estudiante: Instancia de Estudiante
-            bloque: Instancia de Bloque
-            
-        Returns:
-            dict con:
-                - habilitado: bool
-                - virtual: Nota del virtual que habilita (si existe)
-                - mensaje: str con explicación
-            
-        Raises:
-            ValidationError si no está habilitado
         """
-        # Buscar última nota de Final Virtual para este bloque
-        ultima_virtual = Nota.objects.filter(
-            estudiante=estudiante,
-            examen__bloque=bloque,
-            examen__tipo_examen=Examen.FINAL_VIRTUAL
-        ).order_by('-fecha_calificacion').first()
-        
-        if not ultima_virtual:
-            raise ValidationError(
-                f"El estudiante debe rendir primero el Final Virtual del bloque '{bloque.nombre}'"
-            )
-        
-        if not ultima_virtual.aprobado:
-            raise ValidationError(
-                f"El estudiante debe aprobar el Final Virtual del bloque '{bloque.nombre}' "
-                f"(nota actual: {ultima_virtual.calificacion})"
-            )
-        # Verificar que no haya reprobado un Sincrónico posterior a este Virtual
-        from django.utils import timezone
-        ref_date = ultima_virtual.fecha_calificacion or timezone.now()
-        sinc_posterior_reprobado = Nota.objects.filter(
-            estudiante=estudiante,
-            examen__bloque=bloque,
-            examen__tipo_examen=Examen.FINAL_SINC,
-            fecha_calificacion__gt=ref_date,
-            aprobado=False
+        # Verificar si existe un Examen Virtual configurado para el bloque
+        existe_virtual = Examen.objects.filter(
+            bloque=bloque, 
+            tipo_examen=Examen.FINAL_VIRTUAL
         ).exists()
-        
-        if sinc_posterior_reprobado:
-            raise ValidationError(
-                f"El estudiante desaprobó un intento de Final Sincrónico después del último Virtual aprobado. "
-                f"Debe volver a rendir el Final Virtual del bloque '{bloque.nombre}'"
-            )
-        
-        return {
-            'habilitado': True,
-            'virtual': ultima_virtual,
-            'mensaje': 'El estudiante puede rendir el Final Sincrónico'
-        }
+
+        if existe_virtual:
+            # Buscar última nota de Final Virtual para este bloque
+            ultima_virtual = Nota.objects.filter(
+                estudiante=estudiante,
+                examen__bloque=bloque,
+                examen__tipo_examen=Examen.FINAL_VIRTUAL
+            ).order_by('-fecha_calificacion').first()
+            
+            if not ultima_virtual:
+                raise ValidationError(
+                    f"El estudiante debe rendir primero el Final Virtual del bloque '{bloque.nombre}'"
+                )
+            
+            if not ultima_virtual.aprobado:
+                raise ValidationError(
+                    f"El estudiante debe aprobar el Final Virtual del bloque '{bloque.nombre}' "
+                    f"(nota actual: {ultima_virtual.calificacion})"
+                )
+                
+            # Verificar que no haya reprobado un Sincrónico posterior a este Virtual
+            from django.utils import timezone
+            ref_date = ultima_virtual.fecha_calificacion or timezone.now()
+            sinc_posterior_reprobado = Nota.objects.filter(
+                estudiante=estudiante,
+                examen__bloque=bloque,
+                examen__tipo_examen=Examen.FINAL_SINC,
+                fecha_calificacion__gt=ref_date,
+                aprobado=False
+            ).exists()
+            
+            if sinc_posterior_reprobado:
+                raise ValidationError(
+                    f"El estudiante desaprobó un intento de Final Sincrónico después del último Virtual aprobado. "
+                    f"Debe volver a rendir el Final Virtual del bloque '{bloque.nombre}'"
+                )
+            
+            return {
+                'habilitado': True,
+                'virtual': ultima_virtual,
+                'mensaje': 'El estudiante puede rendir el Final Sincrónico'
+            }
+        else:
+            # Si no hay Final Virtual, verificar si cumple las condiciones equivalentes (los parciales)
+            EvaluacionService.puede_rendir_final_virtual(estudiante, bloque)
+            return {
+                'habilitado': True,
+                'virtual': None,
+                'mensaje': 'El estudiante puede rendir el Final Sincrónico directamente (sin Final Virtual)'
+            }
     
     @staticmethod
     @transaction.atomic
@@ -186,6 +184,36 @@ class EvaluacionService:
                 examen=examen_sinc,
                 es_nota_definitiva=True
             ).exclude(id=nota.id).update(es_nota_definitiva=False)
+            
+            # --- LÓGICA DE APROBACIÓN DE BLOQUE Y EGRESO ---
+            # Marcar inscripciones activas (CURSANDO o PREINSCRIPTO) de los modulos de este bloque a APROBADO
+            Inscripcion.objects.filter(
+                estudiante=estudiante,
+                modulo__bloque=examen_sinc.bloque
+            ).exclude(
+                estado__in=[Inscripcion.EGRESADO, Inscripcion.INACTIVO, Inscripcion.LIBRE, Inscripcion.PAUSADO, Inscripcion.DESAPROBADO]
+            ).update(estado=Inscripcion.APROBADO)
+            
+            # Chequear si egresó de todo el programa
+            programa = examen_sinc.bloque.programa
+            if programa:
+                todos_bloques_id = set(programa.bloques.values_list('id', flat=True))
+                bloques_aprobados_id = set(Bloque.objects.filter(
+                    programa=programa,
+                    examenes__tipo_examen=Examen.FINAL_SINC,
+                    examenes__notas__estudiante=estudiante,
+                    examenes__notas__aprobado=True,
+                    examenes__notas__es_nota_definitiva=True
+                ).values_list('id', flat=True))
+                
+                if todos_bloques_id and todos_bloques_id.issubset(bloques_aprobados_id):
+                    # Es EGRESADO del Programa!
+                    Inscripcion.objects.filter(
+                        estudiante=estudiante,
+                        modulo__bloque__programa=programa
+                    ).exclude(
+                        estado__in=[Inscripcion.INACTIVO, Inscripcion.LIBRE]
+                    ).update(estado=Inscripcion.EGRESADO)
         
         return nota
     
@@ -239,6 +267,10 @@ class EvaluacionService:
             if insc_actual:
                 cohorte_actual = insc_actual.cohorte
                 
+                # Actualizar el estado de la inscripción al módulo que acaba de rendir
+                insc_actual.estado = Inscripcion.APROBADO if aprobado else Inscripcion.DESAPROBADO
+                insc_actual.save(update_fields=['estado'])
+                
                 # Buscar la siguiente cohorte (en el tiempo) para este mismo programa/bloque
                 siguiente_cohorte = Cohorte.objects.filter(
                     programa=cohorte_actual.programa,
@@ -264,7 +296,7 @@ class EvaluacionService:
                             estudiante=estudiante,
                             cohorte=siguiente_cohorte,
                             modulo=modulo_destino,
-                            defaults={'estado': Inscripcion.ACTIVO}
+                            defaults={'estado': Inscripcion.CURSANDO}
                         )
 
         return nota

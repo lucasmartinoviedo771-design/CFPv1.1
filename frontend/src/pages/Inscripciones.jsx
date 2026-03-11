@@ -237,7 +237,7 @@ export default function Inscripciones() {
                     estudiante_id: Number(selectedStudent),
                     cohorte_id: cohorteId,
                     modulo_id: moduloId,
-                    estado: "ACTIVO",
+                    estado: "CURSANDO",
                 });
             });
         });
@@ -674,22 +674,25 @@ export default function Inscripciones() {
                                                             onChange={(e) => setEditingEstado(e.target.value)}
                                                             className="bg-indigo-900 border border-indigo-500/50 text-white text-sm rounded px-2 py-1 w-full"
                                                         >
-                                                            <option value="INSCRIPTO">INSCRIPTO</option>
-                                                            <option value="ACTIVO">ACTIVO</option>
+                                                            <option value="PREINSCRIPTO">PREINSCRIPTO</option>
+                                                            <option value="CURSANDO">CURSANDO</option>
                                                             <option value="INACTIVO">INACTIVO</option>
                                                             <option value="LIBRE">LIBRE</option>
                                                             <option value="PAUSADO">PAUSADO</option>
                                                             <option value="EGRESADO">EGRESADO</option>
+                                                            <option value="APROBADO">APROBADO</option>
+                                                            <option value="DESAPROBADO">DESAPROBADO</option>
                                                         </select>
                                                     ) : (
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${r.estado === 'ACTIVO' ? 'bg-green-500/20 text-green-400' :
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${r.estado === 'CURSANDO' ? 'bg-green-500/20 text-green-400' :
                                                             r.estado === 'INACTIVO' ? 'bg-red-500/20 text-red-400' :
                                                                 r.estado === 'LIBRE' ? 'bg-yellow-500/20 text-yellow-500' :
-                                                                    r.estado === 'INSCRIPTO' ? 'bg-blue-500/20 text-blue-400' :
+                                                                    r.estado === 'PREINSCRIPTO' ? 'bg-blue-500/20 text-blue-400' :
                                                                         r.estado === 'EGRESADO' ? 'bg-purple-500/20 text-purple-400' :
                                                                             r.estado === 'PAUSADO' ? 'bg-orange-500/20 text-orange-400' :
-                                                                                'bg-gray-700 text-gray-400'
-                                                            }`}>
+                                                                                r.estado === 'APROBADO' ? 'bg-teal-500/20 text-teal-400' :
+                                                                                    r.estado === 'DESAPROBADO' ? 'bg-rose-500/20 text-rose-400' :
+                                                                                        'bg-indigo-500/20 text-indigo-400'}`}>
                                                             {r.estado}
                                                         </span>
                                                     )}
@@ -730,7 +733,7 @@ export default function Inscripciones() {
                                                                     </button>
                                                                 )}
                                                                 <button
-                                                                    onClick={() => { setEditingInscripcionId(r.id); setEditingEstado(r.estado || 'ACTIVO'); }}
+                                                                onClick={() => { setEditingInscripcionId(r.id); setEditingEstado(r.estado || 'CURSANDO'); }}
                                                                     className="p-1 hover:text-blue-400 transition-colors"
                                                                     title="Editar estado"
                                                                 >

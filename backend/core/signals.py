@@ -49,5 +49,5 @@ def activate_inscripciones_on_regular(sender, instance, **kwargs):
         from .models import Inscripcion
         Inscripcion.objects.filter(
             estudiante=instance,
-            estado=Inscripcion.INSCRIPTO
-        ).update(estado=Inscripcion.ACTIVO)
+            estado=Inscripcion.PREINSCRIPTO
+        ).update(estado=Inscripcion.CURSANDO)

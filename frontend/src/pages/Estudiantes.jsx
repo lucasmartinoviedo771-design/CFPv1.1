@@ -623,31 +623,9 @@ export default function Estudiantes() {
                                                     <Check size={18} /> Autorización Parental OK
                                                 </a>
                                             ) : (
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="flex items-center gap-2 bg-red-900/20 px-4 py-2 rounded-lg text-red-300 border border-red-500/20 italic text-xs">
-                                                        <AlertCircle size={14} /> Falta Autorización Firmada
-                                                    </div>
-                                                    <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-3 py-1.5 rounded-full text-center transition-all flex items-center justify-center gap-1">
-                                                        <Download size={12} className="rotate-180" /> SUBIR NOTA ESCANEADA
-                                                        <input
-                                                            type="file"
-                                                            className="hidden"
-                                                            onChange={async (e) => {
-                                                                const f = e.target.files?.[0];
-                                                                if (!f) return;
-                                                                try {
-                                                                    const fd = new FormData();
-                                                                    fd.append('nota_parental_firmada', f);
-                                                                    await apiClientV2.post(`/estudiantes/${viewData.student.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-                                                                    setFeedback({ open: true, message: "Nota de autorización guardada.", severity: "success" });
-                                                                    handleOpenDetail(viewData.student); // Refrescar modal
-                                                                } catch {
-                                                                    setFeedback({ open: true, message: "Error al subir la nota.", severity: "error" });
-                                                                }
-                                                            }}
-                                                        />
-                                                    </label >
-                                                </div >
+                                                <div className="flex items-center gap-2 bg-red-900/20 px-4 py-2 rounded-lg text-red-300 border border-red-500/20 italic text-xs">
+                                                    <AlertCircle size={14} /> Falta Autorización Firmada
+                                                </div>
                                             )}
 
                                             {viewData.student.autorizacion_status === 'DIGITAL' && (

@@ -46,7 +46,7 @@ class Command(BaseCommand):
                             estudiante=estudiante,
                             cohorte=siguiente_cohorte,
                             modulo=modulo_destino,
-                            defaults={'estado': Inscripcion.ACTIVO}
+                            defaults={'estado': Inscripcion.CURSANDO}
                         )
                         if created:
                             self.stdout.write(self.style.SUCCESS(f'Inscrito: {estudiante} al {modulo_destino} en la {siguiente_cohorte}'))

@@ -13,6 +13,7 @@ export default function HistoricoCursos() {
   const [selectedBloque, setSelectedBloque] = useState('');
   const [selectedCohorte, setSelectedCohorte] = useState('');
   const [tipoDato, setTipoDato] = useState('notas');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,12 @@ export default function HistoricoCursos() {
     (async () => {
       try {
         const [cohortesRes, bloquesRes] = await Promise.all([
-          apiClient.get('/inscripciones/cohortes', { params: { programa_id: selectedPrograma || undefined } }),
+          apiClient.get('/inscripciones/cohortes', { 
+            params: { 
+              programa_id: selectedPrograma || undefined,
+              bloque_id: selectedBloque || undefined
+            } 
+          }),
           apiClient.get('/bloques', { params: { programa_id: selectedPrograma || undefined } }),
         ]);
         setCohortes(Array.isArray(cohortesRes.data) ? cohortesRes.data : []);
@@ -44,7 +50,7 @@ export default function HistoricoCursos() {
         setError("No se pudieron cargar cohortes y bloques.");
       }
     })();
-  }, [selectedPrograma]);
+  }, [selectedPrograma, selectedBloque]);
 
   const handleBuscar = () => {
     setLoading(true);
@@ -125,7 +131,10 @@ export default function HistoricoCursos() {
               label="Bloque"
               id="bloque-select"
               value={selectedBloque}
-              onChange={e => setSelectedBloque(e.target.value)}
+              onChange={e => {
+                setSelectedBloque(e.target.value);
+                setSelectedCohorte('');
+              }}
               options={[{ value: '', label: 'Todos' }, ...bloquesOptions]}
               className="bg-indigo-950/50 border-indigo-500/30 text-white"
             />
@@ -174,10 +183,34 @@ export default function HistoricoCursos() {
       )}
 
       {/* Resultados */}
-      {data && (
-        <Card className="bg-indigo-900/20 border-indigo-500/30 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-indigo-500/30">
+      {data && (() => {
+        const filteredRows = (data.rows || []).filter(row => {
+          if (!searchTerm) return true;
+          const searchLower = searchTerm.toLowerCase();
+          const estudiante = String(row.Estudiante || '').toLowerCase();
+          const dni = String(row.DNI || '').toLowerCase();
+          return estudiante.includes(searchLower) || dni.includes(searchLower);
+        });
+
+        return (
+          <Card className="bg-indigo-900/20 border-indigo-500/30 overflow-hidden">
+            <div className="p-4 border-b border-indigo-500/30 bg-indigo-950/30 flex justify-between items-center">
+              <div className="relative w-full md:w-96">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Filtrar por Apellido, Nombre o DNI..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-indigo-900/40 border border-indigo-500/30 rounded-lg py-2 pl-10 pr-4 text-white placeholder-indigo-400/50 focus:outline-none focus:border-brand-cyan transition-colors"
+                />
+              </div>
+              <span className="text-sm text-indigo-300 hidden md:inline-block">
+                Mostrando {filteredRows.length} resultados
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-indigo-500/30">
               <thead className="bg-indigo-950/50">
                 <tr>
                   {data.headers && data.headers.map(header => (
@@ -188,7 +221,7 @@ export default function HistoricoCursos() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-indigo-500/10 bg-transparent">
-                {data.rows && data.rows.map((row, idx) => (
+                {filteredRows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-white/5 transition-colors">
                     {data.headers.map(header => (
                       <td key={`${row.ID}-${header}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
@@ -199,14 +232,15 @@ export default function HistoricoCursos() {
                 ))}
               </tbody>
             </table>
-            {(!data.rows || data.rows.length === 0) && (
+            {filteredRows.length === 0 && (
               <div className="p-8 text-center text-indigo-300">
-                No se encontraron datos para la selección.
+                {searchTerm ? 'No hay resultados para la búsqueda actual.' : 'No se encontraron datos para la selección.'}
               </div>
             )}
           </div>
         </Card>
-      )}
+        );
+      })()}
     </div>
   );
 }

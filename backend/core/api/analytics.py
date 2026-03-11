@@ -420,12 +420,11 @@ def courses_graph(
             ),
             estado_inscripto=Count(
                 "inscripciones__estudiante_id",
-                filter=Q(inscripciones__estado=Inscripcion.INSCRIPTO),
-                distinct=True,
+                filter=Q(inscripciones__estado=Inscripcion.PREINSCRIPTO),
             ),
-            estado_activo=Count(
-                "inscripciones__estudiante_id",
-                filter=Q(inscripciones__estado=Inscripcion.ACTIVO),
+            Total_Activos=Count(
+                "inscripciones",
+                filter=Q(inscripciones__estado=Inscripcion.CURSANDO),
                 distinct=True,
             ),
             estado_pausado=Count(
