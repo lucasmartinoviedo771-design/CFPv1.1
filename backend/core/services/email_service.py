@@ -97,7 +97,7 @@ def enviar_correo_bienvenida(estudiante_id: int):
                     {'nombre': 'Base de Datos', 'clave': 'BaseDatos2025CFP'},
                     {'nombre': 'Relaciones Laborales', 'clave': 'ReLab2025CFP'}
                 ],
-                'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12',
+                'link': 'https://politecnico.ar/campus/course/index.php?categoryid=14',
                 'nota_programacion_ii': True
             })
 
