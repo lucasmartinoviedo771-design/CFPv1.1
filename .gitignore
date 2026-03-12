@@ -86,3 +86,8 @@ logs/
 # macOS
 .AppleDouble
 .LSOverride
+
+# Google API Credentials
+backend/core/resources/gmail_credentials.json
+backend/media/tokens/
+backend/generate_gmail_token.py

@@ -112,7 +112,7 @@ def enviar_correo_bienvenida(estudiante_id: int):
         context = {
             'nombre': estudiante.nombre,
             'opciones': contenido_opciones,
-            'campus_url': 'https://politecnico.ar/campus/login/index.php',
+            'campus_url': 'https://politecnico.ar/campus/course/index.php?categoryid=12',
             'tutorial_url': 'https://drive.google.com/file/d/1yeBuJ3bHig6-pLYmiqZ0UW1mx9r81Mpe/view'
         }
 
