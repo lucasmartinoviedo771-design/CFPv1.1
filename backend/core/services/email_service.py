@@ -109,10 +109,13 @@ def enviar_correo_bienvenida(estudiante_id: int):
                 'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12'
             })
 
+        # Definimos el link principal según el programa prioritario (prioridad a Programador)
+        main_url = 'https://politecnico.ar/campus/course/index.php?categoryid=14' if 1 in programas_ids else 'https://politecnico.ar/campus/course/index.php?categoryid=12'
+
         context = {
             'nombre': estudiante.nombre,
             'opciones': contenido_opciones,
-            'campus_url': 'https://politecnico.ar/campus/course/index.php?categoryid=12',
+            'campus_url': main_url,
             'tutorial_url': 'https://drive.google.com/file/d/1yeBuJ3bHig6-pLYmiqZ0UW1mx9r81Mpe/view'
         }
 
