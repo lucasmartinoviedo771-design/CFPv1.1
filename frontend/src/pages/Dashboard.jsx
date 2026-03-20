@@ -218,27 +218,6 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Chips de acceso rápido */}
-            <div className="flex flex-wrap gap-2 items-end pb-0.5">
-              {[
-                { label: 'Ene–Dic 2025', desde: '2025-01-01', hasta: '2025-12-31' },
-                { label: 'Ene–Dic 2026', desde: '2026-01-01', hasta: '2026-12-31' },
-                { label: '2026 hasta hoy', desde: '2026-01-01', hasta: new Date().toISOString().slice(0, 10) },
-                { label: 'Todo', desde: '', hasta: '' },
-              ].map((preset) => (
-                <button
-                  key={preset.label}
-                  onClick={() => { setFechaDesde(preset.desde); setFechaHasta(preset.hasta); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                    fechaDesde === preset.desde && fechaHasta === preset.hasta
-                      ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.4)]'
-                      : 'bg-indigo-900/40 border-indigo-500/30 text-indigo-300 hover:bg-indigo-700/40 hover:text-white'
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
 
             {/* Indicador de rango activo */}
             {(fechaDesde || fechaHasta) && (
