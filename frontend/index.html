@@ -14,6 +14,73 @@
     <title>CFP - Gestión Académica</title>
   </head>
   <body>
+    <script>
+      (function() {
+        window.addEventListener('error', function(e) {
+          var messages = [
+            'Importing a module script failed',
+            'error loading dynamically imported module',
+            'Loading chunk',
+            'CSS chunk load error'
+          ];
+          var isChunkError = false;
+          for (var i = 0; i < messages.length; i++) {
+            if (e.message && e.message.indexOf(messages[i]) !== -1) {
+              isChunkError = true;
+              break;
+            }
+          }
+
+          if (isChunkError) {
+            var now = Date.now();
+            var retryData;
+            try {
+              retryData = JSON.parse(sessionStorage.getItem('cfp_reload_retry') || '{"count":0,"last":0}');
+            } catch (err) {
+              retryData = {"count":0,"last":0};
+            }
+            
+            if (now - retryData.last > 60000) {
+              retryData.count = 0;
+            }
+            
+            if (retryData.count < 2) {
+              retryData.count++;
+              retryData.last = now;
+              sessionStorage.setItem('cfp_reload_retry', JSON.stringify(retryData));
+              
+              document.body.innerHTML = 
+                '<div style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: white; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: \'Outfit\', sans-serif; text-align: center;">' +
+                  '<div style="width: 48px; height: 48px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 24px;"></div>' +
+                  '<h2 style="font-weight: 600; font-size: 1.5rem; letter-spacing: -0.025em; margin: 0;">Actualizando sistema</h2>' +
+                  '<p style="color: #94a3b8; margin-top: 8px; font-size: 0.875rem;">Obteniendo la última versión estable...</p>' +
+                  '<style>' +
+                    '@keyframes spin { to { transform: rotate(360deg); } }' +
+                    '@import url(\'https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap\');' +
+                  '</style>' +
+                '</div>';
+              
+              setTimeout(function() {
+                window.location.reload();
+              }, 600);
+            } else {
+              document.body.innerHTML = 
+                '<div style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: white; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: \'Outfit\', sans-serif; padding: 20px;">' +
+                  '<div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); padding: 40px; border-radius: 24px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">' +
+                    '<div style="background: #fee2e2; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">' +
+                      '<svg style="width: 28px; height: 28px; color: #ef4444;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>' +
+                    '</div>' +
+                    '<h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; color: #f8fafc;">Error de conexión</h2>' +
+                    '<p style="color: #94a3b8; line-height: 1.6; margin-bottom: 32px; font-size: 0.9375rem;">No se pudo cargar la última versión. Esto puede deberse a una conexión inestable o a una actualización en progreso.</p>' +
+                    '<button onclick="location.reload()" style="background: #4f46e5; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);">Reintentar Manualmente</button>' +
+                  '</div>' +
+                  '<style>@import url(\'https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap\');</style>' +
+                '</div>';
+            }
+          }
+        }, true);
+      })();
+    </script>
     <noscript>Necesitas habilitar JavaScript para ejecutar esta aplicación.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/index.jsx"></script>
