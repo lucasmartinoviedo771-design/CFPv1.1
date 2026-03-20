@@ -1,46 +1,56 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
+import { createPortal } from "react-dom";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, Cell } from 'recharts';
 import { Select, Button } from '../components/UI';
-import { Users, BookOpen, UserCheck } from 'lucide-react';
+import { Users, BookOpen, UserCheck, GraduationCap, X, ChevronRight, TrendingUp } from 'lucide-react';
 import { getDashboardStats } from '../services/dashboardService';
-import { getEnrollments } from '../services/analyticsService';
 import { listProgramas } from '../services/programasService';
 import api from '../api/client';
 
-const KPICard = ({ title, value, icon: Icon, color }) => (
-  <div className="relative overflow-hidden rounded-xl bg-indigo-900/20 border border-indigo-500/30 backdrop-blur-sm p-6">
+const KPICard = ({ title, value, icon: Icon, color, onClick }) => (
+  <button 
+    onClick={onClick}
+    className={`w-full text-left relative overflow-hidden rounded-xl bg-indigo-900/20 border border-indigo-500/30 backdrop-blur-sm p-6 transition-all hover:bg-indigo-800/30 hover:scale-[1.02] active:scale-95 group ${onClick ? 'cursor-pointer' : 'cursor-default'}`}
+  >
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-sm font-medium text-indigo-300 truncate">{title}</p>
+        <p className="text-sm font-medium text-indigo-300 truncate group-hover:text-white transition-colors">{title}</p>
         <p className="mt-2 text-3xl font-extrabold text-white tracking-tight drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">{value}</p>
       </div>
-      <div className={`p-3 rounded-lg bg-white/5 border border-white/10 ${color.replace('text-', 'text-glow-')}`}>
+      <div className={`p-3 rounded-lg bg-white/5 border border-white/10 ${color.replace('text-', 'text-glow-')} group-hover:border-white/20 transition-all`}>
         <Icon className={`h-6 w-6 ${color}`} />
       </div>
     </div>
+    {onClick && (
+      <div className="mt-4 flex items-center text-xs font-semibold text-indigo-400 group-hover:text-white transition-colors">
+        Ver desglose <ChevronRight size={14} className="ml-1" />
+      </div>
+    )}
     <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full opacity-20 blur-2xl ${color.replace('text-', 'bg-')}`}></div>
-  </div>
+  </button>
 );
 
-function GraduationCap(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-      <path d="M6 12v5c3 3 9 3 12 0v-5" />
-    </svg>
+const Modal = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-[#0f172a] border border-indigo-500/30 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-indigo-500/20 flex justify-between items-center bg-indigo-950/40">
+          <h3 className="text-2xl font-bold text-white">{title}</h3>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-indigo-300 hover:text-white">
+            <X size={24} />
+          </button>
+        </div>
+        <div className="p-8 overflow-y-auto custom-scrollbar bg-gradient-to-b from-indigo-950/20 to-transparent">
+          {children}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
-}
+};
+
+
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -53,6 +63,10 @@ export default function Dashboard() {
   const [programaId, setProgramaId] = useState('');
   const [bloqueId, setBloqueId] = useState('');
   const [cohorteId, setCohorteId] = useState('');
+  const [modalOpen, setModalOpen] = useState(null); // 'activos', 'egresados', 'aprobacion'
+  const [selectedProgramData, setSelectedProgramData] = useState(null); // Para navegación en modal
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -90,22 +104,21 @@ export default function Dashboard() {
           programa_id: programaId || undefined,
           bloque_id: bloqueId || undefined,
           cohorte_id: cohorteId || undefined,
+          fecha_desde: fechaDesde || undefined,
+          fecha_hasta: fechaHasta || undefined,
         };
-        const [statsResponse, enrollmentResponse] = await Promise.all([
+        const [statsResponse] = await Promise.all([
           getDashboardStats(params),
-          getEnrollments({ ...params, group_by: 'month' }),
         ]);
 
         if (!mounted) return;
         setStats(statsResponse);
 
-        const parsedTrend = (enrollmentResponse?.series || []).map((item) => {
-          const parsedDate = item.period ? new Date(item.period) : null;
-          const monthLabel = parsedDate && !Number.isNaN(parsedDate.getTime())
-            ? parsedDate.toLocaleString('es-AR', { month: 'short' })
-            : item.period || 'N/D';
-          return { month: monthLabel, inscritos: item.count };
-        });
+        // Tendencia anual desde el backend
+        const parsedTrend = (statsResponse.yearly_trend || []).map((item) => ({
+          year: item.year,
+          inscritos: item.count
+        }));
         setTrendData(parsedTrend);
       } catch (err) {
         console.error('Error cargando metricas del dashboard', err);
@@ -116,7 +129,7 @@ export default function Dashboard() {
     };
     fetchData();
     return () => { mounted = false; };
-  }, [programaId, bloqueId, cohorteId]);
+  }, [programaId, bloqueId, cohorteId, fechaDesde, fechaHasta]);
 
   if (loading) {
     return (
@@ -148,7 +161,9 @@ export default function Dashboard() {
         <p className="text-indigo-300 mt-1">Resumen de actividad academica y metricas clave.</p>
       </div>
 
-      <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4">
+      {/* BARRA DE FILTROS GLOBAL */}
+      <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4 space-y-4">
+        {/* Fila 1: Programa / Bloque / Cohorte / Exportar */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-end">
           <Select
             label="Programa"
@@ -175,21 +190,113 @@ export default function Dashboard() {
             Exportar Reporte
           </Button>
         </div>
+
+        {/* Fila 2: Rango de fechas global */}
+        <div className="border-t border-indigo-500/20 pt-4">
+          <div className="flex flex-wrap items-end gap-4">
+            {/* Fecha Desde */}
+            <div className="flex flex-col gap-1.5 min-w-[180px]">
+              <label className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Desde</label>
+              <input
+                id="dashboard-fecha-desde"
+                type="date"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+                className="h-11 rounded-lg bg-indigo-900/50 border border-indigo-500/50 text-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent [color-scheme:dark]"
+              />
+            </div>
+
+            {/* Fecha Hasta */}
+            <div className="flex flex-col gap-1.5 min-w-[180px]">
+              <label className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Hasta</label>
+              <input
+                id="dashboard-fecha-hasta"
+                type="date"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+                className="h-11 rounded-lg bg-indigo-900/50 border border-indigo-500/50 text-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent [color-scheme:dark]"
+              />
+            </div>
+
+            {/* Chips de acceso rápido */}
+            <div className="flex flex-wrap gap-2 items-end pb-0.5">
+              {[
+                { label: 'Ene–Dic 2025', desde: '2025-01-01', hasta: '2025-12-31' },
+                { label: 'Ene–Dic 2026', desde: '2026-01-01', hasta: '2026-12-31' },
+                { label: '2026 hasta hoy', desde: '2026-01-01', hasta: new Date().toISOString().slice(0, 10) },
+                { label: 'Todo', desde: '', hasta: '' },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  onClick={() => { setFechaDesde(preset.desde); setFechaHasta(preset.hasta); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                    fechaDesde === preset.desde && fechaHasta === preset.hasta
+                      ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.4)]'
+                      : 'bg-indigo-900/40 border-indigo-500/30 text-indigo-300 hover:bg-indigo-700/40 hover:text-white'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Indicador de rango activo */}
+            {(fechaDesde || fechaHasta) && (
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-xs text-indigo-300 bg-indigo-900/50 border border-indigo-500/30 rounded-full px-3 py-1.5">
+                  📅 {fechaDesde || '∞'} → {fechaHasta || 'Hoy'}
+                </span>
+                <button
+                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
+                  className="text-xs text-red-400 hover:text-red-300 transition-colors font-semibold"
+                >
+                  ✕ Limpiar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <KPICard title="Estudiantes Activos" value={stats.active_students_count ?? 0} icon={Users} color="text-brand-cyan" />
-        <KPICard title="Egresados" value={stats.graduated_students_count ?? 0} icon={GraduationCap} color="text-brand-accent" />
-        <KPICard title="Tasa de Asistencia" value={`${stats.attendance_rate ?? 0}%`} icon={UserCheck} color="text-brand-purple" />
-        <KPICard title="Tasa de Aprobacion" value={`${stats.pass_rate ?? 0}%`} icon={BookOpen} color="text-emerald-400" />
+        <KPICard 
+          title="Estudiantes Activos" 
+          value={stats.active_students_count ?? 0} 
+          icon={Users} 
+          color="text-brand-cyan" 
+          onClick={() => setModalOpen('activos')}
+        />
+        <KPICard 
+          title="Egresados" 
+          value={stats.graduated_students_count ?? 0} 
+          icon={GraduationCap} 
+          color="text-brand-accent" 
+          onClick={() => setModalOpen('egresados')}
+        />
+        <KPICard 
+          title="Tasa de Asistencia" 
+          value={`${stats.attendance_rate ?? 0}%`} 
+          icon={UserCheck} 
+          color="text-brand-purple" 
+        />
+        <KPICard 
+          title="Tasa de Aprobacion" 
+          value={`${stats.pass_rate ?? 0}%`} 
+          icon={BookOpen} 
+          color="text-emerald-400" 
+          onClick={() => setModalOpen('aprobacion')}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-indigo-900/20 border border-indigo-500/30 backdrop-blur-sm rounded-xl p-6 shadow-xl">
-          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+          <h3 className="text-xl font-bold text-white mb-2 flex items-center">
             <span className="w-2 h-8 bg-brand-cyan rounded-full mr-3"></span>
-            Inscripciones por Programa
+            Inscriptos por Programa
           </h3>
+          <p className="text-indigo-400 text-xs mb-6 ml-5">
+            Snapshot de estudiantes únicos con inscripción activa o curso finalizado en cada programa (basado en filtros).
+          </p>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <BarChart data={chartData}>
@@ -203,25 +310,170 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-indigo-900/20 border border-indigo-500/30 backdrop-blur-sm rounded-xl p-6 shadow-xl">
-          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+        <div className="bg-indigo-900/20 border border-indigo-500/30 backdrop-blur-sm rounded-xl p-6 shadow-xl text-white">
+          <h3 className="text-xl font-bold mb-6 flex items-center">
             <span className="w-2 h-8 bg-brand-accent rounded-full mr-3"></span>
-            Tendencia Mensual
+            Tendencia de Inscripciones por Año
           </h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartGridStroke} />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: chartAxisStroke }} />
+                <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fill: chartAxisStroke }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: chartAxisStroke }} />
                 <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#fff' }} />
                 <Legend wrapperStyle={{ color: '#fff' }} />
-                <Line type="monotone" dataKey="inscritos" stroke="#FF6600" strokeWidth={3} dot={{ r: 4, fill: '#FF6600', strokeWidth: 0 }} activeDot={{ r: 7, fill: '#fff', stroke: '#FF6600' }} />
+                <Line name="Inscritos" type="monotone" dataKey="inscritos" stroke="#FF6600" strokeWidth={3} dot={{ r: 4, fill: '#FF6600', strokeWidth: 0 }} activeDot={{ r: 7, fill: '#fff', stroke: '#FF6600' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
+
+      {/* MODALES DE DESGLOSE */}
+      <Modal 
+        isOpen={modalOpen === 'activos' || modalOpen === 'egresados'} 
+        onClose={() => { setModalOpen(null); setSelectedProgramData(null); }}
+        title={modalOpen === 'activos' ? "Desglose: Estudiantes Activos" : "Desglose: Egresados"}
+      >
+        <div className="space-y-6">
+          {!selectedProgramData ? (
+            <div className="bg-white/5 p-6 rounded-xl border border-white/10">
+              <h4 className="text-lg font-bold text-white mb-4 flex items-center">
+                <TrendingUp size={18} className="mr-2 text-brand-cyan" />
+                Seleccione un Programa para ver detalle por Cohorte
+              </h4>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={modalOpen === 'activos' ? stats.active_breakdown : stats.graduated_breakdown} 
+                    layout="vertical"
+                    margin={{ left: 20, right: 30 }}
+                  >
+                    <XAxis type="number" hide />
+                    <YAxis 
+                      dataKey="name" 
+                      type="category" 
+                      width={160} 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={(props) => {
+                        const { x, y, payload } = props;
+                        return (
+                          <g transform={`translate(${x},${y})`}>
+                            <text
+                              x={-10}
+                              y={0}
+                              dy={4}
+                              textAnchor="end"
+                              fill="#94a3b8"
+                              fontSize={12}
+                              className="cursor-pointer hover:fill-white transition-colors"
+                              onClick={() => {
+                                const item = (modalOpen === 'activos' ? stats.active_breakdown : stats.graduated_breakdown)
+                                  .find(d => d.name === payload.value);
+                                if (item) setSelectedProgramData(item);
+                              }}
+                            >
+                              {payload.value}
+                            </text>
+                          </g>
+                        );
+                      }}
+                    />
+                    <Tooltip 
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }} 
+                      contentStyle={tooltipStyle}
+                      formatter={(value) => [`${value} estudiantes`, 'Total']}
+                    />
+                    <Bar 
+                      dataKey="count" 
+                      fill={modalOpen === 'activos' ? "#00ccff" : "#FF6600"} 
+                      radius={[0, 4, 4, 0]} 
+                      barSize={30} 
+                      className="cursor-pointer"
+                      onClick={(data) => {
+                        if (data) setSelectedProgramData(data);
+                      }}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-indigo-400 text-xs mt-4 text-center">Tip: Haga clic en una barra para ver el desglose de cohortes de ese programa.</p>
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <button 
+                onClick={() => setSelectedProgramData(null)}
+                className="mb-6 flex items-center text-sm font-semibold text-brand-cyan hover:text-white transition-colors"
+              >
+                <X size={16} className="mr-1" /> Volver a programas
+              </button>
+              
+              <div className="bg-white/5 p-8 rounded-xl border border-white/20">
+                <h4 className="text-xl font-bold text-white mb-2">{selectedProgramData.name}</h4>
+                <p className="text-indigo-300 text-sm mb-8">Desglose por Cohortes ({selectedProgramData.count} totales)</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedProgramData.cohorts.map((coh, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-indigo-950/40 rounded-lg border border-indigo-500/20 hover:border-brand-cyan/50 transition-colors">
+                      <span className="text-indigo-100 font-medium">{coh.name}</span>
+                      <div className="flex items-center">
+                        <span className="text-xl font-bold text-white mr-2">{coh.count}</span>
+                        <span className="text-xs text-indigo-400">estudiantes</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal 
+        isOpen={modalOpen === 'aprobacion'} 
+        onClose={() => setModalOpen(null)}
+        title="Desglose: Tasa de Aprobación"
+      >
+        <div className="space-y-10">
+          <div className="bg-white/5 p-6 rounded-xl border border-white/10">
+            <h4 className="text-lg font-bold text-white mb-4 flex items-center">
+              Aprobación por Programa
+            </h4>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.pass_breakdown?.by_program}>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} unit="%" />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Tasa de Aprobación']} />
+                  <Bar dataKey="rate" radius={[4, 4, 0, 0]} barSize={40}>
+                    {stats.pass_breakdown?.by_program.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.rate > 70 ? '#10b981' : entry.rate > 50 ? '#f59e0b' : '#ef4444'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white/5 p-6 rounded-xl border border-white/10">
+            <h4 className="text-lg font-bold text-white mb-4 flex items-center">
+              Top 15 Bloques con Mejor Desempeño
+            </h4>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.pass_breakdown?.by_block}>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} unit="%" />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Tasa de Aprobación']} />
+                  <Bar dataKey="rate" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
