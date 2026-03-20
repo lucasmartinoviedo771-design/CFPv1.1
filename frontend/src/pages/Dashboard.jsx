@@ -65,8 +65,14 @@ export default function Dashboard() {
   const [cohorteId, setCohorteId] = useState('');
   const [modalOpen, setModalOpen] = useState(null); // 'activos', 'egresados', 'aprobacion'
   const [selectedProgramData, setSelectedProgramData] = useState(null); // Para navegación en modal
+  // fechaDesde/fechaHasta: estado real que dispara el fetch (solo se actualiza al perder foco)
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  // localFecha*: estado local del input (se actualiza en cada tecla, no dispara fetch)
+  const [localFechaDesde, setLocalFechaDesde] = useState('');
+  const [localFechaHasta, setLocalFechaHasta] = useState('');
+
+  const isDateComplete = (val) => val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val);
 
   useEffect(() => {
     (async () => {
@@ -200,8 +206,12 @@ export default function Dashboard() {
               <input
                 id="dashboard-fecha-desde"
                 type="date"
-                value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
+                value={localFechaDesde}
+                onChange={(e) => setLocalFechaDesde(e.target.value)}
+                onBlur={(e) => {
+                  const v = e.target.value;
+                  if (!v || isDateComplete(v)) setFechaDesde(v);
+                }}
                 className="h-11 rounded-lg bg-indigo-900/50 border border-indigo-500/50 text-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent [color-scheme:dark]"
               />
             </div>
@@ -212,8 +222,12 @@ export default function Dashboard() {
               <input
                 id="dashboard-fecha-hasta"
                 type="date"
-                value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
+                value={localFechaHasta}
+                onChange={(e) => setLocalFechaHasta(e.target.value)}
+                onBlur={(e) => {
+                  const v = e.target.value;
+                  if (!v || isDateComplete(v)) setFechaHasta(v);
+                }}
                 className="h-11 rounded-lg bg-indigo-900/50 border border-indigo-500/50 text-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent [color-scheme:dark]"
               />
             </div>
@@ -226,7 +240,7 @@ export default function Dashboard() {
                   📅 {fechaDesde || '∞'} → {fechaHasta || 'Hoy'}
                 </span>
                 <button
-                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
+                  onClick={() => { setFechaDesde(''); setFechaHasta(''); setLocalFechaDesde(''); setLocalFechaHasta(''); }}
                   className="text-xs text-red-400 hover:text-red-300 transition-colors font-semibold"
                 >
                   ✕ Limpiar
