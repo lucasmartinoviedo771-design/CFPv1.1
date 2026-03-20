@@ -26,13 +26,14 @@ def dashboard_stats(
     if bloque_id:
         inscripciones_qs = inscripciones_qs.filter(modulo__bloque_id=bloque_id)
     if fecha_desde:
-        inscripciones_qs = inscripciones_qs.filter(created_at__date__gte=fecha_desde)
+        inscripciones_qs = inscripciones_qs.filter(cohorte__fecha_inicio__gte=fecha_desde)
     if fecha_hasta:
-        inscripciones_qs = inscripciones_qs.filter(created_at__date__lte=fecha_hasta)
+        inscripciones_qs = inscripciones_qs.filter(cohorte__fecha_inicio__lte=fecha_hasta)
 
     student_ids_qs = inscripciones_qs.values_list("estudiante_id", flat=True).distinct()
     scoped_estudiantes = Estudiante.objects.filter(id__in=student_ids_qs)
-    if not programa_id and not cohorte_id and not bloque_id:
+    # Solo devolver todos los estudiantes si NO hay ningún filtro activo (ni fecha, ni programa, etc.)
+    if not programa_id and not cohorte_id and not bloque_id and not fecha_desde and not fecha_hasta:
         scoped_estudiantes = Estudiante.objects.all()
 
     # "Activos" para el padrón: estudiantes no dados de baja (Regular/Libre).
