@@ -38,12 +38,16 @@ def listar_estudiantes(
     cohorte_id: Optional[int] = None,
     bloque_id: Optional[int] = None,
     modulo_id: Optional[int] = None,
+    programa_id: Optional[int] = None,
+    telefono: Optional[str] = None,
 ):
     qs = Estudiante.objects.all().prefetch_related(
         "inscripciones__cohorte__programa", "inscripciones__cohorte__bloque"
     ).order_by("apellido", "nombre")
     if dni:
         qs = qs.filter(dni__iexact=dni)
+    if telefono:
+        qs = qs.filter(telefono__icontains=telefono)
     if estatus:
         qs = qs.filter(estatus=estatus)
     if anio:
@@ -54,7 +58,10 @@ def listar_estudiantes(
             | Q(nombre__icontains=search)
             | Q(email__icontains=search)
             | Q(dni__icontains=search)
+            | Q(telefono__icontains=search)
         )
+    if programa_id:
+        qs = qs.filter(inscripciones__cohorte__programa_id=programa_id).distinct()
     if cohorte_id:
         qs = qs.filter(inscripciones__cohorte_id=cohorte_id).distinct()
     if bloque_id:

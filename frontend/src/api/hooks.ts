@@ -14,7 +14,16 @@ const keys = {
 };
 
 // Estudiantes
-export const useEstudiantes = (params?: { search?: string; dni?: string; estatus?: string }) =>
+export const useEstudiantes = (params?: { 
+  search?: string; 
+  dni?: string; 
+  estatus?: string; 
+  cohorte_id?: number; 
+  bloque_id?: number; 
+  modulo_id?: number;
+  anio?: string;
+  telefono?: string;
+}) =>
   useQuery({
     queryKey: keys.estudiantes(params),
     queryFn: async () => {

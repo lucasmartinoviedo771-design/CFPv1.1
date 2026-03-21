@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useEstudiantes, useSaveEstudiante } from "../api/hooks";
+import { useEstudiantes, useSaveEstudiante, useProgramas, useBloques, useModulos, useCohortes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
 import { formatDateDisplay, formatDateTimeDisplay } from "../utils/dateFormat";
 import { Card, Select, Button, Input } from '../components/UI';
@@ -43,6 +43,7 @@ const initialFormState = {
     posee_pc: false, posee_conectividad: false, puede_traer_pc: false,
     trabaja: false, lugar_trabajo: "",
     dni_digitalizado: "",
+    titulo_secundario_digitalizado: "",
     tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
     dni_tutor_digitalizado: "", nota_parental_firmada: ""
 };
@@ -60,7 +61,17 @@ const calculateAge = (birthDate) => {
 };
 
 export default function Estudiantes() {
-    const [filters, setFilters] = useState({ dni: "", nombre_apellido: "", estatus: "", anio: "" });
+    const [filters, setFilters] = useState({ 
+        dni: "", 
+        nombre_apellido: "", 
+        telefono: "", // <--- Added this line
+        estatus: "", 
+        anio: "2026",
+        programa_id: "",
+        bloque_id: "",
+        modulo_id: "",
+        cohorte_id: ""
+    });
     const [ordering, setOrdering] = useState({ field: "apellido", direction: "asc" });
     const [qrModal, setQrModal] = useState({ open: false, url: "", studentName: "" });
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -81,6 +92,7 @@ export default function Estudiantes() {
         estatus: ""
     });
     const [exportLoading, setExportLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState("list"); // "list" or "add"
     const formCardRef = useRef(null);
 
     const { data: estudiantes = [], isLoading, refetch } = useEstudiantes({
@@ -88,7 +100,38 @@ export default function Estudiantes() {
         dni: filters.dni || undefined,
         estatus: filters.estatus || undefined,
         anio: filters.anio || undefined,
+        programa_id: filters.programa_id ? parseInt(filters.programa_id) : undefined,
+        bloque_id: filters.bloque_id ? parseInt(filters.bloque_id) : undefined,
+        modulo_id: filters.modulo_id ? parseInt(filters.modulo_id) : undefined,
+        cohorte_id: filters.cohorte_id ? parseInt(filters.cohorte_id) : undefined,
+        telefono: filters.telefono || undefined,
     });
+    
+    const { data: programas = [] } = useProgramas();
+    const { data: bloques = [] } = useBloques(filters.programa_id ? parseInt(filters.programa_id) : undefined);
+    const { data: modulos = [] } = useModulos(filters.bloque_id ? parseInt(filters.bloque_id) : undefined);
+    const { data: cohortes = [] } = useCohortes(filters.programa_id ? parseInt(filters.programa_id) : undefined);
+
+    const filteredCohortes = useMemo(() => {
+        let list = [...cohortes];
+        if (filters.bloque_id) {
+            list = list.filter(c => c.bloque_id === parseInt(filters.bloque_id));
+        }
+        return list.sort((a, b) => {
+            const regex = /(\d+)(?:º|°|rta|era|da|ra|\s)?\s*Cohorte\s*(\d{4})/i;
+            const matchA = a.nombre.match(regex);
+            const matchB = b.nombre.match(regex);
+            if (matchA && matchB) {
+                const numA = parseInt(matchA[1], 10);
+                const yearA = parseInt(matchA[2], 10);
+                const numB = parseInt(matchB[1], 10);
+                const yearB = parseInt(matchB[2], 10);
+                if (yearA !== yearB) return yearB - yearA;
+                return numA - numB;
+            }
+            return a.nombre.localeCompare(b.nombre);
+        });
+    }, [cohortes, filters.bloque_id]);
     const saveEstudiante = useSaveEstudiante();
 
     const sortedRows = useMemo(() => {
@@ -128,8 +171,10 @@ export default function Estudiantes() {
             setFeedback({ open: true, message: `Estudiante ${editId ? "actualizado" : "creado"} con éxito`, severity: "success" });
             setForm(initialFormState);
             setFileData({ dniFile: null, tituloFile: null, dniTutorFile: null, notaParentalFile: null });
+            const isEdit = !!editId;
             setEditId(null);
             refetch();
+            setActiveTab("list");
         } catch (error) {
             const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
             setFeedback({ open: true, message: `Error: ${errorMsg} `, severity: "error" });
@@ -157,11 +202,15 @@ export default function Estudiantes() {
 
             setForm(cleanedData);
             setFileData({ dniFile: null, tituloFile: null, dniTutorFile: null, notaParentalFile: null });
-            formCardRef.current?.scrollIntoView({ behavior: "smooth" });
+            setActiveTab("add");
+            // Wait for next tick to ensure the "add" tab is rendered
+            setTimeout(() => {
+                formCardRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, 100);
         } catch {
             setFeedback({
                 open: true,
-                message: "No se pudieron cargar todos los datos del estudiante para edición.",
+                message: "Error al cargar datos del estudiante para edición.",
                 severity: "error",
             });
         } finally {
@@ -301,15 +350,57 @@ export default function Estudiantes() {
                 <p className="text-indigo-300">Administración completa del padrón de alumnos.</p>
             </div>
 
-            {/* Formulario de Edición/Creación */}
-            <div ref={formCardRef}>
+            {/* Selector de Solapas (Tabs) */}
+            <div className="flex border-b border-indigo-500/20 mb-6 gap-2 bg-indigo-950/20 p-1 rounded-t-xl">
+                <button
+                    onClick={() => setActiveTab("list")}
+                    className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
+                        activeTab === "list" 
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" 
+                        : "text-indigo-400 hover:text-white hover:bg-white/5"
+                    }`}
+                >
+                    <User size={18} />
+                    Ver Estudiantes
+                </button>
+                <button
+                    onClick={() => {
+                        setActiveTab("add");
+                        if (!editId) setForm(initialFormState);
+                    }}
+                    className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
+                        activeTab === "add" 
+                        ? "bg-brand-accent text-white shadow-lg shadow-brand-accent/20" 
+                        : "text-indigo-400 hover:text-white hover:bg-white/5"
+                    }`}
+                >
+                    <UserPlus size={18} />
+                    {editId ? "Editar Estudiante" : "Carga de Estudiantes"}
+                </button>
+            </div>
+
+            {activeTab === "add" ? (
+                /* Formulario de Edición/Creación (Solapa 2) */
+                <div ref={formCardRef} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <Card className="bg-indigo-900/20 border-indigo-500/30 mb-8">
                     <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4 mb-4">
                         <h2 className="text-lg font-bold text-white flex items-center gap-2">
                             {editId ? <Edit2 className="text-brand-accent" /> : <UserPlus className="text-brand-accent" />}
                             {editId ? "Editando Estudiante" : "Agregar Nuevo Estudiante"}
                         </h2>
-                        {editId && <Button size="sm" variant="ghost" onClick={() => { setEditId(null); setForm(initialFormState); }}>Cancelar Edición</Button>}
+                        {editId && (
+                            <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                onClick={() => { 
+                                    setEditId(null); 
+                                    setForm(initialFormState); 
+                                    setActiveTab("list");
+                                }}
+                            >
+                                Cancelar Edición
+                            </Button>
+                        )}
                     </div>
 
                     <div className="space-y-4">
@@ -406,13 +497,35 @@ export default function Estudiantes() {
                         </div>
 
                         <SectionDivider title="Documentación (Opcional)" icon={FileText} />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-indigo-300 mb-1">DNI Digitalizado (PDF/Imagen)</label>
-                                <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
-                                {editId && form.dni_digitalizado && <p className="text-xs text-green-400 mt-1">Archivo actual guardado. Suba uno nuevo si desea reemplazarlo.</p>}
+                                <div className="flex flex-col gap-2">
+                                    <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                    {editId && form.dni_digitalizado && (
+                                        <div className="flex items-center gap-2">
+                                            <a href={getMediaUrl(form.dni_digitalizado)} target="_blank" rel="noreferrer" className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 underline decoration-dotted">
+                                                <Eye size={12} /> Ver DNI actual
+                                            </a>
+                                            <span className="text-[10px] text-gray-500 italic">(Se reemplazará si sube uno nuevo)</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            {editId && form.titulo_secundario_digitalizado && <p className="text-xs text-green-400 mt-1">Archivo actual guardado. Suba uno nuevo si desea reemplazarlo.</p>}
+                            <div>
+                                <label className="block text-sm font-medium text-emerald-300 mb-1">Título Secundario (PDF/Imagen)</label>
+                                <div className="flex flex-col gap-2">
+                                    <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, tituloFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                    {editId && form.titulo_secundario_digitalizado && (
+                                        <div className="flex items-center gap-2">
+                                            <a href={getMediaUrl(form.titulo_secundario_digitalizado)} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline decoration-dotted">
+                                                <Eye size={12} /> Ver Título actual
+                                            </a>
+                                            <span className="text-[10px] text-gray-500 italic">(Se reemplazará si sube uno nuevo)</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -438,58 +551,149 @@ export default function Estudiantes() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-orange-300 mb-1">DNI del Padre/Madre o Tutor (PDF/Imagen)</label>
-                                        <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniTutorFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                        <div className="flex flex-col gap-2">
+                                            <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniTutorFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                            {editId && form.dni_tutor_digitalizado && (
+                                                <a href={getMediaUrl(form.dni_tutor_digitalizado)} target="_blank" rel="noreferrer" className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 underline decoration-dotted">
+                                                    <Eye size={12} /> Ver archivo actual
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-emerald-300 mb-1">Nota Autorización Parental (PDF/Imagen)</label>
-                                        <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, notaParentalFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                        <div className="flex flex-col gap-2">
+                                            <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, notaParentalFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                            {editId && form.nota_parental_firmada && (
+                                                <a href={getMediaUrl(form.nota_parental_firmada)} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline decoration-dotted">
+                                                    <Eye size={12} /> Ver archivo actual
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         );
                     })()}
 
-                    <div className="flex justify-end pt-4 border-t border-indigo-500/20 mt-4">
-                        <Button onClick={handleSubmit} className="bg-brand-accent hover:bg-orange-600 border-none px-8 py-2 shadow-lg" startIcon={<Save size={18} />}>
-                            {editId ? "Guardar Cambios" : "Crear Estudiante"}
-                        </Button>
-                    </div>
                 </Card>
-            </div>
-
-            {/* Listado y Filtros */}
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                    <div className="flex-1"><Input placeholder="Buscar por Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
-                    <div className="w-full md:w-48"><Input placeholder="Buscar DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
-                    <div className="w-full md:w-40">
-                        <Select 
-                            value={filters.anio} 
-                            onChange={(e) => { setFilters({ ...filters, anio: e.target.value }); setPage(0); }} 
-                            options={[
-                                { value: '', label: 'Año: Todos' },
-                                { value: '2023', label: '2023' },
-                                { value: '2024', label: '2024' },
-                                { value: '2025', label: '2025' },
-                                { value: '2026', label: '2026' },
-                            ]} 
-                            className="bg-indigo-950/50" 
-                        />
-                    </div>
-                    <div className="w-full md:w-40"><Select value={filters.estatus} onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} options={[{ value: '', label: 'Estatus: Todos' }, { value: 'Regular', label: 'Regular' }, { value: 'Baja', label: 'Baja' }, { value: 'Condicional', label: 'Condicional' }, { value: 'Preinscripto', label: 'Preinscripto' }]} className="bg-indigo-950/50" /></div>
-                    <Button onClick={() => refetch()} startIcon={<Search size={18} />} className="bg-indigo-600 hover:bg-indigo-500 border-none">Buscar</Button>
-                    <Button 
-                        onClick={() => {
-                            setExportConfig(prev => ({ ...prev, anio: filters.anio, estatus: filters.estatus }));
-                            setExportModalOpen(true);
-                        }} 
-                        startIcon={<Download size={18} />} 
-                        variant="outline" 
-                        className="border-indigo-500 text-indigo-300 hover:bg-indigo-500/20 ml-auto"
-                    >
-                        Exportar
-                    </Button>
                 </div>
+            ) : (
+                /* Listado y Filtros (Solapa 1) */
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex flex-col md:flex-row gap-4 mb-4 items-end">
+                        <div className="flex-1 space-y-4">
+                            <div className="flex flex-col md:flex-row gap-4">
+                                <div className="flex-1"><Input placeholder="Buscar por Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
+                                <div className="w-full md:w-48"><Input placeholder="Buscar DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
+                                <div className="w-full md:w-48"><Input placeholder="Buscar Teléfono" value={filters.telefono} name="telefono" onChange={(e) => { setFilters({ ...filters, telefono: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
+                                <div className="w-full md:w-40">
+                                    <Select 
+                                        value={filters.anio} 
+                                        onChange={(e) => { setFilters({ ...filters, anio: e.target.value }); setPage(0); }} 
+                                        options={[
+                                            { value: '', label: 'Año: Todos' },
+                                            { value: '2023', label: '2023' },
+                                            { value: '2024', label: '2024' },
+                                            { value: '2025', label: '2025' },
+                                            { value: '2026', label: '2026' },
+                                        ]} 
+                                        className="bg-indigo-950/50" 
+                                    />
+                                </div>
+                                <div className="w-full md:w-40"><Select value={filters.estatus} onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} options={[{ value: '', label: 'Estatus: Todos' }, { value: 'Regular', label: 'Regular' }, { value: 'Baja', label: 'Baja' }, { value: 'Condicional', label: 'Condicional' }, { value: 'Preinscripto', label: 'Preinscripto' }]} className="bg-indigo-950/50" /></div>
+                            </div>
+
+                            {/* Filtros Académicos en cascada */}
+                            <div className="flex flex-col md:flex-row gap-4">
+                                <div className="flex-1">
+                                    <Select
+                                        value={filters.programa_id}
+                                        onChange={(e) => { 
+                                            setFilters({ ...filters, programa_id: e.target.value, bloque_id: "", modulo_id: "", cohorte_id: "" }); 
+                                            setPage(0); 
+                                        }}
+                                        options={[
+                                            { value: '', label: 'Todos los Programas' },
+                                            ...programas.map(p => ({ value: p.id, label: p.nombre }))
+                                        ]}
+                                        className="bg-indigo-950/50"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <Select
+                                        value={filters.bloque_id}
+                                        onChange={(e) => { 
+                                            setFilters({ ...filters, bloque_id: e.target.value, modulo_id: "", cohorte_id: "" }); 
+                                            setPage(0); 
+                                        }}
+                                        options={[
+                                            { value: '', label: 'Todos los Bloques' },
+                                            ...bloques.map(b => ({ value: b.id, label: b.nombre }))
+                                        ]}
+                                        className="bg-indigo-950/50"
+                                        disabled={!filters.programa_id}
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <Select
+                                        value={filters.modulo_id}
+                                        onChange={(e) => { 
+                                            setFilters({ ...filters, modulo_id: e.target.value, cohorte_id: "" }); 
+                                            setPage(0); 
+                                        }}
+                                        options={[
+                                            { value: '', label: 'Todos los Módulos' },
+                                            ...modulos.map(m => ({ value: m.id, label: m.nombre }))
+                                        ]}
+                                        className="bg-indigo-950/50"
+                                        disabled={!filters.bloque_id}
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <Select
+                                        value={filters.cohorte_id}
+                                        onChange={(e) => { 
+                                            setFilters({ ...filters, cohorte_id: e.target.value }); 
+                                            setPage(0); 
+                                        }}
+                                        options={[
+                                            { value: '', label: 'Todas las Cohortes' },
+                                            ...filteredCohortes.map(c => ({ value: c.id, label: c.nombre }))
+                                        ]}
+                                        className="bg-indigo-950/50"
+                                        disabled={!filters.programa_id}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                            <Button onClick={() => refetch()} startIcon={<Search size={18} />} className="bg-indigo-600 hover:bg-indigo-500 border-none">Filtrar</Button>
+                            <Button 
+                                onClick={() => {
+                                    setExportConfig(prev => ({ ...prev, anio: filters.anio, estatus: filters.estatus }));
+                                    setExportModalOpen(true);
+                                }} 
+                                startIcon={<Download size={18} />} 
+                                variant="outline" 
+                                className="border-indigo-500 text-indigo-300 hover:bg-indigo-500/20"
+                            >
+                                Exportar
+                            </Button>
+                            <Button 
+                                onClick={() => {
+                                    setEditId(null);
+                                    setForm(initialFormState);
+                                    setActiveTab("add");
+                                }}
+                                startIcon={<Plus size={18} />}
+                                className="bg-brand-accent hover:bg-orange-600 border-none"
+                            >
+                                Nuevo
+                            </Button>
+                        </div>
+                    </div>
 
                 <Card className="bg-indigo-900/10 border-indigo-500/20 overflow-hidden">
                     <div className="overflow-x-auto">
@@ -504,6 +708,9 @@ export default function Estudiantes() {
                                     </th>
                                     <th className="px-6 py-3 cursor-pointer hover:text-white group hidden md:table-cell" onClick={() => handleSort('email')}>
                                         <div className="flex items-center gap-1">Email {ordering.field === 'email' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                    </th>
+                                    <th className="px-6 py-3 cursor-pointer hover:text-white group hidden md:table-cell" onClick={() => handleSort('telefono')}>
+                                        <div className="flex items-center gap-1">Teléfono {ordering.field === 'telefono' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
                                     </th>
                                     <th className="px-6 py-3 cursor-pointer hover:text-white group hidden md:table-cell" onClick={() => handleSort('ciudad')}>
                                         <div className="flex items-center gap-1">Ciudad {ordering.field === 'ciudad' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
@@ -537,6 +744,7 @@ export default function Estudiantes() {
                                             })()}
                                         </td>
                                         <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.email}</td>
+                                        <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.telefono || "-"}</td>
                                         <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.ciudad}</td>
                                         <td className="px-6 py-3">
                                             <span className={`px-2 py-1 rounded text-xs font-bold ${r.estatus === 'Baja' ? 'bg-red-500/20 text-red-400' :
@@ -577,6 +785,8 @@ export default function Estudiantes() {
                     </div>
                 </Card>
             </div>
+
+            )}
 
             {/* Modal Confirmación Delete */}
             <Modal
@@ -880,20 +1090,6 @@ export default function Estudiantes() {
                 </div>
             </Modal>
 
-            {/* Toast Feedback */}
-            {
-                feedback.open && (
-                    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in z-[100] ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' :
-                        feedback.severity === 'warning' ? 'bg-amber-600/90 border-amber-400 text-white' :
-                            'bg-green-900/90 border-green-500 text-white'
-                        }`}>
-                        {feedback.severity === 'error' ? <AlertCircle size={20} /> : feedback.severity === 'warning' ? <AlertCircle size={20} /> : <Check size={20} />}
-                        {feedback.message}
-                        <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
-                    </div>
-                )
-            }
-
             {/* Modal Exportación */}
             <Modal
                 isOpen={exportModalOpen}
@@ -1011,6 +1207,18 @@ export default function Estudiantes() {
                     </div>
                 </div>
             </Modal>
+
+            {/* Toast Feedback */}
+            {feedback.open && (
+                <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in z-[100] ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' :
+                    feedback.severity === 'warning' ? 'bg-amber-600/90 border-amber-400 text-white' :
+                        'bg-green-900/90 border-green-500 text-white'
+                    }`}>
+                    {feedback.severity === 'error' ? <AlertCircle size={20} /> : feedback.severity === 'warning' ? <AlertCircle size={20} /> : <Check size={20} />}
+                    {feedback.message}
+                    <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
+                </div>
+            )}
         </div >
     );
 }
