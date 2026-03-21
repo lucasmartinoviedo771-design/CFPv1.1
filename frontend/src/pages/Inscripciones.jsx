@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, Trash2, CheckCircle, AlertCircle, Loader, Edit2, X, Save, Search, Baby, MessageCircle } from 'lucide-react';
 
 import { useCohortes, useDeleteInscripcion, useInscripciones, useProgramas, useSaveInscripcion, useEstudiantes } from "../api/hooks";
@@ -35,6 +36,21 @@ const Checkbox = ({ checked, onChange, disabled, label }) => (
     </label>
 );
 
+// Modal Custom
+const Modal = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max-w-lg" }) => {
+    if (!isOpen) return null;
+    if (typeof document === "undefined") return null;
+    return createPortal((
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+            <div className={`bg-[#1e1b4b] border border-indigo-500/30 rounded-xl shadow-2xl w-full ${maxWidthClass}`}>
+                <div className="p-6 border-b border-indigo-500/20"><h3 className="text-xl font-bold text-white">{title}</h3></div>
+                <div className="p-6 text-gray-200 max-h-[75vh] overflow-y-auto">{children}</div>
+                <div className="p-4 border-t border-indigo-500/20 flex justify-end gap-3 bg-indigo-950/30 rounded-b-xl">{actions}</div>
+            </div>
+        </div>
+    ), document.body);
+};
+
 const calculateAge = (birthDate) => {
     if (!birthDate) return null;
     const today = new Date();
@@ -59,6 +75,7 @@ export default function Inscripciones() {
     const [inscripcionSearch, setInscripcionSearch] = useState("");
     const [editingInscripcionId, setEditingInscripcionId] = useState(null);
     const [editingEstado, setEditingEstado] = useState("");
+    const [inscToDelete, setInscToDelete] = useState(null);
     const [feedback, setFeedback] = useState({ open: false, message: "", severity: "success" });
     const [loadingBloques, setLoadingBloques] = useState({});
     const [allBloques, setAllBloques] = useState([]);
@@ -67,6 +84,12 @@ export default function Inscripciones() {
     const [filterCohorteId, setFilterCohorteId] = useState("");
     const [filterInicio, setFilterInicio] = useState("");
     const [filterPeriodo, setFilterPeriodo] = useState("ACTUAL_O_PROXIMO");
+    
+    // Filtros para la tabla de Inscripciones Existentes
+    const [filterListProgramaName, setFilterListProgramaName] = useState("");
+    const [filterListBloqueName, setFilterListBloqueName] = useState("");
+    const [filterListModuloName, setFilterListModuloName] = useState("");
+    const [filterListCohorteName, setFilterListCohorteName] = useState("");
 
     const { data: estudiantes = [] } = useEstudiantes();
     const { data: cohortes = [] } = useCohortes();
@@ -271,8 +294,14 @@ export default function Inscripciones() {
 
     const filteredInscripciones = useMemo(() => {
         const needle = inscripcionSearch.trim().toLowerCase();
-        if (!needle) return inscripciones;
         return inscripciones.filter((r) => {
+            if (filterListProgramaName && r.cohorte?.programa?.nombre !== filterListProgramaName) return false;
+            if (filterListBloqueName && r.cohorte?.bloque?.nombre !== filterListBloqueName) return false;
+            if (filterListModuloName && r.modulo?.nombre !== filterListModuloName) return false;
+            if (filterListCohorteName && r.cohorte?.nombre !== filterListCohorteName) return false;
+
+            if (!needle) return true;
+
             const apellido = (r.estudiante?.apellido || "").toLowerCase();
             const nombre = (r.estudiante?.nombre || "").toLowerCase();
             const dni = String(r.estudiante?.dni || "").toLowerCase();
@@ -281,7 +310,62 @@ export default function Inscripciones() {
             const cohorte = (r.cohorte?.nombre || "").toLowerCase();
             return apellido.includes(needle) || nombre.includes(needle) || full.includes(needle) || dni.includes(needle) || modulo.includes(needle) || cohorte.includes(needle);
         });
-    }, [inscripciones, inscripcionSearch]);
+    }, [inscripciones, inscripcionSearch, filterListProgramaName, filterListBloqueName, filterListModuloName, filterListCohorteName]);
+
+    const tableProgramaOpts = useMemo(() => {
+        const set = new Set();
+        inscripciones.forEach(i => { if (i.cohorte?.programa?.nombre) set.add(i.cohorte.programa.nombre); });
+        return Array.from(set).sort((a,b) => a.localeCompare(b));
+    }, [inscripciones]);
+
+    const tableBloqueOpts = useMemo(() => {
+        const set = new Set();
+        inscripciones.forEach(i => { 
+            if (filterListProgramaName && i.cohorte?.programa?.nombre !== filterListProgramaName) return;
+            if (i.cohorte?.bloque?.nombre) set.add(i.cohorte.bloque.nombre); 
+        });
+        return Array.from(set).sort((a,b) => a.localeCompare(b));
+    }, [inscripciones, filterListProgramaName]);
+
+    const tableModuloOpts = useMemo(() => {
+        const set = new Set();
+        inscripciones.forEach(i => { 
+            if (filterListProgramaName && i.cohorte?.programa?.nombre !== filterListProgramaName) return;
+            if (filterListBloqueName && i.cohorte?.bloque?.nombre !== filterListBloqueName) return;
+            if (i.modulo?.nombre) set.add(i.modulo.nombre); 
+        });
+        return Array.from(set).sort((a,b) => a.localeCompare(b));
+    }, [inscripciones, filterListProgramaName, filterListBloqueName]);
+
+    const tableCohorteOpts = useMemo(() => {
+        const set = new Set();
+        inscripciones.forEach(i => { 
+            if (filterListProgramaName && i.cohorte?.programa?.nombre !== filterListProgramaName) return;
+            if (filterListBloqueName && i.cohorte?.bloque?.nombre !== filterListBloqueName) return;
+            if (filterListModuloName && i.modulo?.nombre !== filterListModuloName) return;
+            if (i.cohorte?.nombre) set.add(i.cohorte.nombre); 
+        });
+        
+        return Array.from(set).sort((a, b) => {
+            const regex = /(\d+)(?:º|°|rta|era|da|ra|\s)?\s*Cohorte\s*(\d{4})/i;
+            const matchA = a.match(regex);
+            const matchB = b.match(regex);
+            
+            if (matchA && matchB) {
+                const numA = parseInt(matchA[1], 10);
+                const yearA = parseInt(matchA[2], 10);
+                const numB = parseInt(matchB[1], 10);
+                const yearB = parseInt(matchB[2], 10);
+                
+                if (yearA !== yearB) {
+                    return yearB - yearA; // Año descendente (2026, 2025, ...)
+                }
+                return numA - numB; // Número ascendente (1, 2, 3, ...)
+            }
+            // Fallback al ordenamiento alfabético original
+            return a.localeCompare(b);
+        });
+    }, [inscripciones, filterListProgramaName, filterListBloqueName, filterListModuloName]);
 
     const totalPages = Math.ceil(filteredInscripciones.length / rowsPerPage);
 
@@ -587,19 +671,71 @@ export default function Inscripciones() {
 
             {/* Tabla de Inscripciones */}
             <div className="space-y-4 pt-4 border-t border-indigo-500/20">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <h2 className="text-xl font-bold text-white">Inscripciones Existentes</h2>
-                    <div className="relative w-full sm:w-64">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-400">
-                            <Search size={16} />
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <h2 className="text-xl font-bold text-white whitespace-nowrap">Inscripciones Existentes</h2>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto overflow-x-auto text-sm">
+                        <select
+                            value={filterListProgramaName}
+                            onChange={(e) => { 
+                                setFilterListProgramaName(e.target.value); 
+                                setFilterListBloqueName(""); 
+                                setFilterListModuloName(""); 
+                                setFilterListCohorteName(""); 
+                                setPage(0); 
+                            }}
+                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
+                        >
+                            <option value="">Todos los Programas</option>
+                            {tableProgramaOpts.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                        <select
+                            value={filterListBloqueName}
+                            onChange={(e) => { 
+                                setFilterListBloqueName(e.target.value); 
+                                setFilterListModuloName(""); 
+                                setFilterListCohorteName(""); 
+                                setPage(0); 
+                            }}
+                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
+                        >
+                            <option value="">Todos los Bloques</option>
+                            {tableBloqueOpts.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                        <select
+                            value={filterListModuloName}
+                            onChange={(e) => { 
+                                setFilterListModuloName(e.target.value); 
+                                setFilterListCohorteName(""); 
+                                setPage(0); 
+                            }}
+                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
+                        >
+                            <option value="">Todos los Módulos</option>
+                            {tableModuloOpts.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                        <select
+                            value={filterListCohorteName}
+                            onChange={(e) => { 
+                                setFilterListCohorteName(e.target.value); 
+                                setPage(0); 
+                            }}
+                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
+                        >
+                            <option value="">Todas las Cohortes</option>
+                            {tableCohorteOpts.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                        <div className="relative min-w-[150px]">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-400">
+                                <Search size={16} />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Buscar inscripción..."
+                                value={inscripcionSearch}
+                                onChange={(e) => { setInscripcionSearch(e.target.value); setPage(0); }}
+                                className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded w-full pl-9 pr-3 py-1.5 focus:outline-none focus:border-brand-accent transition-colors"
+                            />
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Buscar inscripción..."
-                            value={inscripcionSearch}
-                            onChange={(e) => setInscripcionSearch(e.target.value)}
-                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded w-full pl-9 pr-3 py-1.5 focus:outline-none focus:border-brand-accent transition-colors"
-                        />
                     </div>
                 </div>
 
@@ -810,10 +946,26 @@ export default function Inscripciones() {
                         }`}>
                         {feedback.severity === 'error' ? <AlertCircle /> : <CheckCircle />}
                         {feedback.message}
-                        <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><Trash2 size={14} /></button>
+                        <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
                     </div>
                 )
             }
+
+            {/* Modal Confirmación Delete */}
+            <Modal
+                isOpen={!!inscToDelete}
+                onClose={() => setInscToDelete(null)}
+                title="Confirmar eliminación"
+                actions={
+                    <>
+                        <Button variant="ghost" onClick={() => setInscToDelete(null)}>Cancelar</Button>
+                        <Button onClick={() => handleDelete(inscToDelete.id)} className="bg-red-600 hover:bg-red-700 text-white border-none">Eliminar</Button>
+                    </>
+                }
+            >
+                <p>¿Estás seguro de que deseas eliminar la inscripción de <strong>{inscToDelete?.estudiante?.apellido}, {inscToDelete?.estudiante?.nombre}</strong> al módulo <strong>{inscToDelete?.modulo?.nombre || "N/A"}</strong>?</p>
+                <p className="text-sm text-gray-400 mt-2">Esta acción no se puede deshacer.</p>
+            </Modal>
         </div >
     );
 }

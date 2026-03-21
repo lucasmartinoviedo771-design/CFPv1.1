@@ -60,7 +60,7 @@ const calculateAge = (birthDate) => {
 };
 
 export default function Estudiantes() {
-    const [filters, setFilters] = useState({ dni: "", nombre_apellido: "", estatus: "" });
+    const [filters, setFilters] = useState({ dni: "", nombre_apellido: "", estatus: "", anio: "" });
     const [ordering, setOrdering] = useState({ field: "apellido", direction: "asc" });
     const [qrModal, setQrModal] = useState({ open: false, url: "", studentName: "" });
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -73,12 +73,21 @@ export default function Estudiantes() {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(25);
     const [loadingEditId, setLoadingEditId] = useState(null);
+    const [exportModalOpen, setExportModalOpen] = useState(false);
+    const [exportConfig, setExportConfig] = useState({
+        columns: ["apellido", "nombre", "dni", "email", "estatus", "materias_aprobadas", "materias_cursando", "materias_pendientes"],
+        format: "excel",
+        anio: "",
+        estatus: ""
+    });
+    const [exportLoading, setExportLoading] = useState(false);
     const formCardRef = useRef(null);
 
     const { data: estudiantes = [], isLoading, refetch } = useEstudiantes({
         search: filters.nombre_apellido || undefined,
         dni: filters.dni || undefined,
         estatus: filters.estatus || undefined,
+        anio: filters.anio || undefined,
     });
     const saveEstudiante = useSaveEstudiante();
 
@@ -191,11 +200,71 @@ export default function Estudiantes() {
         }
     };
 
+    const handleExport = async () => {
+        setExportLoading(true);
+        try {
+            const response = await apiClientV2.post('/estudiantes/export/', {
+                search: filters.nombre_apellido || undefined,
+                dni: filters.dni || undefined,
+                anio: exportConfig.anio ? parseInt(exportConfig.anio) : undefined,
+                estatus: exportConfig.estatus || undefined,
+                columns: exportConfig.columns,
+                format: exportConfig.format
+            }, { responseType: 'blob' });
+
+            // Detectar si el servidor devolvió un error en formato JSON a pesar de responseType 'blob'
+            if (response.data.type === 'application/json') {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const errorData = JSON.parse(reader.result);
+                    setFeedback({ open: true, message: `Error: ${errorData.detail || 'No se pudo generar el archivo'}`, severity: "error" });
+                };
+                reader.readAsText(response.data);
+                setExportLoading(false);
+                return;
+            }
+
+            const blob = new Blob([response.data], { 
+                type: exportConfig.format === 'excel' 
+                    ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                    : 'application/pdf' 
+            });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `estudiantes_${new Date().toISOString().split('T')[0]}.${exportConfig.format === 'excel' ? 'xlsx' : 'pdf'}`);
+            document.body.appendChild(link);
+            link.click();
+            
+            // Limpieza diferida
+            setTimeout(() => {
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+            
+            setExportModalOpen(false);
+        } catch (error) {
+            console.error("Export error:", error);
+            setFeedback({ open: true, message: "Error al generar el reporte. Verifique su conexión.", severity: "error" });
+        } finally {
+            setExportLoading(false);
+        }
+    };
+
+    const toggleColumn = (col) => {
+        setExportConfig(prev => ({
+            ...prev,
+            columns: prev.columns.includes(col) 
+                ? prev.columns.filter(c => c !== col) 
+                : [...prev.columns, col]
+        }));
+    };
+
     const trayectoria = useMemo(() => {
         const inscripciones = viewData.inscripciones || [];
         const notas = viewData.notas || [];
 
-        const inscripcionesActivas = inscripciones.filter(i => i.estado === "ACTIVO");
+        const inscripcionesActivas = inscripciones.filter(i => i.estado === "CURSANDO");
         const modulosMap = new Map();
         inscripcionesActivas.forEach(i => {
             if (i?.modulo?.id && !modulosMap.has(i.modulo.id)) {
@@ -393,8 +462,33 @@ export default function Estudiantes() {
                 <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="flex-1"><Input placeholder="Buscar por Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
                     <div className="w-full md:w-48"><Input placeholder="Buscar DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
-                    <div className="w-full md:w-48"><Select value={filters.estatus} onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} options={[{ value: '', label: 'Todos' }, { value: 'Regular', label: 'Regular' }, { value: 'Baja', label: 'Baja' }, { value: 'Condicional', label: 'Condicional' }, { value: 'Preinscripto', label: 'Preinscripto' }]} className="bg-indigo-950/50" /></div>
+                    <div className="w-full md:w-40">
+                        <Select 
+                            value={filters.anio} 
+                            onChange={(e) => { setFilters({ ...filters, anio: e.target.value }); setPage(0); }} 
+                            options={[
+                                { value: '', label: 'Año: Todos' },
+                                { value: '2023', label: '2023' },
+                                { value: '2024', label: '2024' },
+                                { value: '2025', label: '2025' },
+                                { value: '2026', label: '2026' },
+                            ]} 
+                            className="bg-indigo-950/50" 
+                        />
+                    </div>
+                    <div className="w-full md:w-40"><Select value={filters.estatus} onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} options={[{ value: '', label: 'Estatus: Todos' }, { value: 'Regular', label: 'Regular' }, { value: 'Baja', label: 'Baja' }, { value: 'Condicional', label: 'Condicional' }, { value: 'Preinscripto', label: 'Preinscripto' }]} className="bg-indigo-950/50" /></div>
                     <Button onClick={() => refetch()} startIcon={<Search size={18} />} className="bg-indigo-600 hover:bg-indigo-500 border-none">Buscar</Button>
+                    <Button 
+                        onClick={() => {
+                            setExportConfig(prev => ({ ...prev, anio: filters.anio, estatus: filters.estatus }));
+                            setExportModalOpen(true);
+                        }} 
+                        startIcon={<Download size={18} />} 
+                        variant="outline" 
+                        className="border-indigo-500 text-indigo-300 hover:bg-indigo-500/20 ml-auto"
+                    >
+                        Exportar
+                    </Button>
                 </div>
 
                 <Card className="bg-indigo-900/10 border-indigo-500/20 overflow-hidden">
@@ -402,11 +496,21 @@ export default function Estudiantes() {
                         <table className="w-full text-sm text-left">
                             <thead className="bg-[#1e1b4b] text-indigo-300 uppercase text-xs">
                                 <tr>
-                                    <th className="px-6 py-3 cursor-pointer hover:text-white" onClick={() => handleSort('dni')}>DNI</th>
-                                    <th className="px-6 py-3 cursor-pointer hover:text-white" onClick={() => handleSort('apellido')}>Estudiante {ordering.field === 'apellido' && (ordering.direction === 'asc' ? '↑' : '↓')}</th>
-                                    <th className="px-6 py-3 hidden md:table-cell">Email</th>
-                                    <th className="px-6 py-3 hidden md:table-cell">Ciudad</th>
-                                    <th className="px-6 py-3">Estatus</th>
+                                    <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('dni')}>
+                                        <div className="flex items-center gap-1">DNI {ordering.field === 'dni' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                    </th>
+                                    <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('apellido')}>
+                                        <div className="flex items-center gap-1">Estudiante {ordering.field === 'apellido' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                    </th>
+                                    <th className="px-6 py-3 cursor-pointer hover:text-white group hidden md:table-cell" onClick={() => handleSort('email')}>
+                                        <div className="flex items-center gap-1">Email {ordering.field === 'email' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                    </th>
+                                    <th className="px-6 py-3 cursor-pointer hover:text-white group hidden md:table-cell" onClick={() => handleSort('ciudad')}>
+                                        <div className="flex items-center gap-1">Ciudad {ordering.field === 'ciudad' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                    </th>
+                                    <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('estatus')}>
+                                        <div className="flex items-center gap-1">Estatus {ordering.field === 'estatus' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                    </th>
                                     <th className="px-6 py-3 text-right">Acciones</th>
                                 </tr>
                             </thead>
@@ -789,6 +893,124 @@ export default function Estudiantes() {
                     </div>
                 )
             }
+
+            {/* Modal Exportación */}
+            <Modal
+                isOpen={exportModalOpen}
+                onClose={() => setExportModalOpen(false)}
+                title="Exportar Datos de Estudiantes"
+                maxWidthClass="max-w-2xl"
+                actions={
+                    <>
+                        <Button variant="ghost" onClick={() => setExportModalOpen(false)}>Cancelar</Button>
+                        <Button 
+                            onClick={handleExport} 
+                            loading={exportLoading}
+                            className="bg-brand-accent hover:bg-orange-600 border-none" 
+                            startIcon={<Download size={18} />}
+                        >
+                            Descargar {exportConfig.format === 'excel' ? 'Excel' : 'PDF'}
+                        </Button>
+                    </>
+                }
+            >
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white/5 border border-white/10 rounded-xl">
+                        <div>
+                            <p className="text-xs font-bold text-indigo-400 uppercase mb-2">Filtrar por Año</p>
+                            <Select 
+                                value={exportConfig.anio} 
+                                onChange={(e) => setExportConfig({...exportConfig, anio: e.target.value})} 
+                                options={[
+                                    { value: '', label: 'Cualquier Año' },
+                                    { value: '2023', label: '2023' },
+                                    { value: '2024', label: '2024' },
+                                    { value: '2025', label: '2025' },
+                                    { value: '2026', label: '2026' },
+                                ]} 
+                                className="bg-indigo-900/50 border-indigo-500/30" 
+                            />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-indigo-400 uppercase mb-2">Filtrar por Estatus</p>
+                            <Select 
+                                value={exportConfig.estatus} 
+                                onChange={(e) => setExportConfig({...exportConfig, estatus: e.target.value})} 
+                                options={[
+                                    { value: '', label: 'Todos los Estatus' },
+                                    { value: 'Regular', label: 'Regular' },
+                                    { value: 'Baja', label: 'Baja' },
+                                    { value: 'Condicional', label: 'Condicional' },
+                                    { value: 'Preinscripto', label: 'Preinscripto' }
+                                ]} 
+                                className="bg-indigo-900/50 border-indigo-500/30" 
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <p className="text-sm text-indigo-300 mb-4">Seleccione las columnas que desea incluir en el archivo:</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {[
+                                { id: "apellido", label: "Apellido" },
+                                { id: "nombre", label: "Nombre" },
+                                { id: "dni", label: "DNI" },
+                                { id: "email", label: "Email" },
+                                { id: "telefono", label: "Teléfono" },
+                                { id: "ciudad", label: "Ciudad" },
+                                { id: "estatus", label: "Estatus" },
+                                { id: "fecha_nacimiento", label: "Fecha Nac." },
+                                { id: "fecha_inscripcion", label: "Fecha Inscripción" },
+                                { id: "materias_aprobadas", label: "Módulos Aprobados" },
+                                { id: "materias_cursando", label: "Módulos Cursando" },
+                                { id: "materias_pendientes", label: "Módulos Pendientes" },
+                            ].map(col => (
+                                <label key={col.id} className="flex items-center gap-2 p-2 rounded bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={exportConfig.columns.includes(col.id)}
+                                        onChange={() => toggleColumn(col.id)}
+                                        className="rounded border-indigo-500 bg-indigo-900 text-brand-accent"
+                                    />
+                                    <span className="text-sm text-white">{col.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p className="text-sm text-indigo-300 mb-4">Formato de salida:</p>
+                        <div className="flex gap-4">
+                            <label className="flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all bg-white/5 border-white/10 hover:border-brand-accent/50 group">
+                                <input 
+                                    type="radio" 
+                                    name="exportFormat" 
+                                    hidden 
+                                    checked={exportConfig.format === 'excel'} 
+                                    onChange={() => setExportConfig({...exportConfig, format: 'excel'})} 
+                                />
+                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${exportConfig.format === 'excel' ? 'border-brand-accent' : 'border-gray-500'}`}>
+                                    {exportConfig.format === 'excel' && <div className="w-2 h-2 rounded-full bg-brand-accent" />}
+                                </div>
+                                <span className={`font-bold ${exportConfig.format === 'excel' ? 'text-brand-accent' : 'text-gray-400 group-hover:text-white'}`}>Excel (.xlsx)</span>
+                            </label>
+                            <label className="flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all bg-white/5 border-white/10 hover:border-brand-accent/50 group">
+                                <input 
+                                    type="radio" 
+                                    name="exportFormat" 
+                                    hidden 
+                                    checked={exportConfig.format === 'pdf'} 
+                                    onChange={() => setExportConfig({...exportConfig, format: 'pdf'})} 
+                                />
+                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${exportConfig.format === 'pdf' ? 'border-brand-accent' : 'border-gray-500'}`}>
+                                    {exportConfig.format === 'pdf' && <div className="w-2 h-2 rounded-full bg-brand-accent" />}
+                                </div>
+                                <span className={`font-bold ${exportConfig.format === 'pdf' ? 'text-brand-accent' : 'text-gray-400 group-hover:text-white'}`}>Documento PDF (.pdf)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
         </div >
     );
 }

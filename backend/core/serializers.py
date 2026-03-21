@@ -204,13 +204,13 @@ class InscripcionSerializer(serializers.ModelSerializer):
     cohorte = CohorteSerializer(read_only=True)
     modulo = ModuloSerializer(read_only=True, allow_null=True)
     estudiante_id = serializers.PrimaryKeyRelatedField(
-        queryset=Estudiante.objects.all(), source='estudiante', write_only=True
+        queryset=Estudiante.objects.all(), source='estudiante'
     )
     cohorte_id = serializers.PrimaryKeyRelatedField(
-        queryset=Cohorte.objects.all(), source='cohorte', write_only=True
+        queryset=Cohorte.objects.all(), source='cohorte'
     )
     modulo_id = serializers.PrimaryKeyRelatedField(
-        queryset=Modulo.objects.all(), source='modulo', write_only=True, allow_null=True
+        queryset=Modulo.objects.all(), source='modulo', allow_null=True
     )
 
     class Meta:

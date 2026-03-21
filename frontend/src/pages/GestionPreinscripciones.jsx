@@ -38,20 +38,62 @@ export default function GestionPreinscripciones() {
     const [viewStudent, setViewStudent] = useState(null);
     const { user } = useContext(UserContext);
     const isAdmin = user?.groups?.includes('Admin');
+    const [ordering, setOrdering] = useState({ field: "created_at", direction: "desc" });
 
     // Fetch only students with status 'Preinscripto'
     const { data: preinscriptos = [], isLoading, refetch } = useEstudiantes({
         estatus: 'Preinscripto',
     });
 
-    const filtered = useMemo(() => {
+    const handleSort = (field) => {
+        setOrdering(prev => ({
+            field,
+            direction: prev.field === field && prev.direction === "asc" ? "desc" : "asc"
+        }));
+    };
+
+    const sortedAndFiltered = useMemo(() => {
         const needle = searchTerm.toLowerCase();
-        return preinscriptos.filter(s =>
+        let result = preinscriptos.filter(s =>
             s.apellido.toLowerCase().includes(needle) ||
             s.nombre.toLowerCase().includes(needle) ||
             s.dni.includes(needle)
         );
-    }, [preinscriptos, searchTerm]);
+
+        return result.sort((a, b) => {
+            const dir = ordering.direction === "asc" ? 1 : -1;
+            let valA, valB;
+
+            switch (ordering.field) {
+                case 'dni':
+                    valA = a.dni || "";
+                    valB = b.dni || "";
+                    break;
+                case 'estudiante':
+                    valA = `${a.apellido} ${a.nombre}`.toLowerCase();
+                    valB = `${b.apellido} ${b.nombre}`.toLowerCase();
+                    break;
+                case 'trayectos':
+                    valA = (a.trayectos?.[0] || "").toLowerCase();
+                    valB = (b.trayectos?.[0] || "").toLowerCase();
+                    break;
+                case 'created_at':
+                    valA = a.created_at || "";
+                    valB = b.created_at || "";
+                    break;
+                case 'archivos':
+                    valA = (a.dni_digitalizado ? 1 : 0) + (a.titulo_secundario_digitalizado ? 1 : 0);
+                    valB = (b.dni_digitalizado ? 1 : 0) + (b.titulo_secundario_digitalizado ? 1 : 0);
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (valA < valB) return -1 * dir;
+            if (valA > valB) return 1 * dir;
+            return 0;
+        });
+    }, [preinscriptos, searchTerm, ordering]);
 
     const toggleSelect = (id) => {
         const next = new Set(selectedIds);
@@ -61,10 +103,10 @@ export default function GestionPreinscripciones() {
     };
 
     const toggleSelectAll = () => {
-        if (selectedIds.size === filtered.length) {
+        if (selectedIds.size === sortedAndFiltered.length) {
             setSelectedIds(new Set());
         } else {
-            setSelectedIds(new Set(filtered.map(s => s.id)));
+            setSelectedIds(new Set(sortedAndFiltered.map(s => s.id)));
         }
     };
 
@@ -156,22 +198,32 @@ export default function GestionPreinscripciones() {
                                     <input
                                         type="checkbox"
                                         className="rounded bg-indigo-900 border-indigo-500"
-                                        checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                                        checked={sortedAndFiltered.length > 0 && selectedIds.size === sortedAndFiltered.length}
                                         onChange={toggleSelectAll}
                                     />
                                 </th>
-                                <th className="px-6 py-3">DNI</th>
-                                <th className="px-6 py-3">Estudiante</th>
-                                <th className="px-6 py-3">Trayectos</th>
-                                <th className="px-6 py-3">Fecha Preins.</th>
-                                <th className="px-6 py-3">Archivos</th>
+                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('dni')}>
+                                    <div className="flex items-center gap-1">DNI {ordering.field === 'dni' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                </th>
+                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('estudiante')}>
+                                    <div className="flex items-center gap-1">Estudiante {ordering.field === 'estudiante' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                </th>
+                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('trayectos')}>
+                                    <div className="flex items-center gap-1">Trayectos {ordering.field === 'trayectos' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                </th>
+                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('created_at')}>
+                                    <div className="flex items-center gap-1">Fecha {ordering.field === 'created_at' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                </th>
+                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('archivos')}>
+                                    <div className="flex items-center gap-1">Archivos {ordering.field === 'archivos' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
+                                </th>
                                 <th className="px-6 py-3 text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-indigo-500/10">
                             {isLoading ? (
                                 <tr><td colSpan={7} className="text-center py-8 text-indigo-300"><Loader className="animate-spin inline mr-2" />Cargando aspirantes...</td></tr>
-                            ) : filtered.map(s => (
+                            ) : sortedAndFiltered.map(s => (
                                 <tr key={s.id} className={`hover:bg-white/5 transition-colors ${selectedIds.has(s.id) ? 'bg-indigo-500/10' : ''}`}>
                                     <td className="px-4 py-3">
                                         <input
@@ -264,7 +316,7 @@ export default function GestionPreinscripciones() {
                                     </td>
                                 </tr>
                             ))}
-                            {!isLoading && filtered.length === 0 && (
+                            {!isLoading && sortedAndFiltered.length === 0 && (
                                 <tr><td colSpan={7} className="text-center py-12 text-indigo-300">No hay preinscripciones pendientes.</td></tr>
                             )}
                         </tbody>

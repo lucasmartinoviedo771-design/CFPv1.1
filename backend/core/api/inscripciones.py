@@ -55,7 +55,14 @@ def listar_cohortes(request, programa_id: Optional[int] = None, bloque_id: Optio
 # INSCRIPCIONES
 @router.get("", response=List[dict])
 @require_authenticated_group
-def listar_inscripciones(request, cohorte_id: Optional[int] = None, estudiante_id: Optional[int] = None, estado: Optional[str] = None):
+def listar_inscripciones(
+    request, 
+    cohorte_id: Optional[int] = None, 
+    estudiante_id: Optional[int] = None, 
+    estado: Optional[str] = None,
+    bloque_id: Optional[int] = None,
+    modulo_id: Optional[int] = None,
+):
     qs = Inscripcion.objects.select_related("cohorte", "estudiante", "modulo", "modulo__bloque").order_by("-created_at")
     if cohorte_id:
         qs = qs.filter(cohorte_id=cohorte_id)
@@ -63,6 +70,11 @@ def listar_inscripciones(request, cohorte_id: Optional[int] = None, estudiante_i
         qs = qs.filter(estudiante_id=estudiante_id)
     if estado:
         qs = qs.filter(estado=estado)
+    if bloque_id:
+        from django.db.models import Q
+        qs = qs.filter(Q(modulo__bloque_id=bloque_id) | Q(cohorte__bloque_id=bloque_id))
+    if modulo_id:
+        qs = qs.filter(modulo_id=modulo_id)
     return InscripcionSerializer(qs, many=True).data
 
 

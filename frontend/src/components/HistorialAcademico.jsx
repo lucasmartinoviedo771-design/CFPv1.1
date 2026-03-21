@@ -64,7 +64,7 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
     if (!studentId) { setStudentEnrollments([]); return; }
     (async () => {
       try {
-        const { results } = await listInscripciones({ estudiante_id: studentId, estado: 'ACTIVO' });
+        const { results } = await listInscripciones({ estudiante_id: studentId, estado: 'CURSANDO' });
         setStudentEnrollments(results || []);
       } catch (error) { setStudentEnrollments([]); }
     })();

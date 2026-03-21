@@ -138,7 +138,7 @@ export default function Cohortes() {
         }
         acc[i.modulo_id].total += 1;
         const estado = String(i.estado || '').toUpperCase();
-        if (estado === 'ACTIVO') acc[i.modulo_id].activos += 1;
+        if (estado === 'CURSANDO') acc[i.modulo_id].activos += 1;
         if (estado === 'PAUSADO') acc[i.modulo_id].pausados += 1;
         if (estado === 'EGRESADO') acc[i.modulo_id].egresados += 1;
         if (estado === 'BAJA') acc[i.modulo_id].baja += 1;

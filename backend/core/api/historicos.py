@@ -47,14 +47,15 @@ def historico_cursos(
 
     student_ids = list(inscripciones_qs.values_list("estudiante_id", flat=True).distinct())
     
-    # Map para mostrar la cohorte específica del módulo, y como fallback la del programa
+    # Map para mostrar la cohorte más reciente (ordenando por fecha de inicio descendente)
     student_prog_cohortes_map = {}
     student_modulo_cohortes_map = {}
-    for ins in inscripciones_qs:
+    for ins in inscripciones_qs.order_by("-cohorte__fecha_inicio", "-id"):
         prog_id = ins.cohorte.programa_id
-        student_prog_cohortes_map.setdefault((ins.estudiante_id, prog_id), set()).add(ins.cohorte.nombre)
-        if ins.modulo_id:
-            student_modulo_cohortes_map.setdefault((ins.estudiante_id, ins.modulo_id), set()).add(ins.cohorte.nombre)
+        if (ins.estudiante_id, prog_id) not in student_prog_cohortes_map:
+            student_prog_cohortes_map[(ins.estudiante_id, prog_id)] = ins.cohorte.nombre
+        if ins.modulo_id and (ins.estudiante_id, ins.modulo_id) not in student_modulo_cohortes_map:
+            student_modulo_cohortes_map[(ins.estudiante_id, ins.modulo_id)] = ins.cohorte.nombre
 
     tipo = (tipo_dato or "notas").lower()
 
@@ -77,11 +78,11 @@ def historico_cursos(
             programa = bloque.programa if bloque and bloque.programa else None
             prog_id = programa.id if programa else None
             
-            cohortes = set()
+            cohorte_nome = ""
             if modulo_id:
-                cohortes = student_modulo_cohortes_map.get((a.estudiante_id, modulo_id), set())
-            if not cohortes:
-                cohortes = student_prog_cohortes_map.get((a.estudiante_id, prog_id), set())
+                cohorte_nome = student_modulo_cohortes_map.get((a.estudiante_id, modulo_id), "")
+            if not cohorte_nome:
+                cohorte_nome = student_prog_cohortes_map.get((a.estudiante_id, prog_id), "")
             
             rows.append({
                 "ID": a.id,
@@ -89,7 +90,7 @@ def historico_cursos(
                 "DNI": a.estudiante.dni,
                 "Teléfono": a.estudiante.telefono or "",
                 "Programa": shorten(programa.nombre if programa else ""),
-                "Cohorte": shorten(", ".join(sorted(cohortes))),
+                "Cohorte": shorten(cohorte_nome),
                 "Bloque": shorten(bloque.nombre if bloque else ""),
                 "Módulo": shorten(a.modulo.nombre if a.modulo else ""),
                 "Fecha": a.fecha.isoformat() if a.fecha else "",
@@ -128,11 +129,11 @@ def historico_cursos(
         programa = bloque.programa if bloque and bloque.programa else None
         prog_id = programa.id if programa else None
         
-        cohortes = set()
+        cohorte_nome = ""
         if modulo_id:
-            cohortes = student_modulo_cohortes_map.get((n.estudiante_id, modulo_id), set())
-        if not cohortes:
-            cohortes = student_prog_cohortes_map.get((n.estudiante_id, prog_id), set())
+            cohorte_nome = student_modulo_cohortes_map.get((n.estudiante_id, modulo_id), "")
+        if not cohorte_nome:
+            cohorte_nome = student_prog_cohortes_map.get((n.estudiante_id, prog_id), "")
         
         rows.append({
             "ID": n.id,
@@ -140,7 +141,7 @@ def historico_cursos(
             "DNI": n.estudiante.dni,
             "Teléfono": n.estudiante.telefono or "",
             "Programa": shorten(programa.nombre if programa else ""),
-            "Cohorte": shorten(", ".join(sorted(cohortes))),
+            "Cohorte": shorten(cohorte_nome),
             "Bloque": shorten(bloque.nombre if bloque else ""),
             "Módulo": shorten(modulo.nombre if modulo else ""),
             "Examen": n.examen.tipo_examen,
