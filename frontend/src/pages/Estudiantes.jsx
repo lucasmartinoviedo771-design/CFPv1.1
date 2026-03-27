@@ -576,6 +576,18 @@ export default function Estudiantes() {
                         );
                     })()}
 
+                    <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-indigo-500/20">
+                        <Button 
+                            onClick={handleSubmit} 
+                            isLoading={saveEstudiante.isPending}
+                            size="lg"
+                            className="bg-brand-accent hover:bg-orange-600 text-white min-w-[200px] shadow-lg shadow-brand-accent/20"
+                            startIcon={saveEstudiante.isPending ? null : <Save size={20} />}
+                        >
+                            {saveEstudiante.isPending ? "Guardando..." : (editId ? "Guardar Cambios" : "Crear Estudiante")}
+                        </Button>
+                    </div>
+
                 </Card>
                 </div>
             ) : (
@@ -1011,6 +1023,59 @@ export default function Estudiantes() {
                             })()}
                         </div >
 
+                        {/* Nivelación Digital */}
+                        {viewData.inscripciones.some(i => (i?.cohorte?.programa?.nombre || "").toLowerCase().includes("habilidades digitales")) && (
+                            <div className="mx-6 mb-8 p-5 bg-brand-accent/5 border border-brand-accent/20 rounded-2xl backdrop-blur-md animate-in fade-in slide-in-from-left-4 duration-500">
+                                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-brand-accent/20 rounded-xl">
+                                            <Cpu className="text-brand-accent" size={24} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-lg font-bold text-white tracking-tight">Nivelación: Habilidades Digitales</h4>
+                                            <div className="flex items-center gap-3 mt-1">
+                                                {viewData.student.nivelacion_digital ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${viewData.student.nivelacion_digital.completado ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                                            {viewData.student.nivelacion_digital.completado ? `Completado: ${viewData.student.nivelacion_digital.puntaje}/10` : 'Enviado / Pendiente'}
+                                                        </span>
+                                                        {viewData.student.nivelacion_digital.completado && (
+                                                            <span className="text-xs font-medium text-indigo-300">
+                                                                Propuesta: <span className={viewData.student.nivelacion_digital.puntaje >= 7 ? 'text-emerald-400' : 'text-amber-400'}>
+                                                                    {viewData.student.nivelacion_digital.puntaje >= 7 ? 'Módulo 2' : 'Módulo 1'}
+                                                                </span>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-sm text-indigo-300">Test pendiente de envío</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={async () => {
+                                            try {
+                                                const { data } = await apiClientV2.post(`/nivelacion/generate/${viewData.student.id}`);
+                                                const url = `${window.location.origin}/nivelacion/${data.token}`;
+                                                setQrModal({ 
+                                                    open: true, 
+                                                    url, 
+                                                    studentName: `${viewData.student.nombre} ${viewData.student.apellido} (Test Nivelación)` 
+                                                });
+                                            } catch (err) {
+                                                alert("Error al generar el test.");
+                                            }
+                                        }}
+                                        className="bg-brand-accent hover:bg-orange-600 border-none shadow-lg shadow-brand-accent/20"
+                                        startIcon={<Send size={16} />}
+                                    >
+                                        Generar Invitación
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
                         <div>
                             <SectionDivider title="Trayectoria Académica" icon={Briefcase} />
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
@@ -1101,7 +1166,7 @@ export default function Estudiantes() {
                         <Button variant="ghost" onClick={() => setExportModalOpen(false)}>Cancelar</Button>
                         <Button 
                             onClick={handleExport} 
-                            loading={exportLoading}
+                            isLoading={exportLoading}
                             className="bg-brand-accent hover:bg-orange-600 border-none" 
                             startIcon={<Download size={18} />}
                         >

@@ -28,6 +28,8 @@ import Resoluciones from './pages/Resoluciones.jsx';
 import PreinscripcionPublica from './pages/PreinscripcionPublica.jsx';
 import GestionPreinscripciones from './pages/GestionPreinscripciones.jsx';
 import AutorizacionParental from './pages/AutorizacionParental.jsx';
+import NivelacionDigital from './pages/NivelacionDigital.jsx';
+
 
 // Services
 import authService from "./services/authService";
@@ -109,6 +111,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/preinscripcion" element={<PreinscripcionPublica />} />
             <Route path="/autorizar/:token" element={<AutorizacionParental />} />
+            <Route path="/nivelacion/:token" element={<NivelacionDigital />} />
 
             {/* Protected Routes */}
             <Route path="/set-password" element={<PrivateRoute><WithLayout title="Actualizar Contraseña"><SetPassword /></WithLayout></PrivateRoute>} />

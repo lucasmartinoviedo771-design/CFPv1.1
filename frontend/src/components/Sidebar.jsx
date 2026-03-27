@@ -188,7 +188,7 @@ export default function Sidebar() {
 
       <div className="p-4 border-t border-indigo-500/20">
         <p className="text-sm text-center text-white font-medium">
-          lucasoviedodev@gmail.com
+          estudiantes.cfp@malvinastdf.edu.ar
         </p>
       </div>
     </aside>

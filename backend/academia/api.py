@@ -22,6 +22,7 @@ from core.api import (
     horarios_cursada_router,
     preinscripciones_publicas_router,
     autorizaciones_router,
+    nivelacion_router,
 )
 from core.api.auth import jwt_auth
 
@@ -72,3 +73,5 @@ api.add_router("", auth_endpoints_router, auth=None)  # login/refresh/logout
 api.add_router("", user_info_router)
 api.add_router("", estructura_router)
 api.add_router("/autorizaciones", autorizaciones_router, auth=None)
+api.add_router("/nivelacion", nivelacion_router, auth=None)
+

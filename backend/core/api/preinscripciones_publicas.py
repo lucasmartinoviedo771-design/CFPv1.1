@@ -421,8 +421,6 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
             if os.path.exists(pdf_path):
                 email.attach_file(pdf_path)
 
-        # Copia oculta al correo oficial para que quede registro
-        email.bcc = ["estudiantes.cfp@malvinastdf.edu.ar"]
         email.send(fail_silently=True)
     except Exception as e:
         print(f"Error enviando email de confirmación: {e}")

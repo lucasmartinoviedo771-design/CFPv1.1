@@ -19,6 +19,8 @@ from .resoluciones import router as resoluciones_router
 from .horarios_cursada import router as horarios_cursada_router
 from .preinscripciones_publicas import router as preinscripciones_publicas_router
 from .autorizaciones import router as autorizaciones_router
+from .nivelacion import router as nivelacion_router
+
 
 __all__ = [
     "health_router",
@@ -41,4 +43,5 @@ __all__ = [
     "horarios_cursada_router",
     "preinscripciones_publicas_router",
     "autorizaciones_router",
+    "nivelacion_router",
 ]

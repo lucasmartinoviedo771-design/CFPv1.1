@@ -525,3 +525,27 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"Profile({self.user.username})"
+
+class NivelacionDigital(TimeStamped):
+    """
+    Test de nivelación para el curso de Habilidades Digitales.
+    Determina si el estudiante va al Módulo 1 o Módulo 2.
+    """
+    estudiante = models.OneToOneField(Estudiante, on_delete=models.CASCADE, related_name="nivelacion_digital")
+    token = models.CharField(max_length=100, unique=True, db_index=True)
+    completado = models.BooleanField(default=False)
+    fecha_completado = models.DateTimeField(null=True, blank=True)
+    puntaje = models.PositiveIntegerField(default=0)
+    total_preguntas = models.PositiveIntegerField(default=10)
+    respuestas_json = models.JSONField(null=True, blank=True, help_text="Respuestas detalladas del estudiante")
+    
+    # Lógica de asignación sugerida
+    modulo_asignado = models.ForeignKey('Modulo', on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Nivelación Digital"
+        verbose_name_plural = "Nivelaciones Digitales"
+
+    def __str__(self):
+        return f"Nivelación {self.estudiante.apellido} ({self.puntaje}/{self.total_preguntas})"
+
