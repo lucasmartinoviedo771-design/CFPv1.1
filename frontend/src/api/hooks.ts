@@ -23,6 +23,7 @@ export const useEstudiantes = (params?: {
   modulo_id?: number;
   anio?: string;
   telefono?: string;
+  archived?: boolean;
 }) =>
   useQuery({
     queryKey: keys.estudiantes(params),

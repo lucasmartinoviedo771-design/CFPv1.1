@@ -6,7 +6,7 @@ import { formatDateDisplay, formatDateTimeDisplay } from "../utils/dateFormat";
 import { Card, Select, Button, Input } from '../components/UI';
 import {
     UserPlus, Edit2, Trash2, Search, Save, X, AlertCircle,
-    Check, Eye, User, MapPin, Briefcase, FileText, Download, Plus, Baby
+    Check, Eye, User, MapPin, Briefcase, FileText, Download, Plus, Baby, Cpu, Send
 } from 'lucide-react';
 import { getMediaUrl } from '../utils/media';
 
@@ -1102,13 +1102,25 @@ export default function Estudiantes() {
                                     <h4 className="text-white font-semibold mb-2">Inscripciones</h4>
                                     <div className="space-y-2 text-sm">
                                         {viewData.inscripciones.length ? viewData.inscripciones.map(i => (
-                                            <div key={i.id} className="border-b border-indigo-500/10 pb-2">
-                                                <p className="text-indigo-100">{i?.cohorte?.programa?.nombre || "Programa"} - {i?.cohorte?.nombre || "Cohorte"}</p>
-                                                <p className="text-indigo-300">Bloque: {i?.modulo?.bloque?.nombre || i?.cohorte?.bloque?.nombre || "-"}</p>
-                                                <p className="text-indigo-300">Módulo: {i?.modulo?.nombre || "-"}</p>
-                                                <p className="text-indigo-300">Estado: {i.estado}</p>
+                                            <div key={i.id} className="border-b border-indigo-500/10 pb-3 mb-2 last:border-0 last:mb-0">
+                                                <div className="flex flex-col">
+                                                    <p className="text-indigo-100 font-bold">{i?.cohorte?.programa?.nombre || "Programa"}</p>
+                                                    <p className="text-indigo-300 text-xs">{i?.modulo?.bloque?.nombre || i?.cohorte?.bloque?.nombre || "-"}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-200 text-[10px] border border-indigo-500/20">
+                                                            {i?.modulo?.nombre || "Inscripción"}
+                                                        </span>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider ${i.estado === 'APROBADO' ? 'bg-green-500/20 text-green-400' :
+                                                            i.estado === 'CURSANDO' ? 'bg-blue-500/20 text-blue-400' :
+                                                                i.estado === 'PAUSADO' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                    'bg-red-500/20 text-red-400'
+                                                            }`}>
+                                                            {i.estado}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        )) : <p className="text-indigo-300">Sin inscripciones registradas.</p>}
+                                        )) : <p className="text-indigo-500/50 italic text-center py-4">Sin inscripciones registradas.</p>}
                                     </div>
                                 </Card>
 

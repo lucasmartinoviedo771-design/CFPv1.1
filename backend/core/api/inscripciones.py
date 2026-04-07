@@ -69,7 +69,10 @@ def listar_inscripciones(
     if estudiante_id:
         qs = qs.filter(estudiante_id=estudiante_id)
     if estado:
-        qs = qs.filter(estado=estado)
+        if "," in estado:
+            qs = qs.filter(estado__in=estado.split(","))
+        else:
+            qs = qs.filter(estado=estado)
     if bloque_id:
         from django.db.models import Q
         qs = qs.filter(Q(modulo__bloque_id=bloque_id) | Q(cohorte__bloque_id=bloque_id))

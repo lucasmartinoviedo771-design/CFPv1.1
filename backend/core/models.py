@@ -233,6 +233,10 @@ class Estudiante(TimeStamped):
         verbose_name="Nota de Autorización Parental Firmada (Archivo)",
     )
     
+    # --- Gestión de Soft-Delete (Borrado Lógico) ---
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name="¿Está Activo?")
+    archived_at = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Archivado")
+
     # --- Gestión de Autorización Digital ---
     AUTORIZACION_ESTADOS = [
         ('PENDIENTE', 'Pendiente'),
@@ -272,6 +276,7 @@ class Estudiante(TimeStamped):
         indexes = [
             models.Index(fields=['apellido', 'nombre'], name='idx_estudiante_nombre'),
             models.Index(fields=['estatus'], name='idx_estudiante_estatus'),
+            models.Index(fields=['is_active'], name='idx_estudiante_active'),
             models.Index(fields=['ciudad'], name='idx_estudiante_ciudad'),
             models.Index(fields=['email'], name='idx_estudiante_email'),
         ]

@@ -64,7 +64,18 @@ class EstudianteSerializer(serializers.ModelSerializer):
     trayectos = serializers.SerializerMethodField()
 
     def get_trayectos(self, obj):
-        return list(obj.inscripciones.values_list('cohorte__programa__nombre', flat=True).distinct())
+        trayectos = set()
+        for insc in obj.inscripciones.select_related('cohorte__programa', 'modulo__bloque', 'cohorte__bloque').all():
+            prog = insc.cohorte.programa.nombre if insc.cohorte and insc.cohorte.programa else "S/P"
+            # Priorizamos el bloque del módulo, luego el de la cohorte
+            bloque = (insc.modulo.bloque.nombre if (insc.modulo and insc.modulo.bloque) 
+                      else (insc.cohorte.bloque.nombre if (insc.cohorte and insc.cohorte.bloque) else None))
+            
+            if bloque:
+                trayectos.add(f"{prog} ({bloque})")
+            else:
+                trayectos.add(prog)
+        return sorted(list(trayectos))
 
     class Meta:
         model = Estudiante
@@ -256,9 +267,23 @@ class InscripcionSerializer(serializers.ModelSerializer):
         estudiante = attrs.get("estudiante") or getattr(self.instance, "estudiante", None)
         modulo = attrs.get("modulo") or getattr(self.instance, "modulo", None)
 
-        # Si la inscripción no apunta a módulo, no aplica correlatividad de módulos.
         if not estudiante or not modulo:
             return attrs
+
+        # Evitar duplicidad exacta: No permitir otra inscripción si ya existe una idéntica vigente
+        # Se permiten nuevas inscripciones si las anteriores están en estados finales de "no éxito"
+        existing = Inscripcion.objects.filter(
+            estudiante=estudiante, 
+            modulo=modulo
+        ).exclude(estado__in=['INACTIVO', 'LIBRE', 'DESAPROBADO', 'PAUSADO'])
+        
+        if self.instance:
+            existing = existing.exclude(pk=self.instance.pk)
+            
+        if existing.exists():
+            raise serializers.ValidationError(
+                f"El estudiante ya cuenta con una inscripción activa o aprobada en el módulo '{modulo.nombre}'."
+            )
 
         modulos_bloque = list(Modulo.objects.filter(bloque_id=modulo.bloque_id).order_by("id"))
         nivel_actual = self._modulo_nivel(modulo, modulos_bloque)

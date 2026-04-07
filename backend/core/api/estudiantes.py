@@ -40,8 +40,9 @@ def listar_estudiantes(
     modulo_id: Optional[int] = None,
     programa_id: Optional[int] = None,
     telefono: Optional[str] = None,
+    archived: Optional[bool] = False,
 ):
-    qs = Estudiante.objects.all().prefetch_related(
+    qs = Estudiante.objects.filter(is_active=not archived).prefetch_related(
         "inscripciones__cohorte__programa", "inscripciones__cohorte__bloque"
     ).order_by("apellido", "nombre")
     if dni:
@@ -75,7 +76,7 @@ def listar_estudiantes(
 @require_authenticated_group
 def export_estudiantes(request, payload: ExportIn):
     # 1. Filtrar estudiantes (misma lógica que listar)
-    qs = Estudiante.objects.all().prefetch_related(
+    qs = Estudiante.objects.filter(is_active=True).prefetch_related(
         "inscripciones__modulo",
         "notas__examen__modulo"
     )
@@ -270,13 +271,37 @@ def bulk_approve(request, data: BulkIdsIn):
     return {"updated": updated_count}
 
 
+@router.post("/bulk_archive/", response=dict)
+@require_authenticated_group
+def bulk_archive(request, data: BulkIdsIn):
+    # Cualquiera autenticado (Admin o Preceptor) puede archivar
+    with transaction.atomic():
+        updated_count = Estudiante.objects.filter(id__in=data.ids).update(
+            is_active=False,
+            archived_at=timezone.now()
+        )
+    return {"archived": updated_count}
+
+
+@router.post("/bulk_restore/", response=dict)
+@require_authenticated_group
+def bulk_restore(request, data: BulkIdsIn):
+    # Restaurar estudiantes (Admin o Preceptor)
+    with transaction.atomic():
+        updated_count = Estudiante.objects.filter(id__in=data.ids).update(
+            is_active=True,
+            archived_at=None
+        )
+    return {"restored": updated_count}
+
+
 @router.post("/bulk_delete/", response=dict)
 @require_authenticated_group
 def bulk_delete(request, data: BulkIdsIn):
-    # Verificar si el usuario es Admin o superusuario
+    # Verificar si el usuario es Admin o superusuario (El borrado físico sigue siendo exclusivo de Admins)
     if not (request.user.is_superuser or request.user.groups.filter(name="Admin").exists()):
         from ninja.errors import HttpError
-        raise HttpError(403, "Solo administradores pueden realizar esta acción.")
+        raise HttpError(403, "Solo administradores pueden realizar esta acción de ELIMINACIÓN PERMANENTE.")
 
     with transaction.atomic():
         deleted_count, _ = Estudiante.objects.filter(id__in=data.ids).delete()

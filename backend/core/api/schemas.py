@@ -251,7 +251,18 @@ class EstudianteDetailOut(EstudianteOut):
 
     @staticmethod
     def resolve_trayectos(obj):
-        return [f"{i.cohorte.programa.nombre} ({i.cohorte.bloque.nombre})" for i in obj.inscripciones.all()]
+        trayectos = set()
+        for i in obj.inscripciones.select_related("cohorte__programa", "modulo__bloque", "cohorte__bloque").all():
+            prog = (i.cohorte.programa.nombre or "S/P").strip()
+            # Priorizamos el bloque del módulo, luego el de la cohorte
+            bloque_obj = i.modulo.bloque if (i.modulo and i.modulo.bloque) else (i.cohorte.bloque if i.cohorte else None)
+            bloque_nombre = bloque_obj.nombre.strip() if bloque_obj else None
+            
+            if bloque_nombre:
+                trayectos.add(f"{prog} ({bloque_nombre})")
+            else:
+                trayectos.add(prog)
+        return sorted(list(trayectos))
 
 
 class InscripcionOut(Schema):

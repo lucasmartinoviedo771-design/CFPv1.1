@@ -38,11 +38,15 @@ export default function GestionPreinscripciones() {
     const [viewStudent, setViewStudent] = useState(null);
     const { user } = useContext(UserContext);
     const isAdmin = user?.groups?.includes('Admin');
+    const isPreceptor = user?.groups?.includes('Preceptor');
+    const canDelete = isAdmin || isPreceptor;
     const [ordering, setOrdering] = useState({ field: "created_at", direction: "desc" });
+    const [viewArchived, setViewArchived] = useState(false);
 
     // Fetch only students with status 'Preinscripto'
     const { data: preinscriptos = [], isLoading, refetch } = useEstudiantes({
         estatus: 'Preinscripto',
+        archived: viewArchived
     });
 
     const handleSort = (field) => {
@@ -112,16 +116,37 @@ export default function GestionPreinscripciones() {
 
     const handleBulkDelete = async () => {
         if (selectedIds.size === 0) return;
-        if (!window.confirm(`¿Seguro que deseas ELIMINAR COMPLETAMENTE a ${selectedIds.size} estudiante(s)? Esta acción no se puede deshacer.`)) return;
+        
+        // Si es Admin, puede elegir entre archivado (lógico) o borrado (físico)
+        const isPhysical = isAdmin && window.confirm(`¿Deseas ELIMINAR COMPLETAMENTE a ${selectedIds.size} estudiante(s)?\n\n- Aceptar: Borrado Físico (Irreversible)\n- Cancelar: Volver`);
+        
+        if (!isPhysical) return;
 
         setApproving(true);
         try {
             await apiClientV2.post('/estudiantes/bulk_delete/', { ids: Array.from(selectedIds) });
-            setFeedback({ open: true, message: `${selectedIds.size} estudiante(s) eliminados con éxito.`, severity: "success" });
+            setFeedback({ open: true, message: `${selectedIds.size} estudiante(s) eliminados físicamente.`, severity: "success" });
             setSelectedIds(new Set());
             refetch();
         } catch (error) {
             setFeedback({ open: true, message: "Error al eliminar estudiantes.", severity: "error" });
+        } finally {
+            setApproving(false);
+        }
+    };
+
+    const handleBulkArchive = async () => {
+        if (selectedIds.size === 0) return;
+        if (!window.confirm(`¿Seguro que deseas quitar/archivar a ${selectedIds.size} estudiante(s) de esta lista? El registro se mantendrá en la base de datos pero no figurará más en las colas.`)) return;
+
+        setApproving(true);
+        try {
+            await apiClientV2.post('/estudiantes/bulk_archive/', { ids: Array.from(selectedIds) });
+            setFeedback({ open: true, message: `${selectedIds.size} estudiante(s) archivados con éxito.`, severity: "success" });
+            setSelectedIds(new Set());
+            refetch();
+        } catch (error) {
+            setFeedback({ open: true, message: "Error al archivar estudiantes.", severity: "error" });
         } finally {
             setApproving(false);
         }
@@ -144,6 +169,23 @@ export default function GestionPreinscripciones() {
         }
     };
 
+    const handleBulkRestore = async () => {
+        if (selectedIds.size === 0) return;
+        if (!window.confirm(`¿Restaurar a ${selectedIds.size} estudiante(s)? Volverán a figurar en la cola principal.`)) return;
+
+        setApproving(true);
+        try {
+            await apiClientV2.post('/estudiantes/bulk_restore/', { ids: Array.from(selectedIds) });
+            setFeedback({ open: true, message: `${selectedIds.size} estudiante(s) restaurados con éxito.`, severity: "success" });
+            setSelectedIds(new Set());
+            refetch();
+        } catch (error) {
+            setFeedback({ open: true, message: "Error al restaurar estudiantes.", severity: "error" });
+        } finally {
+            setApproving(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in-up">
             <div className="flex justify-between items-end">
@@ -152,16 +194,27 @@ export default function GestionPreinscripciones() {
                     <p className="text-indigo-300">Revisión y aprobación masiva de nuevos Estudiantes.</p>
                 </div>
                 <div className="flex gap-3">
+                    {canDelete && (
+                        <Button
+                            onClick={handleBulkArchive}
+                            disabled={selectedIds.size === 0 || approving}
+                            variant="danger"
+                            className="bg-orange-600 hover:bg-orange-500 border-none px-6"
+                            startIcon={<Trash2 size={18} />}
+                            title="Quitar de la lista (Borrado Lógico)"
+                        >
+                            Quitar ({selectedIds.size})
+                        </Button>
+                    )}
                     {isAdmin && (
                         <Button
                             onClick={handleBulkDelete}
                             disabled={selectedIds.size === 0 || approving}
                             variant="danger"
-                            className="bg-red-600 hover:bg-red-500 border-none px-6"
-                            startIcon={<Trash2 size={18} />}
-                        >
-                            Borrar ({selectedIds.size})
-                        </Button>
+                            className="bg-red-700 hover:bg-red-600 border-none px-2"
+                            startIcon={<XCircle size={18} />}
+                            title="Eliminar Permanente"
+                        />
                     )}
                     <Button
                         onClick={handleBulkApprove}
@@ -171,7 +224,32 @@ export default function GestionPreinscripciones() {
                     >
                         Aprobar Seleccionados ({selectedIds.size})
                     </Button>
+                    {viewArchived && selectedIds.size > 0 && (
+                        <Button
+                            onClick={handleBulkRestore}
+                            disabled={approving}
+                            className="bg-cyan-600 hover:bg-cyan-500 border-none px-6"
+                            startIcon={<UploadCloud size={18} />}
+                        >
+                            Restaurar ({selectedIds.size})
+                        </Button>
+                    )}
                 </div>
+            </div>
+
+            <div className="flex gap-2 mb-4 bg-indigo-950/30 p-1 rounded-lg w-fit border border-indigo-500/10">
+                <button
+                    onClick={() => { setViewArchived(false); setSelectedIds(new Set()); }}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${!viewArchived ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 hover:text-indigo-200'}`}
+                >
+                    Cola Principal
+                </button>
+                <button
+                    onClick={() => { setViewArchived(true); setSelectedIds(new Set()); }}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewArchived ? 'bg-orange-600 text-white shadow-lg' : 'text-indigo-400 hover:text-indigo-200'}`}
+                >
+                    <Trash2 size={16} /> Papelera / Archivados
+                </button>
             </div>
 
             <Card className="bg-indigo-900/10 border-indigo-500/20">
@@ -293,23 +371,59 @@ export default function GestionPreinscripciones() {
                                             >
                                                 <Eye size={18} />
                                             </button>
-                                            {isAdmin && (
+                                            {canDelete && (
                                                 <button
                                                     onClick={async () => {
-                                                        if (window.confirm(`¿Eliminar permanentemente a ${s.apellido}, ${s.nombre}?`)) {
+                                                        if (window.confirm(`¿Archivar a ${s.apellido}, ${s.nombre}? No figurará más en las colas pero el registro se mantiene.`)) {
                                                             try {
-                                                                await apiClientV2.post('/estudiantes/bulk_delete/', { ids: [s.id] });
-                                                                setFeedback({ open: true, message: "Estudiante eliminado.", severity: "success" });
+                                                                await apiClientV2.post('/estudiantes/bulk_archive/', { ids: [s.id] });
+                                                                setFeedback({ open: true, message: "Estudiante archivado correctamente.", severity: "success" });
                                                                 refetch();
                                                             } catch (e) {
-                                                                setFeedback({ open: true, message: "Error al eliminar.", severity: "error" });
+                                                                setFeedback({ open: true, message: "Error al archivar.", severity: "error" });
                                                             }
                                                         }
                                                     }}
-                                                    className="p-2 text-red-400 hover:text-red-200 transition-colors"
-                                                    title="Eliminar permanentemente"
+                                                    className="p-2 text-orange-400 hover:text-orange-200 transition-colors"
+                                                    title="Archivar (Borrado lógico)"
                                                 >
                                                     <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={async () => {
+                                                        if (window.confirm(`¿ELIMINAR PERMANENTEMENTE a ${s.apellido}, ${s.nombre}? ESTA ACCIÓN ES IRREVERSIBLE.`)) {
+                                                            try {
+                                                                await apiClientV2.post('/estudiantes/bulk_delete/', { ids: [s.id] });
+                                                                setFeedback({ open: true, message: "Estudiante eliminado físicamente.", severity: "success" });
+                                                                refetch();
+                                                            } catch (e) {
+                                                                setFeedback({ open: true, message: "Error al eliminar físicamente.", severity: "error" });
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="p-2 text-red-600 hover:text-red-400 transition-colors"
+                                                    title="ELIMINAR PERMANENTE"
+                                                >
+                                                    <XCircle size={18} />
+                                                </button>
+                                            )}
+                                            {viewArchived && canDelete && (
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            await apiClientV2.post('/estudiantes/bulk_restore/', { ids: [s.id] });
+                                                            setFeedback({ open: true, message: "Estudiante restaurado.", severity: "success" });
+                                                            refetch();
+                                                        } catch (e) {
+                                                            setFeedback({ open: true, message: "Error al restaurar.", severity: "error" });
+                                                        }
+                                                    }}
+                                                    className="p-2 text-cyan-400 hover:text-cyan-200 transition-colors"
+                                                    title="Restaurar a la cola"
+                                                >
+                                                    <UploadCloud size={18} />
                                                 </button>
                                             )}
                                         </div>
@@ -317,7 +431,9 @@ export default function GestionPreinscripciones() {
                                 </tr>
                             ))}
                             {!isLoading && sortedAndFiltered.length === 0 && (
-                                <tr><td colSpan={7} className="text-center py-12 text-indigo-300">No hay preinscripciones pendientes.</td></tr>
+                                <tr><td colSpan={7} className="text-center py-12 text-indigo-300">
+                                    {viewArchived ? "No hay estudiantes en la papelera." : "No hay preinscripciones pendientes."}
+                                </td></tr>
                             )}
                         </tbody>
                     </table>
