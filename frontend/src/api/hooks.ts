@@ -24,6 +24,7 @@ export const useEstudiantes = (params?: {
   anio?: string;
   telefono?: string;
   archived?: boolean;
+  rango_edad?: string;
 }) =>
   useQuery({
     queryKey: keys.estudiantes(params),

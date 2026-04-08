@@ -70,7 +70,8 @@ export default function Estudiantes() {
         programa_id: "",
         bloque_id: "",
         modulo_id: "",
-        cohorte_id: ""
+        cohorte_id: "",
+        rango_edad: ""
     });
     const [ordering, setOrdering] = useState({ field: "apellido", direction: "asc" });
     const [qrModal, setQrModal] = useState({ open: false, url: "", studentName: "" });
@@ -89,7 +90,11 @@ export default function Estudiantes() {
         columns: ["apellido", "nombre", "dni", "email", "estatus", "materias_aprobadas", "materias_cursando", "materias_pendientes"],
         format: "excel",
         anio: "",
-        estatus: ""
+        estatus: "",
+        programa_id: "",
+        bloque_id: "",
+        modulo_id: "",
+        cohorte_id: ""
     });
     const [exportLoading, setExportLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("list"); // "list" or "add"
@@ -105,6 +110,7 @@ export default function Estudiantes() {
         modulo_id: filters.modulo_id ? parseInt(filters.modulo_id) : undefined,
         cohorte_id: filters.cohorte_id ? parseInt(filters.cohorte_id) : undefined,
         telefono: filters.telefono || undefined,
+        rango_edad: filters.rango_edad || undefined,
     });
     
     const { data: programas = [] } = useProgramas();
@@ -220,12 +226,22 @@ export default function Estudiantes() {
 
     const handleConfirmDelete = async () => {
         if (!deleteTarget) return;
+        const isTest = deleteTarget.apellido?.toUpperCase().includes("TEST") || deleteTarget.nombre?.toUpperCase().includes("TEST") || deleteTarget.dni?.startsWith("99000");
+
         try {
-            await saveEstudiante.mutateAsync({ id: deleteTarget.id, estatus: "Baja" });
-            setFeedback({ open: true, message: "Estudiante dado de baja", severity: "success" });
+            if (isTest && window.confirm("Este parece ser un alumno de prueba. ¿Deseas ELIMINARLO PERMANENTEMENTE?")) {
+                await apiClientV2.post('/estudiantes/bulk_delete/', { ids: [deleteTarget.id] });
+                setFeedback({ open: true, message: "Prueba eliminada.", severity: "success" });
+            } else {
+                await apiClientV2.post('/estudiantes/bulk_archive/', { ids: [deleteTarget.id] });
+                setFeedback({ open: true, message: "Dado de baja correctamente.", severity: "success" });
+            }
             setDeleteTarget(null);
             refetch();
-        } catch (error) { setFeedback({ open: true, message: "Error al dar de baja", severity: "error" }); }
+        } catch (error) {
+            setDeleteTarget(null);
+            setFeedback({ open: true, message: "Error al procesar la baja.", severity: "error" });
+        }
     };
 
     const handleOpenDetail = async (student) => {
@@ -255,8 +271,13 @@ export default function Estudiantes() {
             const response = await apiClientV2.post('/estudiantes/export/', {
                 search: filters.nombre_apellido || undefined,
                 dni: filters.dni || undefined,
-                anio: exportConfig.anio ? parseInt(exportConfig.anio) : undefined,
-                estatus: exportConfig.estatus || undefined,
+                anio: filters.anio ? parseInt(filters.anio) : undefined,
+                estatus: filters.estatus || undefined,
+                programa_id: filters.programa_id ? parseInt(filters.programa_id) : undefined,
+                bloque_id: filters.bloque_id ? parseInt(filters.bloque_id) : undefined,
+                modulo_id: filters.modulo_id ? parseInt(filters.modulo_id) : undefined,
+                cohorte_id: filters.cohorte_id ? parseInt(filters.cohorte_id) : undefined,
+                rango_edad: filters.rango_edad || undefined,
                 columns: exportConfig.columns,
                 format: exportConfig.format
             }, { responseType: 'blob' });
@@ -593,117 +614,115 @@ export default function Estudiantes() {
             ) : (
                 /* Listado y Filtros (Solapa 1) */
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="flex flex-col md:flex-row gap-4 mb-4 items-end">
-                        <div className="flex-1 space-y-4">
-                            <div className="flex flex-col md:flex-row gap-4">
-                                <div className="flex-1"><Input placeholder="Buscar por Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
-                                <div className="w-full md:w-48"><Input placeholder="Buscar DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
-                                <div className="w-full md:w-48"><Input placeholder="Buscar Teléfono" value={filters.telefono} name="telefono" onChange={(e) => { setFilters({ ...filters, telefono: e.target.value }); setPage(0); }} className="bg-indigo-950/50" /></div>
-                                <div className="w-full md:w-40">
-                                    <Select 
-                                        value={filters.anio} 
-                                        onChange={(e) => { setFilters({ ...filters, anio: e.target.value }); setPage(0); }} 
-                                        options={[
-                                            { value: '', label: 'Año: Todos' },
-                                            { value: '2023', label: '2023' },
-                                            { value: '2024', label: '2024' },
-                                            { value: '2025', label: '2025' },
-                                            { value: '2026', label: '2026' },
-                                        ]} 
-                                        className="bg-indigo-950/50" 
-                                    />
+                    <div className="space-y-4 mb-6">
+                        {/* Panel de Búsqueda de Estudiante */}
+                        <div className="bg-white/5 border border-white/5 p-4 rounded-2xl">
+                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <Search size={14} /> Búsqueda de Estudiante
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div className="col-span-1 md:col-span-1">
+                                    <Input placeholder="Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/30" />
                                 </div>
-                                <div className="w-full md:w-40"><Select value={filters.estatus} onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} options={[{ value: '', label: 'Estatus: Todos' }, { value: 'Regular', label: 'Regular' }, { value: 'Baja', label: 'Baja' }, { value: 'Condicional', label: 'Condicional' }, { value: 'Preinscripto', label: 'Preinscripto' }]} className="bg-indigo-950/50" /></div>
-                            </div>
-
-                            {/* Filtros Académicos en cascada */}
-                            <div className="flex flex-col md:flex-row gap-4">
-                                <div className="flex-1">
-                                    <Select
-                                        value={filters.programa_id}
-                                        onChange={(e) => { 
-                                            setFilters({ ...filters, programa_id: e.target.value, bloque_id: "", modulo_id: "", cohorte_id: "" }); 
-                                            setPage(0); 
-                                        }}
-                                        options={[
-                                            { value: '', label: 'Todos los Programas' },
-                                            ...programas.map(p => ({ value: p.id, label: p.nombre }))
-                                        ]}
-                                        className="bg-indigo-950/50"
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <Select
-                                        value={filters.bloque_id}
-                                        onChange={(e) => { 
-                                            setFilters({ ...filters, bloque_id: e.target.value, modulo_id: "", cohorte_id: "" }); 
-                                            setPage(0); 
-                                        }}
-                                        options={[
-                                            { value: '', label: 'Todos los Bloques' },
-                                            ...bloques.map(b => ({ value: b.id, label: b.nombre }))
-                                        ]}
-                                        className="bg-indigo-950/50"
-                                        disabled={!filters.programa_id}
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <Select
-                                        value={filters.modulo_id}
-                                        onChange={(e) => { 
-                                            setFilters({ ...filters, modulo_id: e.target.value, cohorte_id: "" }); 
-                                            setPage(0); 
-                                        }}
-                                        options={[
-                                            { value: '', label: 'Todos los Módulos' },
-                                            ...modulos.map(m => ({ value: m.id, label: m.nombre }))
-                                        ]}
-                                        className="bg-indigo-950/50"
-                                        disabled={!filters.bloque_id}
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <Select
-                                        value={filters.cohorte_id}
-                                        onChange={(e) => { 
-                                            setFilters({ ...filters, cohorte_id: e.target.value }); 
-                                            setPage(0); 
-                                        }}
-                                        options={[
-                                            { value: '', label: 'Todas las Cohortes' },
-                                            ...filteredCohortes.map(c => ({ value: c.id, label: c.nombre }))
-                                        ]}
-                                        className="bg-indigo-950/50"
-                                        disabled={!filters.programa_id}
-                                    />
-                                </div>
+                                <Input placeholder="DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/30" />
+                                <Input placeholder="Teléfono" value={filters.telefono} name="telefono" onChange={(e) => { setFilters({ ...filters, telefono: e.target.value }); setPage(0); }} className="bg-indigo-950/30" />
+                                <Select 
+                                    value={filters.anio} 
+                                    onChange={(e) => { setFilters({ ...filters, anio: e.target.value }); setPage(0); }} 
+                                    options={[
+                                        { value: '', label: 'Cualquier Año' },
+                                        { value: '2023', label: '2023' },
+                                        { value: '2024', label: '2024' },
+                                        { value: '2025', label: '2025' },
+                                        { value: '2026', label: '2026' },
+                                    ]} 
+                                    className="bg-indigo-950/30" 
+                                />
                             </div>
                         </div>
-                        
-                        <div className="flex gap-2">
-                            <Button onClick={() => refetch()} startIcon={<Search size={18} />} className="bg-indigo-600 hover:bg-indigo-500 border-none">Filtrar</Button>
-                            <Button 
-                                onClick={() => {
-                                    setExportConfig(prev => ({ ...prev, anio: filters.anio, estatus: filters.estatus }));
-                                    setExportModalOpen(true);
-                                }} 
-                                startIcon={<Download size={18} />} 
-                                variant="outline" 
-                                className="border-indigo-500 text-indigo-300 hover:bg-indigo-500/20"
-                            >
-                                Exportar
-                            </Button>
-                            <Button 
-                                onClick={() => {
-                                    setEditId(null);
-                                    setForm(initialFormState);
-                                    setActiveTab("add");
-                                }}
-                                startIcon={<Plus size={18} />}
-                                className="bg-brand-accent hover:bg-orange-600 border-none"
-                            >
-                                Nuevo
-                            </Button>
+
+                        {/* Panel de Filtros Académicos / Reportes */}
+                        <div className="bg-brand-accent/5 border border-brand-accent/20 p-4 rounded-2xl shadow-lg shadow-brand-accent/5">
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-3">
+                                <p className="text-[10px] font-bold text-brand-accent uppercase tracking-widest flex items-center gap-2">
+                                    <Briefcase size={14} /> Filtros de Cursada / Reportes
+                                </p>
+                                <div className="flex gap-2">
+                                    <Button onClick={() => refetch()} size="sm" startIcon={<Search size={16} />} className="bg-indigo-600 hover:bg-indigo-500 border-none px-4">Filtrar</Button>
+                                    <Button 
+                                        onClick={() => setExportModalOpen(true)} 
+                                        size="sm"
+                                        startIcon={<Download size={16} />} 
+                                        variant="outline" 
+                                        className="border-brand-accent/50 text-brand-accent hover:bg-brand-accent/10 px-4"
+                                    >
+                                        Exportar Listado
+                                    </Button>
+                                    <Button 
+                                        onClick={() => {
+                                            setEditId(null);
+                                            setForm(initialFormState);
+                                            setActiveTab("add");
+                                        }}
+                                        size="sm"
+                                        startIcon={<Plus size={16} />}
+                                        className="bg-brand-accent hover:bg-orange-600 border-none px-4"
+                                    >
+                                        Nuevo Estudiante
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+                                <Select 
+                                    value={filters.estatus} 
+                                    onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} 
+                                    options={[
+                                        { value: '', label: 'Estatus: Todos' }, 
+                                        { value: 'Regular', label: 'Regular' }, 
+                                        { value: 'Baja', label: 'Baja' }, 
+                                        { value: 'Condicional', label: 'Condicional' }, 
+                                        { value: 'Preinscripto', label: 'Preinscripto' }
+                                    ]} 
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
+                                />
+                                <Select 
+                                    value={filters.rango_edad} 
+                                    onChange={(e) => { setFilters({ ...filters, rango_edad: e.target.value }); setPage(0); }} 
+                                    options={[
+                                        { value: '', label: 'Cualquier Edad' }, 
+                                        { value: 'mayores', label: 'Mayores (>= 18)' }, 
+                                        { value: 'menores', label: 'Menores (< 18)' }
+                                    ]} 
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
+                                />
+                                <Select
+                                    value={filters.programa_id}
+                                    onChange={(e) => { setFilters({ ...filters, programa_id: e.target.value, bloque_id: "", modulo_id: "", cohorte_id: "" }); setPage(0); }}
+                                    options={[{ value: '', label: 'Todos los Programas' }, ...programas.map(p => ({ value: p.id, label: p.nombre }))]}
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs"
+                                />
+                                <Select
+                                    value={filters.bloque_id}
+                                    onChange={(e) => { setFilters({ ...filters, bloque_id: e.target.value, modulo_id: "", cohorte_id: "" }); setPage(0); }}
+                                    options={[{ value: '', label: 'Todos los Bloques' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]}
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs"
+                                    disabled={!filters.programa_id}
+                                />
+                                <Select
+                                    value={filters.modulo_id}
+                                    onChange={(e) => { setFilters({ ...filters, modulo_id: e.target.value, cohorte_id: "" }); setPage(0); }}
+                                    options={[{ value: '', label: 'Todos los Módulos' }, ...modulos.map(m => ({ value: m.id, label: m.nombre }))]}
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs"
+                                    disabled={!filters.bloque_id}
+                                />
+                                <Select
+                                    value={filters.cohorte_id}
+                                    onChange={(e) => { setFilters({ ...filters, cohorte_id: e.target.value }); setPage(0); }}
+                                    options={[{ value: '', label: 'Todas las Cohortes' }, ...filteredCohortes.map(c => ({ value: c.id, label: c.nombre }))]}
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs"
+                                    disabled={!filters.programa_id}
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -1188,37 +1207,10 @@ export default function Estudiantes() {
                 }
             >
                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white/5 border border-white/10 rounded-xl">
-                        <div>
-                            <p className="text-xs font-bold text-indigo-400 uppercase mb-2">Filtrar por Año</p>
-                            <Select 
-                                value={exportConfig.anio} 
-                                onChange={(e) => setExportConfig({...exportConfig, anio: e.target.value})} 
-                                options={[
-                                    { value: '', label: 'Cualquier Año' },
-                                    { value: '2023', label: '2023' },
-                                    { value: '2024', label: '2024' },
-                                    { value: '2025', label: '2025' },
-                                    { value: '2026', label: '2026' },
-                                ]} 
-                                className="bg-indigo-900/50 border-indigo-500/30" 
-                            />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-indigo-400 uppercase mb-2">Filtrar por Estatus</p>
-                            <Select 
-                                value={exportConfig.estatus} 
-                                onChange={(e) => setExportConfig({...exportConfig, estatus: e.target.value})} 
-                                options={[
-                                    { value: '', label: 'Todos los Estatus' },
-                                    { value: 'Regular', label: 'Regular' },
-                                    { value: 'Baja', label: 'Baja' },
-                                    { value: 'Condicional', label: 'Condicional' },
-                                    { value: 'Preinscripto', label: 'Preinscripto' }
-                                ]} 
-                                className="bg-indigo-900/50 border-indigo-500/30" 
-                            />
-                        </div>
+                    <div className="bg-indigo-950/40 p-4 border border-indigo-500/20 rounded-xl mb-4">
+                        <p className="text-xs text-indigo-300">
+                            La exportación incluirá a los estudiantes según los <b>filtros que seleccionaste en la pantalla principal</b>.
+                        </p>
                     </div>
 
                     <div>

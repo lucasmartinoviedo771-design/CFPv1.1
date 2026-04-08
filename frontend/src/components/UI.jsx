@@ -101,7 +101,7 @@ export const Select = ({ className, label, options, id, labelClassName, ...props
 
 // --- Card ---
 export const Card = ({ children, className, title }) => (
-    <div className={cn("bg-indigo-900/20 overflow-hidden shadow-lg rounded-xl border border-indigo-500/20 backdrop-blur-sm", className)}>
+    <div className={cn("bg-indigo-900/20 shadow-lg rounded-xl border border-indigo-500/20 backdrop-blur-sm", className)}>
         {title && (
             <div className="px-6 py-4 border-b border-indigo-500/20 bg-indigo-950/30">
                 <h3 className="text-lg leading-6 font-bold text-white">{title}</h3>

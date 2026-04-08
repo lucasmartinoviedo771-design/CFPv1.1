@@ -21,6 +21,11 @@ class ExportIn(Schema):
     dni: Optional[str] = None
     estatus: Optional[str] = None
     anio: Optional[int] = None
+    programa_id: Optional[int] = None
+    cohorte_id: Optional[int] = None
+    bloque_id: Optional[int] = None
+    modulo_id: Optional[int] = None
+    rango_edad: Optional[str] = None # "menores", "mayores"
     columns: List[str]
     format: str = "excel" # "excel" or "pdf"
 
@@ -41,6 +46,7 @@ def listar_estudiantes(
     programa_id: Optional[int] = None,
     telefono: Optional[str] = None,
     archived: Optional[bool] = False,
+    rango_edad: Optional[str] = None, # "menores", "mayores"
 ):
     qs = Estudiante.objects.filter(is_active=not archived).prefetch_related(
         "inscripciones__cohorte__programa", "inscripciones__cohorte__bloque"
@@ -69,6 +75,15 @@ def listar_estudiantes(
         qs = qs.filter(Q(inscripciones__modulo__bloque_id=bloque_id) | Q(inscripciones__cohorte__bloque_id=bloque_id)).distinct()
     if modulo_id:
         qs = qs.filter(inscripciones__modulo_id=modulo_id).distinct()
+    
+    if rango_edad:
+        today = timezone.now().date()
+        date_18 = today.replace(year=today.year - 18)
+        if rango_edad == "menores":
+            qs = qs.filter(fecha_nacimiento__gt=date_18)
+        elif rango_edad == "mayores":
+            qs = qs.filter(fecha_nacimiento__lte=date_18)
+            
     return qs
 
 
@@ -93,6 +108,23 @@ def export_estudiantes(request, payload: ExportIn):
             | Q(email__icontains=payload.search)
             | Q(dni__icontains=payload.search)
         )
+    
+    if payload.programa_id:
+        qs = qs.filter(inscripciones__cohorte__programa_id=payload.programa_id).distinct()
+    if payload.cohorte_id:
+        qs = qs.filter(inscripciones__cohorte_id=payload.cohorte_id).distinct()
+    if payload.bloque_id:
+        qs = qs.filter(Q(inscripciones__modulo__bloque_id=payload.bloque_id) | Q(inscripciones__cohorte__bloque_id=payload.bloque_id)).distinct()
+    if payload.modulo_id:
+        qs = qs.filter(inscripciones__modulo_id=payload.modulo_id).distinct()
+    
+    if payload.rango_edad:
+        today = timezone.now().date()
+        date_18 = today.replace(year=today.year - 18)
+        if payload.rango_edad == "menores":
+            qs = qs.filter(fecha_nacimiento__gt=date_18)
+        elif payload.rango_edad == "mayores":
+            qs = qs.filter(fecha_nacimiento__lte=date_18)
     
     # 2. Preparar datos
     data = []

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import apiClient from '../api/client';
 import HistorialAcademico from '../components/HistorialAcademico';
 import { Card, Select } from '../components/UI';
-import { UserSearch, FileText } from 'lucide-react';
+import { Autocomplete } from '../components/Autocomplete';
+import { UserSearch, FileText, Search } from 'lucide-react';
 
 const calculateAge = (birthDate) => {
   if (!birthDate) return null;
@@ -59,35 +60,42 @@ export default function Notas() {
   }, [selEstudiante]);
 
   // Student options for Select
-  const studentOptions = estudiantes.map(e => {
-    const age = calculateAge(e.fecha_nacimiento);
-    const ageLabel = age !== null ? (age < 18 ? ` - ${age} años 👶` : ` - ${age} años`) : "";
-    return {
-      value: e.id,
-      label: `${e.apellido}, ${e.nombre} (${e.dni})${ageLabel}`
-    };
-  });
+    const studentOptions = estudiantes.map(e => {
+        const age = calculateAge(e.fecha_nacimiento);
+        const ageLabel = age !== null ? (age < 18 ? ` - ${age} años 👶` : ` - ${age} años`) : "";
+        return {
+            value: e.id,
+            label: `${e.apellido}, ${e.nombre} (${e.dni})`,
+            sublabel: ageLabel ? ageLabel.replace(" - ", "") : "Edad no disponible"
+        };
+    });
 
   return (
     <div className="space-y-6 animate-fade-in-up">
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight">Gestión de Notas</h1>
         <p className="text-indigo-300">Carga y edición de calificaciones y exámenes.</p>
+        <p className="text-[10px] text-brand-accent/60 mt-1 uppercase font-bold tracking-widest">
+            {estudiantes.length === 0 ? "Buscando alumnos..." : `Sincronizados: ${estudiantes.length} estudiantes`}
+        </p>
       </div>
 
-      <Card className="bg-indigo-900/20 border-indigo-500/30">
-        <div className="flex flex-col md:flex-row gap-4 items-end">
-          <div className="w-full md:w-1/2">
-            <Select
+      <Card className="bg-indigo-900/15 border-indigo-500/20 overflow-visible relative z-30">
+        <div className="flex flex-col md:flex-row gap-6 items-end">
+          <div className="w-full md:w-1/2 lg:w-1/3">
+            <Autocomplete
               label="Seleccionar Estudiante"
               value={selEstudiante}
-              onChange={(e) => setSelEstudiante(e.target.value)}
-              options={[{ value: '', label: 'Buscar estudiante...' }, ...studentOptions]}
-              className="bg-indigo-950/50 border-indigo-500/30 text-white"
+              onChange={(val) => setSelEstudiante(val)}
+              options={studentOptions}
+              placeholder="Escriba apellido, nombre o DNI..."
+              className="bg-indigo-950/40"
             />
           </div>
-          <div className="pb-2 text-indigo-400 hidden md:block">
-            <UserSearch size={24} />
+          <div className="hidden md:flex items-center gap-2 pb-2.5 text-indigo-400 group">
+             <div className="p-2 rounded-lg bg-indigo-500/10 group-hover:bg-indigo-500/20 transition-colors">
+                <UserSearch size={22} className="group-hover:scale-110 transition-transform" />
+             </div>
           </div>
         </div>
       </Card>

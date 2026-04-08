@@ -451,8 +451,8 @@ def crear_preinscripcion_publica(request):
 
     # Validar que si es menor solo se anote a Nivel III
     if es_menor:
-        if edad < 16:
-            raise HttpError(400, "La edad mínima para participar es de 16 años.")
+        if edad < 15:
+            raise HttpError(400, "No se permite la inscripción de menores de 15 años. Por favor, verifique la fecha de nacimiento colocada en el formulario.")
         
         programas_ids = [s["programa_id"] for s in seleccion_programas]
         from core.models import Programa
