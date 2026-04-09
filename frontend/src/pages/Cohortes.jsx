@@ -287,7 +287,16 @@ export default function Cohortes() {
                   <TableRow key={c.id}>
                     <TableCell>{programas.find(p => p.id === c.programa_id)?.nombre || c.programa_id}</TableCell>
                     <TableCell>{bloquesPrograma.find(b => b.id === c.bloque_id)?.nombre || '-'}</TableCell>
-                    <TableCell>{calendarios.find(b => b.id === c.bloque_fechas_id)?.nombre || c.bloque_fechas_id}</TableCell>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2">
+                          {calendarios.find(b => b.id === c.bloque_fechas_id)?.nombre || c.bloque_fechas_id}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+                          {calendarios.find(b => b.id === c.bloque_fechas_id)?.descripcion || ''}
+                        </Typography>
+                      </Box>
+                    </TableCell>
                     <TableCell>{c.nombre}</TableCell>
                     <TableCell>{formatDateDisplay(c.fecha_inicio)}</TableCell>
                     <TableCell>{formatDateDisplay(c.fecha_fin)}</TableCell>

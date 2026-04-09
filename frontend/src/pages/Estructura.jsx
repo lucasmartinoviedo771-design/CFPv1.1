@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Box, Typography, Accordion, AccordionSummary, AccordionDetails, CircularProgress,
   List, ListItem, ListItemText, Grid, IconButton, Tooltip, Button,
@@ -9,6 +10,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import api from '../api/client';
 
 const initialModuloFormState = {
@@ -342,6 +344,11 @@ function ProgramaItem({ programa, onAddBloque, onEdit, onDelete, onAddModulo, on
           <Tooltip title="Añadir Bloque">
             <IconButton size="small" onClick={(e) => { e.stopPropagation(); onAddBloque(programa.id); }}>
               <AddRoundedIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Gestionar Exámenes">
+            <IconButton size="small" component={RouterLink} to={`/cursos/${programa.id}`}>
+              <MenuBookIcon sx={{ color: 'rgba(255,255,255,0.7)' }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Editar Programa">

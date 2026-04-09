@@ -70,6 +70,30 @@ def eliminar_bloque_fechas(request, bloque_id: int):
     return {"deleted": True, "id": bloque_id}
 
 
+def generar_resumen_secuencia(semanas_data):
+    """
+    Genera un 'tag' descriptivo basado en la secuencia de semanas.
+    Ejemplo: 5C - PA - FV - FS
+    """
+    counts = {}
+    for s in semanas_data:
+        counts[s.tipo] = counts.get(s.tipo, 0) + 1
+    
+    summary = []
+    if counts.get('CLASE'):
+        summary.append(f"{counts['CLASE']}C")
+    if counts.get('PARCIAL'):
+        summary.append("PA")
+    if counts.get('SIN_ACTIVIDADES'):
+        summary.append("SA")
+    if counts.get('FINAL_VIRTUAL'):
+        summary.append("FV")
+    if counts.get('FINAL_SINC'):
+        summary.append("FS")
+    
+    return " - ".join(summary)
+
+
 @router.post("/{bloque_id}/guardar_secuencia", response=dict)
 @require_authenticated_group
 def guardar_secuencia(request, bloque_id: int, payload: SecuenciaPayload):
@@ -88,5 +112,9 @@ def guardar_secuencia(request, bloque_id: int, payload: SecuenciaPayload):
                 orden=idx + 1,
                 tipo=semana.tipo,
             )
+        
+        # Generar y actualizar la descripción automáticamente
+        bloque.descripcion = generar_resumen_secuencia(semanas_data)
+        bloque.save()
 
-    return {"status": "ok", "bloque_id": bloque_id, "semanas": SemanaConfigSerializer(bloque.semanas_config.all(), many=True).data}
+    return {"status": "ok", "bloque_id": bloque_id, "summary": bloque.descripcion, "semanas": SemanaConfigSerializer(bloque.semanas_config.all(), many=True).data}
