@@ -109,7 +109,7 @@ def _bloques_aprobados_ids(estudiante_id: int) -> set[int]:
 def _esta_en_periodo_examenes(cohorte: Cohorte, hoy: date) -> bool:
     if not cohorte.fecha_fin:
         return False
-    return hoy >= (cohorte.fecha_fin - timedelta(days=14))
+    return hoy >= (cohorte.fecha_fin - timedelta(days=21))
 
 
 def _cohortes_habilitadas() -> List[Cohorte]:

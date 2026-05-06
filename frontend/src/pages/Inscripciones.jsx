@@ -90,6 +90,7 @@ export default function Inscripciones() {
     const [filterListBloqueName, setFilterListBloqueName] = useState("");
     const [filterListModuloName, setFilterListModuloName] = useState("");
     const [filterListCohorteName, setFilterListCohorteName] = useState("");
+    const [filterListEstado, setFilterListEstado] = useState("");
 
     const { data: estudiantes = [] } = useEstudiantes();
     const { data: cohortes = [] } = useCohortes();
@@ -299,6 +300,7 @@ export default function Inscripciones() {
             if (filterListBloqueName && r.cohorte?.bloque?.nombre !== filterListBloqueName) return false;
             if (filterListModuloName && r.modulo?.nombre !== filterListModuloName) return false;
             if (filterListCohorteName && r.cohorte?.nombre !== filterListCohorteName) return false;
+            if (filterListEstado && r.estado !== filterListEstado) return false;
 
             if (!needle) return true;
 
@@ -310,7 +312,7 @@ export default function Inscripciones() {
             const cohorte = (r.cohorte?.nombre || "").toLowerCase();
             return apellido.includes(needle) || nombre.includes(needle) || full.includes(needle) || dni.includes(needle) || modulo.includes(needle) || cohorte.includes(needle);
         });
-    }, [inscripciones, inscripcionSearch, filterListProgramaName, filterListBloqueName, filterListModuloName, filterListCohorteName]);
+    }, [inscripciones, inscripcionSearch, filterListProgramaName, filterListBloqueName, filterListModuloName, filterListCohorteName, filterListEstado]);
 
     const tableProgramaOpts = useMemo(() => {
         const set = new Set();
@@ -723,6 +725,16 @@ export default function Inscripciones() {
                         >
                             <option value="">Todas las Cohortes</option>
                             {tableCohorteOpts.map(name => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                        <select
+                            value={filterListEstado}
+                            onChange={(e) => { setFilterListEstado(e.target.value); setPage(0); }}
+                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
+                        >
+                            <option value="">Todos los Estados</option>
+                            {["PREINSCRIPTO","CURSANDO","INACTIVO","LIBRE","PAUSADO","EGRESADO","APROBADO","DESAPROBADO"].map(e => (
+                                <option key={e} value={e}>{e}</option>
+                            ))}
                         </select>
                         <div className="relative min-w-[150px]">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-400">

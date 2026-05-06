@@ -101,11 +101,19 @@ def enviar_correo_bienvenida(estudiante_id: int):
                 'nota_programacion_ii': True
             })
 
-        # Trayecto: Sistemas de Representación (ID 3) - Opcional si no tenía clave específica
+        # Trayecto: Sistemas de Representación (ID 3)
         if 3 in programas_ids:
              contenido_opciones.append({
                 'titulo': 'Sistemas de Representación',
-                'clave': 'Sist-Rep2025', # Clave genérica o placeholder
+                'clave': 'Sist-Rep2025',
+                'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12'
+            })
+
+        # Trayecto: Matemática para Técnicos (ID 6)
+        if 6 in programas_ids:
+            contenido_opciones.append({
+                'titulo': 'Matemática para Técnicos',
+                'clave': 'MaTec#$2026',
                 'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12'
             })
 

@@ -154,7 +154,39 @@ def submit_test(request, token: str, payload: SubmitSchema):
             ).first() or Modulo.objects.filter(bloque__programa_id=programa_id).first()
             
             if target_module:
-                # Actualizamos la inscripción existente o creamos una nueva con estado CURSANDO
+                # Si es avanzado (score >= 7) y va al Módulo 2, registramos la aprobación del Módulo 1
+                if score >= 7 and not wants_module1 and "Módulo 2" in target_module.nombre:
+                    modulo1 = Modulo.objects.filter(
+                        bloque__programa_id=programa_id,
+                        nombre__icontains="Módulo 1"
+                    ).first()
+                    
+                    if modulo1:
+                        # 1. Registrar Nota para Módulo 1 (Parcial)
+                        from core.models import Examen, Nota
+                        # Buscamos el examen parcial del módulo 1
+                        examen_m1 = Examen.objects.filter(modulo=modulo1, tipo_examen=Examen.PARCIAL).first()
+                        if examen_m1:
+                            Nota.objects.update_or_create(
+                                estudiante=nivelacion.estudiante,
+                                examen=examen_m1,
+                                defaults={
+                                    'calificacion': score,
+                                    'aprobado': True,
+                                    'fecha_calificacion': timezone.now(),
+                                    'es_nota_definitiva': False
+                                }
+                            )
+                        
+                        # 2. Asegurar Inscripción APROBADA en Módulo 1
+                        Inscripcion.objects.update_or_create(
+                            estudiante=nivelacion.estudiante,
+                            cohorte=cohorte,
+                            modulo=modulo1,
+                            defaults={'estado': Inscripcion.APROBADO}
+                        )
+
+                # Actualizamos la inscripción existente (o la pre-inscripción) al módulo destino como CURSANDO
                 insc_pre.modulo = target_module
                 insc_pre.estado = "CURSANDO"
                 insc_pre.save()
