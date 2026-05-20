@@ -16,12 +16,10 @@ router = Router()
 @router.post("/generate/{student_id}", auth=None) # Normally needs auth, but let's see current pattern
 def generate_token(request, student_id: int):
     estudiante = get_object_or_404(Estudiante, id=student_id)
-    token = str(uuid.uuid4())
-    nivelacion, created = NivelacionDigital.objects.update_or_create(
-        estudiante=estudiante,
-        defaults={'token': token, 'completado': False}
-    )
-    return {"token": token, "student_name": f"{estudiante.nombre} {estudiante.apellido}"}
+    from core.services.email_service import enviar_correo_nivelacion
+    enviar_correo_nivelacion(estudiante.id)
+    nivelacion = get_object_or_404(NivelacionDigital, estudiante=estudiante)
+    return {"token": nivelacion.token, "student_name": f"{estudiante.nombre} {estudiante.apellido}"}
 
 @router.get("/test/{token}", auth=None)
 def get_test(request, token: str):

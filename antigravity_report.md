@@ -8,6 +8,21 @@
 
 ## 📌 Historial de Cambios Recientes
 
+### 🗓️ 20 de Mayo de 2026 (Segunda Parte) - Automatización de Correos de Nivelación (Habilidades Digitales)
+
+Se ha integrado el envío automático del correo de invitación para el autodiagnóstico de nivelación en "Habilidades Digitales", asegurando que el estudiante reciba de inmediato el enlace de nivelación y el sistema no dependa únicamente de la generación manual sin notificar.
+
+#### 1. Integración en el Panel de Administración (Generación Manual de Invitación)
+* **Archivo**: [`backend/core/api/nivelacion.py`](file:///home/admin486321/CFP/backend/core/api/nivelacion.py)
+* **Cambio**: Se actualizó el endpoint `/api/nivelacion/generate/{student_id}` para importar y llamar a `enviar_correo_nivelacion(estudiante.id)`. En lugar de recrear el token localmente, delega la creación consistente del token a la función de servicio y recupera de forma segura el nuevo token para retornar su información a la UI del administrador.
+
+#### 2. Integración en la Pre-inscripción Pública (Flujo Automático)
+* **Archivo**: [`backend/core/api/preinscripciones_publicas.py`](file:///home/admin486321/CFP/backend/core/api/preinscripciones_publicas.py)
+* **Cambio**: Se actualizó la función `_enviar_confirmacion_preinscripcion` (que se ejecuta asíncronamente en segundo plano tras registrar una preinscripción). Ahora comprueba si el estudiante se ha registrado en el trayecto de "Habilidades Digitales" (programa con `id = 2`). De ser así, invoca `enviar_correo_nivelacion(estudiante.id)` automáticamente.
+
+#### 3. Estabilidad y Pruebas Unitarias
+* Se ejecutó el suite de tests unitarios (`pytest`) en el contenedor docker, obteniendo **17/17 OK (100% exitosos)**, garantizando que no se introdujeron regresiones.
+
 ### 🗓️ 20 de Mayo de 2026 - Corrección de Bugs de Auditoría, Rutas y Formulario de Nivelación
 
 Se han resuelto de manera integral los problemas detectados en la auditoría académica y el flujo de pre-inscripción para Habilidades Digitales, logrando un suite de pruebas 100% verde (17/17 OK) y asegurando la estabilidad en producción.

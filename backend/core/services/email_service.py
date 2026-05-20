@@ -146,3 +146,99 @@ def enviar_correo_bienvenida(estudiante_id: int):
     except Exception as e:
         logger.error(f"Error Gmail API: {str(e)}")
         return False
+
+def enviar_correo_nivelacion(estudiante_id: int):
+    """
+    Genera/actualiza el token de nivelación digital y envía el correo correspondiente al estudiante.
+    """
+    try:
+        from core.models import NivelacionDigital
+        import uuid
+        
+        estudiante = Estudiante.objects.get(id=estudiante_id)
+        
+        # Generar o actualizar token
+        token = str(uuid.uuid4())
+        nivelacion, created = NivelacionDigital.objects.update_or_create(
+            estudiante=estudiante,
+            defaults={'token': token, 'completado': False}
+        )
+        
+        service = get_gmail_service()
+        if not service:
+            logger.error("No se pudo obtener el servicio de Gmail. Abortando envío de nivelación.")
+            return False
+
+        link = f"https://politecnico.ar/cfp/nivelacion.html?token={token}"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333333; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f5; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; overflow: hidden; }}
+                .header {{ background-color: #0b1c3c; color: #ffffff; padding: 25px 20px; text-align: center; border-bottom: 5px solid #f26b21; }}
+                .header h1 {{ margin: 0; font-size: 24px; letter-spacing: 0.5px; }}
+                .header h2 {{ margin: 5px 0 0 0; font-size: 16px; font-weight: normal; color: #cbd5e1; }}
+                .content {{ padding: 30px 25px; }}
+                .btn-box {{ text-align: center; margin: 30px 0; }}
+                .btn {{ background-color: #f26b21; color: #ffffff !important; padding: 12px 30px; font-weight: bold; border-radius: 6px; text-decoration: none; display: inline-block; font-size: 16px; box-shadow: 0 4px 6px rgba(242, 107, 33, 0.2); }}
+                .btn:hover {{ background-color: #d95a16; }}
+                .contacto-box {{ background-color: #f1f5f9; padding: 25px; border-radius: 8px; font-size: 15px; margin-top: 20px; border: 1px solid #e2e8f0; }}
+                .contacto-item {{ margin-bottom: 12px; line-height: 1.5; }}
+                .contacto-item:last-child {{ margin-bottom: 0; }}
+                .footer {{ background-color: #0f172a; color: #94a3b8; text-align: center; padding: 20px; font-size: 12px; }}
+                a {{ color: #0284c7; text-decoration: none; font-weight: 600; }}
+                a:hover {{ text-decoration: underline; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Centro Politécnico Superior</h1>
+                    <h2>Formación Profesional - Malvinas Argentinas</h2>
+                </div>
+                <div class="content">
+                    <p style="font-size: 17px; margin-top: 0;">Hola <strong>{estudiante.nombre}</strong>,</p>
+                    <p>Para determinar cuál es el módulo de <strong>Habilidades Digitales</strong> más adecuado para vos, necesitamos que realices un breve autodiagnóstico de nivelación digital.</p>
+                    <p>Este diagnóstico consta de 10 preguntas sencillas sobre conceptos generales de informática y navegación web. No te preocupes, no es un examen eliminatorio, sino una herramienta para ubicarte en el nivel que mejor te acompañe en tu aprendizaje.</p>
+                    
+                    <div class="btn-box">
+                        <a href="{link}" class="btn" target="_blank">Comenzar Autodiagnóstico</a>
+                    </div>
+
+                    <p style="font-size: 14px; color: #666;">Si el botón no funciona, podés copiar y pegar el siguiente enlace en tu navegador:<br><a href="{link}">{link}</a></p>
+
+                    <p style="font-size: 16px; margin-top: 35px;"><strong>Ante cualquier duda o consulta, recordá que podés comunicarte con nosotros:</strong></p>
+                    
+                    <div class="contacto-box">
+                        <div class="contacto-item">📍 <strong>Dirección:</strong> Monte Independencia 261, Barrio El Mirador (Margen Sur), Río Grande, Tierra del Fuego.</div>
+                        <div class="contacto-item">📱 <strong>WhatsApp:</strong> <a href="https://wa.me/5492964355801">+54 9 2964 35-5801</a></div>
+                        <div class="contacto-item">📞 <strong>Teléfono:</strong> 02964 69-7979</div>
+                        <div class="contacto-item">✉️ <strong>Email:</strong> <a href="mailto:estudiantes.cfp@malvinastdf.edu.ar">estudiantes.cfp@malvinastdf.edu.ar</a></div>
+                        <div class="contacto-item">🌐 <strong>Web:</strong> <a href="https://politecnico.ar">politecnico.ar</a></div>
+                    </div>
+                    
+                    <p style="margin-top: 35px; text-align: center; font-size: 18px; color: #f26b21;"><strong>¡Te deseamos muchos éxitos!</strong></p>
+                </div>
+                <div class="footer">
+                    Este es un mensaje automático del sistema de gestión del CFP.<br>Por favor, no respondas a este correo.
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        message = MIMEText(html_content, 'html')
+        message['to'] = estudiante.email
+        message['from'] = settings.DEFAULT_FROM_EMAIL
+        message['subject'] = 'Autodiagnóstico de Nivelación - Habilidades Digitales - CFP'
+
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        service.users().messages().send(userId='me', body={'raw': raw}).execute()
+        logger.info(f"Correo de nivelación enviado a {estudiante.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Error enviando correo de nivelación: {str(e)}")
+        return False

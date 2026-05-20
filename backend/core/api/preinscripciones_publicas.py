@@ -422,6 +422,13 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
                 email.attach_file(pdf_path)
 
         email.send(fail_silently=True)
+
+        # Enviar correo de autodiagnóstico si se inscribió al trayecto Habilidades Digitales (programa_id = 2)
+        tiene_habilidades = any(c.programa_id == 2 for c in cohortes)
+        if tiene_habilidades:
+            from core.services.email_service import enviar_correo_nivelacion
+            enviar_correo_nivelacion(estudiante.id)
+
     except Exception as e:
         print(f"Error enviando email de confirmación: {e}")
 

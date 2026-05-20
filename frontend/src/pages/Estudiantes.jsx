@@ -1076,7 +1076,7 @@ export default function Estudiantes() {
                                         onClick={async () => {
                                             try {
                                                 const { data } = await apiClientV2.post(`/nivelacion/generate/${viewData.student.id}`);
-                                                const url = `${window.location.origin}/nivelacion/${data.token}`;
+                                                const url = `https://politecnico.ar/cfp/nivelacion.html?token=${data.token}`;
                                                 setQrModal({ 
                                                     open: true, 
                                                     url, 
