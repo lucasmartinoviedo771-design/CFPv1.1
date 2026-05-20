@@ -22,16 +22,16 @@ from core.models import (
 
 class ApiV2WriteTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="admin", password="pass1234")
+        self.user = User.objects.create_superuser(username="admin", password="pass1234")
         token = str(RefreshToken.for_user(self.user).access_token)
         self.client = APIClient()
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
         self.programa = Programa.objects.create(codigo="PRG1", nombre="Programa 1")
-        self.bloque = Bloque.objects.create(programa=self.programa, nombre="Bloque 1", orden=1)
-        self.modulo = Modulo.objects.create(bloque=self.bloque, nombre="Modulo 1", orden=1)
+        self.bloque = Bloque.objects.create(programa=self.programa, nombre="Bloque 1")
+        self.modulo = Modulo.objects.create(bloque=self.bloque, nombre="Modulo 1")
         self.examen = Examen.objects.create(modulo=self.modulo, tipo_examen=Examen.PARCIAL)
-        self.bloque_fechas = BloqueDeFechas.objects.create(nombre="Calendario 1", fecha_inicio=date(2025, 1, 1))
+        self.bloque_fechas = BloqueDeFechas.objects.create(nombre="Calendario 1")
         self.cohorte = Cohorte.objects.create(programa=self.programa, bloque_fechas=self.bloque_fechas, nombre="Cohorte A")
 
     def test_crear_estudiante(self):
@@ -52,7 +52,7 @@ class ApiV2WriteTests(TestCase):
         payload = {
             "estudiante_id": est.id,
             "cohorte_id": self.cohorte.id,
-            "estado": Inscripcion.ACTIVO,
+            "estado": Inscripcion.CURSANDO,
         }
         resp = self.client.post("/api/v2/inscripciones", data=json.dumps(payload), content_type="application/json")
         self.assertEqual(resp.status_code, 200)
@@ -95,7 +95,6 @@ class ApiV2WriteTests(TestCase):
         payload_mod = {
             "bloque_id": self.bloque.id,
             "nombre": "Modulo API",
-            "orden": 2,
             "es_practica": False,
             "asistencia_requerida_practica": 80,
         }

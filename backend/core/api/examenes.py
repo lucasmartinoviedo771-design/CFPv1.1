@@ -54,6 +54,61 @@ def detalle_nota(request, nota_id: int):
     return NotaSerializer(nota).data
 
 
+# --- Asistencias ---
+@router.get("/asistencias", response=List[dict])
+@require_authenticated_group
+def listar_asistencias(
+    request,
+    estudiante_id: Optional[int] = None,
+    modulo_id: Optional[int] = None,
+    bloque_id: Optional[int] = None,
+    presente: Optional[bool] = None,
+    fecha: Optional[str] = None,
+):
+    qs = Asistencia.objects.select_related("estudiante", "modulo", "modulo__bloque")
+    if estudiante_id:
+        qs = qs.filter(estudiante_id=estudiante_id)
+    if modulo_id:
+        qs = qs.filter(modulo_id=modulo_id)
+    if bloque_id:
+        qs = qs.filter(modulo__bloque_id=bloque_id)
+    if presente is not None:
+        qs = qs.filter(presente=presente)
+    if fecha:
+        qs = qs.filter(fecha=fecha)
+    return AsistenciaSerializer(qs, many=True).data
+
+
+@router.get("/asistencias/{asistencia_id}", response=dict)
+@require_authenticated_group
+def detalle_asistencia(request, asistencia_id: int):
+    asistencia = get_object_or_404(
+        Asistencia.objects.select_related("estudiante", "modulo", "modulo__bloque"),
+        pk=asistencia_id,
+    )
+    return AsistenciaSerializer(asistencia).data
+
+
+@router.post("/asistencias", response=dict)
+@require_authenticated_group
+def crear_asistencia(request, payload: AsistenciaIn):
+    serializer = AsistenciaSerializer(data=payload.dict(exclude_none=True))
+    serializer.is_valid(raise_exception=True)
+    asistencia = serializer.save()
+    return AsistenciaSerializer(asistencia).data
+
+
+@router.put("/asistencias/{asistencia_id}", response=dict)
+@router.patch("/asistencias/{asistencia_id}", response=dict)
+@require_authenticated_group
+def actualizar_asistencia(request, asistencia_id: int, payload: AsistenciaIn):
+    asistencia = get_object_or_404(Asistencia, pk=asistencia_id)
+    serializer = AsistenciaSerializer(instance=asistencia, data=payload.dict(exclude_none=True), partial=True)
+    serializer.is_valid(raise_exception=True)
+    asistencia = serializer.save()
+    return AsistenciaSerializer(asistencia).data
+
+
 # --- Examenes ---
 @router.get("", response=List[dict])
 @require_authenticated_group
@@ -216,64 +271,6 @@ def eliminar_nota(request, nota_id: int):
     nota.delete()
     return {"success": True, "message": "Nota eliminada correctamente."}
 
-
-# --- Asistencias ---
-@router.get("/asistencias", response=List[dict])
-@require_authenticated_group
-def listar_asistencias(
-    request,
-    estudiante_id: Optional[int] = None,
-    modulo_id: Optional[int] = None,
-    bloque_id: Optional[int] = None,
-    presente: Optional[bool] = None,
-    fecha: Optional[str] = None,
-):
-    qs = Asistencia.objects.select_related("estudiante", "modulo", "modulo__bloque")
-    if estudiante_id:
-        qs = qs.filter(estudiante_id=estudiante_id)
-    if modulo_id:
-        qs = qs.filter(modulo_id=modulo_id)
-    if bloque_id:
-        qs = qs.filter(modulo__bloque_id=bloque_id)
-    if presente is not None:
-        qs = qs.filter(presente=presente)
-    if fecha:
-        qs = qs.filter(fecha=fecha)
-    return AsistenciaSerializer(qs, many=True).data
-
-
-@router.get("/asistencias/{asistencia_id}", response=dict)
-@require_authenticated_group
-def detalle_asistencia(request, asistencia_id: int):
-    asistencia = get_object_or_404(
-        Asistencia.objects.select_related("estudiante", "modulo", "modulo__bloque"),
-        pk=asistencia_id,
-    )
-    return AsistenciaSerializer(asistencia).data
-
-
-@router.post("/asistencias", response=dict)
-@require_authenticated_group
-def crear_asistencia(request, payload: AsistenciaIn):
-    serializer = AsistenciaSerializer(data=payload.dict(exclude_none=True))
-    serializer.is_valid(raise_exception=True)
-    asistencia = serializer.save()
-    return AsistenciaSerializer(asistencia).data
-
-
-@router.put("/asistencias/{asistencia_id}", response=dict)
-@router.patch("/asistencias/{asistencia_id}", response=dict)
-@require_authenticated_group
-def actualizar_asistencia(request, asistencia_id: int, payload: AsistenciaIn):
-    asistencia = get_object_or_404(Asistencia, pk=asistencia_id)
-    serializer = AsistenciaSerializer(instance=asistencia, data=payload.dict(exclude_none=True), partial=True)
-    serializer.is_valid(raise_exception=True)
-    asistencia = serializer.save()
-    return AsistenciaSerializer(asistencia).data
-
-
-    asistencia = serializer.save()
-    return AsistenciaSerializer(asistencia).data
 
 @router.get("/estudiante/{estudiante_id}/bloque/{bloque_id}/puede-rendir-sincronico", response=dict)
 @require_authenticated_group

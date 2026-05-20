@@ -109,8 +109,7 @@ class EstudianteAprobacionTest(TestCase):
         
         self.bloque = Bloque.objects.create(
             programa=self.programa,
-            nombre="Bloque 1",
-            orden=1
+            nombre="Bloque 1"
         )
 
     def test_get_approved_bloques_empty(self):

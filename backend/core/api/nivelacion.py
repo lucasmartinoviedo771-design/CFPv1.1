@@ -129,11 +129,14 @@ def submit_test(request, token: str, payload: SubmitSchema):
     # Automatización de Inscripción
     # Buscamos la inscripción PREINSCRIPTA del alumno para este programa
     # (Habilidades Digitales id=2)
-    from core.models import Inscripcion, Modulo
+    from core.models import Inscripcion, Modulo, Programa
     
-    # Intentamos encontrar los módulos disponibles para Habilidades Digitales
-    # (Asumimos programa id=2 por defecto para este test)
-    programa_id = 2
+    # Intentamos encontrar Habilidades Digitales dinámicamente por nombre, si no, usamos ID 2
+    prog = Programa.objects.filter(nombre__icontains="habilidades digitales").first()
+    programa_id = prog.id if prog else 2
+
+    target_module = None
+    target_module_name = "Módulo 1"
     
     try:
         # Encontramos la cohorte activa en la que está preinscripto

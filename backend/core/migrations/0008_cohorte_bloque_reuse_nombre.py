@@ -10,7 +10,20 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.SeparateDatabaseAndState(
-            database_operations=[],
+            database_operations=[
+                migrations.AddField(
+                    model_name="cohorte",
+                    name="bloque",
+                    field=models.ForeignKey(
+                        blank=True,
+                        help_text="Bloque académico al que aplica esta cohorte",
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="cohortes",
+                        to="core.bloque",
+                    ),
+                ),
+            ],
             state_operations=[
                 migrations.AddField(
                     model_name="cohorte",
