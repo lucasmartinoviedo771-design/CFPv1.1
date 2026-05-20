@@ -92,8 +92,9 @@ def listar_estudiantes(
 def export_estudiantes(request, payload: ExportIn):
     # 1. Filtrar estudiantes (misma lógica que listar)
     qs = Estudiante.objects.filter(is_active=True).prefetch_related(
-        "inscripciones__modulo",
-        "notas__examen__modulo"
+        "inscripciones__modulo__bloque__programa",
+        "inscripciones__cohorte__programa",
+        "notas__examen__modulo__bloque__programa"
     )
     if payload.dni:
         qs = qs.filter(dni__iexact=payload.dni)
@@ -137,17 +138,24 @@ def export_estudiantes(request, payload: ExportIn):
         aprobadas_set = set()
         for n in notas_repo:
             if n.aprobado and n.examen and n.examen.modulo:
-                aprobadas_set.add(n.examen.modulo.nombre)
+                modulo_obj = n.examen.modulo
+                prog_nom = modulo_obj.bloque.programa.nombre if modulo_obj.bloque and modulo_obj.bloque.programa else ""
+                nombre_completo = f"{prog_nom} - {modulo_obj.nombre}" if prog_nom else modulo_obj.nombre
+                aprobadas_set.add(nombre_completo)
         aprobadas_list = sorted(list(aprobadas_set))
         
         # Materias cursando: Inscripciones en estado CURSANDO
-        cursando_list = sorted(list(set([
-            i.modulo.nombre for i in inscripciones_repo 
-            if i.estado == "CURSANDO" and i.modulo
-        ])))
+        cursando_set = set()
+        for i in inscripciones_repo:
+            if i.estado == "CURSANDO" and i.modulo:
+                modulo_obj = i.modulo
+                prog_nom = modulo_obj.bloque.programa.nombre if modulo_obj.bloque and modulo_obj.bloque.programa else ""
+                nombre_completo = f"{prog_nom} - {modulo_obj.nombre}" if prog_nom else modulo_obj.nombre
+                cursando_set.add(nombre_completo)
+        cursando_list = sorted(list(cursando_set))
         
         # Materias pendientes: Módulos inscriptos que no están aprobados
-        pendientes = sorted(list(set(cursando_list) - set(aprobadas_list)))
+        pendientes = sorted(list(set(cursando_list) - set(aprobadas_set)))
         
         # Fecha de inscripción: la más antigua de sus inscripciones o created_at
         fecha_insc_dt = est.created_at
@@ -161,15 +169,16 @@ def export_estudiantes(request, payload: ExportIn):
             "apellido": est.apellido,
             "nombre": est.nombre,
             "dni": est.dni,
+            "sexo": est.sexo or "",
             "email": est.email,
             "telefono": est.telefono,
             "ciudad": est.ciudad,
             "estatus": est.estatus,
             "fecha_nacimiento": est.fecha_nacimiento.isoformat() if est.fecha_nacimiento else "",
             "fecha_inscripcion": fecha_insc,
-            "materias_aprobadas": aprobadas_list,
-            "materias_cursando": cursando_list,
-            "materias_pendientes": pendientes,
+            "materias_aprobadas": ", ".join(aprobadas_list),
+            "materias_cursando": ", ".join(cursando_list),
+            "materias_pendientes": ", ".join(pendientes),
         }
         data.append(row)
 
@@ -177,6 +186,7 @@ def export_estudiantes(request, payload: ExportIn):
         "apellido": "Apellido",
         "nombre": "Nombre",
         "dni": "DNI",
+        "sexo": "Sexo",
         "email": "Email",
         "telefono": "Teléfono",
         "ciudad": "Ciudad",

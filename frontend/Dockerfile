@@ -1,7 +1,7 @@
 # Build Stage
 FROM node:20 as build
 WORKDIR /app
-RUN npm install -g pnpm@latest
+RUN npm install -g pnpm@9
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install
 COPY . .

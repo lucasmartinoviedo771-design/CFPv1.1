@@ -87,7 +87,7 @@ export default function Estudiantes() {
     const [loadingEditId, setLoadingEditId] = useState(null);
     const [exportModalOpen, setExportModalOpen] = useState(false);
     const [exportConfig, setExportConfig] = useState({
-        columns: ["apellido", "nombre", "dni", "email", "estatus", "materias_aprobadas", "materias_cursando", "materias_pendientes"],
+        columns: ["apellido", "nombre", "dni", "sexo", "email", "estatus", "materias_aprobadas", "materias_cursando", "materias_pendientes"],
         format: "excel",
         anio: "",
         estatus: "",
@@ -1220,6 +1220,7 @@ export default function Estudiantes() {
                                 { id: "apellido", label: "Apellido" },
                                 { id: "nombre", label: "Nombre" },
                                 { id: "dni", label: "DNI" },
+                                { id: "sexo", label: "Sexo" },
                                 { id: "email", label: "Email" },
                                 { id: "telefono", label: "Teléfono" },
                                 { id: "ciudad", label: "Ciudad" },
