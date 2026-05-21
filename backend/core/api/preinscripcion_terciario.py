@@ -1,6 +1,5 @@
 from ninja import Router, Schema
 from ninja.errors import HttpError
-from ninja.security import django_auth
 from django.utils import timezone
 from django.db import transaction
 from typing import Optional, List
@@ -204,7 +203,7 @@ class PreinscripcionTerciarioListOut(Schema):
         return None
 
 
-@router.get("/preinscripciones-terciario", response=List[PreinscripcionTerciarioListOut], auth=django_auth)
+@router.get("/preinscripciones-terciario", response=List[PreinscripcionTerciarioListOut])
 def listar_preinscripciones_terciario(request, estado: str = "", localidad: str = ""):
     if not (request.user.is_staff or request.user.groups.filter(name__in=["Admin", "Terciario"]).exists()):
         raise HttpError(403, "Sin permisos.")
@@ -216,7 +215,7 @@ def listar_preinscripciones_terciario(request, estado: str = "", localidad: str 
     return list(qs)
 
 
-@router.patch("/preinscripciones-terciario/{preinscripcion_id}", auth=django_auth)
+@router.patch("/preinscripciones-terciario/{preinscripcion_id}")
 def actualizar_preinscripcion_terciario(
     request, preinscripcion_id: int, estado: str = "", observaciones: str = ""
 ):
@@ -240,7 +239,7 @@ def actualizar_preinscripcion_terciario(
     return {"id": p.id, "mensaje": "Actualizado correctamente."}
 
 
-@router.get("/preinscripciones-terciario-stats", auth=django_auth)
+@router.get("/preinscripciones-terciario-stats")
 def stats_preinscripciones_terciario(request):
     if not (request.user.is_staff or request.user.groups.filter(name__in=["Admin", "Terciario"]).exists()):
         raise HttpError(403, "Sin permisos.")

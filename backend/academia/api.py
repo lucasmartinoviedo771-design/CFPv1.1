@@ -75,5 +75,5 @@ api.add_router("", user_info_router)
 api.add_router("", estructura_router)
 api.add_router("/autorizaciones", autorizaciones_router, auth=None)
 api.add_router("/nivelacion", nivelacion_router, auth=None)
-api.add_router("", preinscripcion_terciario_router, auth=None)
+api.add_router("", preinscripcion_terciario_router)
 
