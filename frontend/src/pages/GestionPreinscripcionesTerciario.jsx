@@ -9,11 +9,18 @@ const ESTADOS = [
   { value: "rechazada", label: "Rechazada" },
 ];
 
+const LOCALIDAD_LABELS = {
+  ushuaia: "Ushuaia", rg_sur: "Río Grande Sur", rg_norte: "Río Grande Norte",
+  tolhuin: "Tolhuin", zona_rural: "Zona Rural", otras: "Otras",
+};
+
 const LOCALIDADES = [
   { value: "", label: "Todas las localidades" },
-  { value: "Ushuaia", label: "Ushuaia" },
-  { value: "Río Grande", label: "Río Grande" },
-  { value: "Tolhuin", label: "Tolhuin" },
+  { value: "ushuaia", label: "Ushuaia" },
+  { value: "rg_sur", label: "Río Grande Sur" },
+  { value: "rg_norte", label: "Río Grande Norte" },
+  { value: "tolhuin", label: "Tolhuin" },
+  { value: "zona_rural", label: "Zona Rural" },
 ];
 
 const BADGE = {
@@ -280,7 +287,7 @@ export default function GestionPreinscripcionesTerciario() {
                 <tr key={p.id} className="hover:bg-indigo-500/5 transition-colors">
                   <td className="px-4 py-3 font-semibold text-white">{p.apellido_nombre}</td>
                   <td className="px-4 py-3 text-indigo-200">{p.dni}</td>
-                  <td className="px-4 py-3 text-indigo-200">{p.localidad}</td>
+                  <td className="px-4 py-3 text-indigo-200">{LOCALIDAD_LABELS[p.localidad] || p.localidad}</td>
                   <td className="px-4 py-3 text-indigo-200">
                     {p.finalizo_secundaria === "si" ? "Sí" :
                      p.finalizo_secundaria === "no" ? "No" :
