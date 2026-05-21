@@ -14,6 +14,18 @@ export default function Login() {
     const navigate = useNavigate();
     const { setUser } = useContext(UserContext);
 
+    const [showChoice, setShowChoice] = useState(false);
+    const [pendingUser, setPendingUser] = useState(null);
+
+    const resolveDestino = (userData) => {
+        const groups = userData?.groups || [];
+        const isTerciario = groups.includes('Terciario');
+        const isCFP = userData?.is_superuser || groups.some(g => !['Terciario', 'Estudiante'].includes(g));
+        if (isTerciario && !isCFP) return '/admin-terciario';
+        if (isTerciario && isCFP) return null; // mostrar elección
+        return '/dashboard';
+    };
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
@@ -22,16 +34,42 @@ export default function Login() {
             await authService.login(username, password);
             const userData = await authService.getUserDetails();
             setUser(userData);
-
-            navigate('/dashboard');
+            const destino = resolveDestino(userData);
+            if (destino) {
+                navigate(destino);
+            } else {
+                setPendingUser(userData);
+                setShowChoice(true);
+            }
         } catch (err) {
-            // Intentamos extraer un mensaje amigable, si no, uno genérico
             const msg = err.response?.data?.detail || err.message || 'Credenciales inválidas';
             setError(msg);
         } finally {
             setLoading(false);
         }
     };
+
+    if (showChoice) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
+                <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl p-10 max-w-sm w-full text-center space-y-6">
+                    <h2 className="text-2xl font-black text-white">¿Dónde querés ingresar?</h2>
+                    <p className="text-indigo-200 text-sm">Tu usuario tiene acceso a ambos paneles.</p>
+                    <div className="space-y-3">
+                        <button onClick={() => navigate('/dashboard')}
+                            className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-colors">
+                            Panel CFP Malvinas Argentinas
+                        </button>
+                        <button onClick={() => navigate('/admin-terciario')}
+                            className="w-full py-4 rounded-2xl font-bold text-sm transition-colors"
+                            style={{ background: '#1a1f4e', color: '#f5c518' }}>
+                            Panel Terciario — Politécnico
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 relative overflow-hidden">

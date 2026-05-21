@@ -29,6 +29,7 @@ import PreinscripcionPublica from './pages/PreinscripcionPublica.jsx';
 import PreinscripcionTerciario from './pages/PreinscripcionTerciario.jsx';
 import GestionPreinscripciones from './pages/GestionPreinscripciones.jsx';
 import GestionPreinscripcionesTerciario from './pages/GestionPreinscripcionesTerciario.jsx';
+import AdminTerciario from './pages/AdminTerciario.jsx';
 import AutorizacionParental from './pages/AutorizacionParental.jsx';
 import NivelacionDigital from './pages/NivelacionDigital.jsx';
 
@@ -115,6 +116,8 @@ export default function App() {
             <Route path="/preinscripcion-terciario" element={<PreinscripcionTerciario />} />
             <Route path="/autorizar/:token" element={<AutorizacionParental />} />
             <Route path="/nivelacion/:token" element={<NivelacionDigital />} />
+
+            <Route path="/admin-terciario" element={<PrivateRoute><AdminTerciario /></PrivateRoute>} />
 
             {/* Protected Routes */}
             <Route path="/set-password" element={<PrivateRoute><WithLayout title="Actualizar Contraseña"><SetPassword /></WithLayout></PrivateRoute>} />

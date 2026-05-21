@@ -608,9 +608,17 @@ class PreinscripcionTerciario(TimeStamped):
     requiere_apoyo_especifico = models.BooleanField(null=True, blank=True)
     descripcion_apoyo = models.TextField(blank=True)
 
+    # Documentación
+    dni_digitalizado = models.FileField(upload_to='terciario/dni/', null=True, blank=True)
+    titulo_digitalizado = models.FileField(upload_to='terciario/titulo/', null=True, blank=True)
+
     # Gestión
     estado = models.CharField(max_length=15, choices=ESTADO_CHOICES, default='pendiente')
     observaciones = models.TextField(blank=True)
+    hd_inscripcion = models.ForeignKey(
+        'Inscripcion', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='preinscripcion_terciario'
+    )
 
     class Meta:
         verbose_name = "Preinscripción Terciario"
