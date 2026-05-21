@@ -2,7 +2,8 @@ from ninja import Router, Schema
 from ninja.errors import HttpError
 from django.utils import timezone
 from django.db import transaction
-from typing import Optional, List
+from typing import Optional, List, Any
+from datetime import date
 from ..models import PreinscripcionTerciario, Inscripcion, Modulo, Cohorte, Estudiante
 import threading
 from django.core.mail import send_mail
@@ -155,7 +156,7 @@ class PreinscripcionTerciarioListOut(Schema):
     cuil: str
     sexo: str
     celular: str
-    fecha_nacimiento: str
+    fecha_nacimiento: Any
     localidad_nacimiento: str
     provincia_nacimiento: str
     nacionalidad: str
@@ -184,6 +185,10 @@ class PreinscripcionTerciarioListOut(Schema):
     @staticmethod
     def resolve_created_at(obj):
         return obj.created_at.strftime("%Y-%m-%d %H:%M") if obj.created_at else ""
+
+    @staticmethod
+    def resolve_fecha_nacimiento(obj):
+        return str(obj.fecha_nacimiento) if obj.fecha_nacimiento else ""
 
     @staticmethod
     def resolve_tiene_dni(obj):
