@@ -10,7 +10,7 @@ import {
 const P = { navy: "#1a1f4e", yellow: "#f5c518", blue: "#b8ccd8", gray: "#c8c4bc" };
 
 const ESTADOS_FILTER = [
-  { value: "", label: "Todos" },
+  { value: "", label: "Todos los estados" },
   { value: "pendiente", label: "Pendientes" },
   { value: "aprobada", label: "Aprobadas" },
   { value: "rechazada", label: "Rechazadas" },
