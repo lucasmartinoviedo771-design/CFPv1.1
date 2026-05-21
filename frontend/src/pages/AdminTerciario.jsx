@@ -164,8 +164,20 @@ function DetailModal({ p, onClose, onSaved }) {
 
           {/* Documentación */}
           <Section title="Documentación">
-            <Row label="DNI adjunto" value={<YesNo v={p.tiene_dni} />} />
-            <Row label="Título adjunto" value={<YesNo v={p.tiene_titulo} />} />
+            <Row label="DNI" value={
+              p.url_dni
+                ? <a href={p.url_dni} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-opacity" style={{ background: "#1a1f4e" }}>
+                    Ver / Descargar DNI
+                  </a>
+                : <span className="text-red-400 text-xs font-semibold">No adjuntado</span>
+            } />
+            <Row label="Título Secundario" value={
+              p.url_titulo
+                ? <a href={p.url_titulo} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-opacity" style={{ background: "#1a1f4e" }}>
+                    Ver / Descargar Título
+                  </a>
+                : <span className="text-[#1a1f4e]/40 text-xs">No adjuntado</span>
+            } />
           </Section>
 
           {/* Gestión */}

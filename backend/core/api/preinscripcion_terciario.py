@@ -177,6 +177,8 @@ class PreinscripcionTerciarioListOut(Schema):
     descripcion_apoyo: str
     tiene_dni: bool
     tiene_titulo: bool
+    url_dni: Optional[str]
+    url_titulo: Optional[str]
     estado: str
     observaciones: str
     created_at: str
@@ -197,6 +199,14 @@ class PreinscripcionTerciarioListOut(Schema):
     @staticmethod
     def resolve_tiene_titulo(obj):
         return bool(obj.titulo_digitalizado)
+
+    @staticmethod
+    def resolve_url_dni(obj):
+        return f"/media/{obj.dni_digitalizado.name}" if obj.dni_digitalizado else None
+
+    @staticmethod
+    def resolve_url_titulo(obj):
+        return f"/media/{obj.titulo_digitalizado.name}" if obj.titulo_digitalizado else None
 
     @staticmethod
     def resolve_hd_estado(obj):
