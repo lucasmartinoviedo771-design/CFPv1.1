@@ -230,6 +230,24 @@ def listar_preinscripciones_terciario(request, estado: str = "", localidad: str 
     return list(qs)
 
 
+@router.patch("/preinscripciones-terciario/{preinscripcion_id}/docs")
+def actualizar_docs_terciario(request, preinscripcion_id: int):
+    if not (request.user.is_staff or request.user.groups.filter(name__in=["Admin", "Terciario"]).exists()):
+        raise HttpError(403, "Sin permisos.")
+    try:
+        p = PreinscripcionTerciario.objects.get(id=preinscripcion_id)
+    except PreinscripcionTerciario.DoesNotExist:
+        raise HttpError(404, "No encontrada.")
+    files = request.FILES
+    if "dni_digitalizado" in files:
+        p.dni_digitalizado = files["dni_digitalizado"]
+    if "titulo_digitalizado" in files:
+        p.titulo_digitalizado = files["titulo_digitalizado"]
+    p.save()
+    return {"id": p.id, "url_dni": f"/media/{p.dni_digitalizado.name}" if p.dni_digitalizado else None,
+            "url_titulo": f"/media/{p.titulo_digitalizado.name}" if p.titulo_digitalizado else None}
+
+
 @router.patch("/preinscripciones-terciario/{preinscripcion_id}")
 def actualizar_preinscripcion_terciario(
     request, preinscripcion_id: int, estado: str = "", observaciones: str = ""

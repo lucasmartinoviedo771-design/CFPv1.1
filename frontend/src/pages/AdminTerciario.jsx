@@ -74,11 +74,53 @@ function Row({ label, value }) {
   );
 }
 
+function DocRow({ label, url, field, onUpload, uploading }) {
+  const ref = React.useRef();
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+      <span className="font-bold text-[#1a1f4e]/50 text-xs uppercase tracking-wide w-44 flex-shrink-0">{label}</span>
+      <div className="flex items-center gap-2 flex-wrap">
+        {url
+          ? <a href={url} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-opacity"
+              style={{ background: "#1a1f4e" }}>
+              Ver / Descargar
+            </a>
+          : <span className="text-red-400 text-xs font-semibold">No adjuntado</span>
+        }
+        <label className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer border-2 border-dashed border-[#b8ccd8] hover:border-[#f5c518] transition-colors ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+          <input ref={ref} type="file" className="hidden" accept=".pdf,.doc,.docx,image/*"
+            onChange={(e) => { onUpload(field, e.target.files?.[0]); ref.current.value = ""; }} />
+          {uploading ? "Subiendo..." : url ? "Reemplazar" : "Subir"}
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function DetailModal({ p, onClose, onSaved }) {
   const [estado, setEstado] = useState(p.estado);
   const [obs, setObs] = useState(p.observaciones || "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [urls, setUrls] = useState({ dni: p.url_dni, titulo: p.url_titulo });
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const handleDocUpload = async (field, file) => {
+    if (!file) return;
+    setUploadingDoc(true);
+    try {
+      const fd = new FormData();
+      fd.append(field, file);
+      const { data } = await apiClientV2.patch(
+        `/preinscripciones-terciario/${p.id}/docs`, fd,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      setUrls({ dni: data.url_dni, titulo: data.url_titulo });
+      setMsg("Documento actualizado.");
+    } catch { setMsg("Error al subir el documento."); }
+    finally { setUploadingDoc(false); }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -164,20 +206,11 @@ function DetailModal({ p, onClose, onSaved }) {
 
           {/* Documentación */}
           <Section title="Documentación">
-            <Row label="DNI" value={
-              p.url_dni
-                ? <a href={p.url_dni} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-opacity" style={{ background: "#1a1f4e" }}>
-                    Ver / Descargar DNI
-                  </a>
-                : <span className="text-red-400 text-xs font-semibold">No adjuntado</span>
-            } />
-            <Row label="Título Secundario" value={
-              p.url_titulo
-                ? <a href={p.url_titulo} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-opacity" style={{ background: "#1a1f4e" }}>
-                    Ver / Descargar Título
-                  </a>
-                : <span className="text-[#1a1f4e]/40 text-xs">No adjuntado</span>
-            } />
+            <DocRow label="DNI" url={urls.dni} field="dni_digitalizado" onUpload={handleDocUpload} uploading={uploadingDoc} />
+            <DocRow label="Título Secundario" url={urls.titulo} field="titulo_digitalizado" onUpload={handleDocUpload} uploading={uploadingDoc} />
+            {msg && msg.includes("Documento") && (
+              <p className={`text-xs font-semibold ${msg.includes("Error") ? "text-red-500" : "text-green-600"}`}>{msg}</p>
+            )}
           </Section>
 
           {/* Gestión */}
