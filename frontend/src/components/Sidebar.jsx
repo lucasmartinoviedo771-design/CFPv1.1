@@ -31,6 +31,7 @@ const dataItems = [
 const cargaDatosItems = [
   { label: 'Estudiantes', icon: <Users size={20} />, href: '/estudiantes' },
   { label: 'Cola de Preinscripciones', icon: <ClipboardList size={20} />, href: '/gestion-preinscripciones' },
+  { label: 'Preinscripciones Terciario', icon: <GraduationCap size={20} />, href: '/preinscripciones-terciario' },
   { label: 'Inscripciones', icon: <FileText size={20} />, href: '/inscripciones' },
   { label: 'Asistencia', icon: <CheckSquare size={20} />, href: '/asistencia' },
 ];
