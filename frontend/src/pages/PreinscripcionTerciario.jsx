@@ -21,7 +21,6 @@ const STEPS = [
   { n: 2, label: "Académicos", icon: <BookOpen size={18} /> },
   { n: 3, label: "Tecnológicos", icon: <Monitor size={18} /> },
   { n: 4, label: "Complementarios", icon: <Heart size={18} /> },
-  { n: 5, label: "Documentación", icon: <FileText size={18} /> },
 ];
 
 const P = { navy: "#1a1f4e", yellow: "#f5c518", blue: "#b8ccd8" };
@@ -153,8 +152,7 @@ export default function PreinscripcionTerciario() {
   const saved = loadSaved();
   const [step, setStep] = useState(saved.step);
   const [form, setForm] = useState(saved.form);
-  const [dniFile, setDniFile] = useState(null);
-  const [tituloFile, setTituloFile] = useState(null);
+
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
@@ -229,9 +227,6 @@ export default function PreinscripcionTerciario() {
           return setError("Describí el tipo de apoyo que necesitás."), false;
       }
     }
-    if (s === 5) {
-      if (!dniFile) return setError("El DNI digitalizado es obligatorio."), false;
-    }
     return true;
   };
 
@@ -250,8 +245,7 @@ export default function PreinscripcionTerciario() {
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ""));
-      if (dniFile) fd.append("dni_digitalizado", dniFile);
-      if (tituloFile) fd.append("titulo_digitalizado", tituloFile);
+
 
       await apiClientV2.post("/preinscripcion-terciario", fd, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -317,7 +311,7 @@ export default function PreinscripcionTerciario() {
             Tu preinscripción fue registrada correctamente. En los próximos días recibirás un email con información en <strong>{form.email}</strong>.
           </p>
           <p className="text-xs text-[#1a1f4e]/50">
-            Ante dudas: <a href="mailto:tecnicaturedatos@tdf.edu.ar" className="underline">tecnicaturedatos@tdf.edu.ar</a>
+            Ante dudas: <a href="mailto:tecnicaturadatos@tdf.edu.ar" className="underline">tecnicaturadatos@tdf.edu.ar</a>
           </p>
         </div>
       </div>
@@ -581,27 +575,14 @@ export default function PreinscripcionTerciario() {
                 </div>
               )}
 
-              {/* PASO 5: Documentación */}
-              {step === 5 && (
-                <div className="animate-in fade-in slide-in-from-right-6 duration-400 space-y-6">
-                  <div>
-                    <h2 className="text-xl font-black text-[#1a1f4e]">Documentación</h2>
-                    <p className="text-sm text-[#1a1f4e]/50 mt-0.5">Adjuntá copias digitales legibles (PDF, Word, JPG o PNG).</p>
-                  </div>
-                  <FileUpload label="Copia del DNI (frente y dorso)" required file={dniFile} onFile={setDniFile} />
-                  <FileUpload
-                    label="Título Secundario (Opcional)"
-                    required={false}
-                    file={tituloFile}
-                    onFile={setTituloFile}
-                  />
-                  <div className="p-5 rounded-2xl bg-[#1a1f4e]/5 border border-[#1a1f4e]/10">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 size={22} className="text-[#1a1f4e] flex-shrink-0" />
-                      <div>
-                        <p className="font-black text-[#1a1f4e] text-sm">Listo para enviar</p>
-                        <p className="text-xs text-[#1a1f4e]/60 mt-0.5">Al confirmar declarás que los datos ingresados son verídicos.</p>
-                      </div>
+              {/* Confirmación final — paso 4 */}
+              {step === 4 && (
+                <div className="p-5 rounded-2xl bg-[#1a1f4e]/5 border border-[#1a1f4e]/10 mt-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 size={22} className="text-[#1a1f4e] flex-shrink-0" />
+                    <div>
+                      <p className="font-black text-[#1a1f4e] text-sm">Listo para enviar</p>
+                      <p className="text-xs text-[#1a1f4e]/60 mt-0.5">Al confirmar declarás que los datos ingresados son verídicos.</p>
                     </div>
                   </div>
                 </div>
@@ -616,7 +597,7 @@ export default function PreinscripcionTerciario() {
                   </button>
                 )}
                 <div className="flex-grow" />
-                {step < 5 ? (
+                {step < 4 ? (
                   <button type="button" onClick={nextStep}
                     className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-95"
                     style={{ background: P.navy, color: P.yellow }}>
@@ -635,7 +616,7 @@ export default function PreinscripcionTerciario() {
           </div>
 
           <p className="text-center text-xs text-[#1a1f4e]/50 mt-6">
-            Contacto: <a href="mailto:tecnicaturedatos@tdf.edu.ar" className="underline">tecnicaturedatos@tdf.edu.ar</a>
+            Contacto: <a href="mailto:tecnicaturadatos@tdf.edu.ar" className="underline">tecnicaturadatos@tdf.edu.ar</a>
           </p>
         </div>
       </main>
