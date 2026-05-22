@@ -117,9 +117,23 @@ tecnicaturedatos@tdf.edu.ar
         pass
 
 
+def _esta_abierta(cfg):
+    """Si hay fechas configuradas, el período manda. Si no, usa el toggle manual."""
+    from datetime import date
+    hoy = date.today()
+    if cfg.fecha_inicio and cfg.fecha_fin:
+        return cfg.fecha_inicio <= hoy <= cfg.fecha_fin
+    if cfg.fecha_inicio:
+        return hoy >= cfg.fecha_inicio
+    if cfg.fecha_fin:
+        return hoy <= cfg.fecha_fin
+    return cfg.preinscripcion_abierta
+
+
 def _cfg_to_dict(cfg):
     return {
-        "abierta": cfg.preinscripcion_abierta,
+        "abierta": _esta_abierta(cfg),
+        "abierta_manual": cfg.preinscripcion_abierta,
         "fecha_inicio": str(cfg.fecha_inicio) if cfg.fecha_inicio else None,
         "fecha_fin": str(cfg.fecha_fin) if cfg.fecha_fin else None,
         "mensaje_cierre": cfg.mensaje_cierre,
@@ -191,7 +205,7 @@ def set_config_preinscripcion(
 def crear_preinscripcion_terciario(request):
     """Acepta multipart/form-data con archivos opcionales."""
     cfg = ConfiguracionPreinscripcionTerciario.get()
-    if not cfg.preinscripcion_abierta:
+    if not _esta_abierta(cfg):
         raise HttpError(403, cfg.mensaje_cierre or "Las preinscripciones están cerradas.")
 
     data = request.POST

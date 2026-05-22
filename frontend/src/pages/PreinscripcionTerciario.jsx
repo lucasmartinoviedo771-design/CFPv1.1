@@ -590,8 +590,8 @@ export default function PreinscripcionTerciario() {
                   </div>
                   <FileUpload label="Copia del DNI (frente y dorso)" required file={dniFile} onFile={setDniFile} />
                   <FileUpload
-                    label={`Título Secundario${form.finalizo_secundaria === "si" ? " (Obligatorio - finalizaste secundaria)" : " (Opcional)"}`}
-                    required={form.finalizo_secundaria === "si"}
+                    label="Título Secundario (Opcional)"
+                    required={false}
                     file={tituloFile}
                     onFile={setTituloFile}
                   />
