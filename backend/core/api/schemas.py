@@ -248,6 +248,7 @@ class EstudianteDetailOut(EstudianteOut):
     created_at: datetime
     updated_at: datetime
     trayectos: List[str] = []
+    nivelacion_digital: Optional[dict] = None
 
     @staticmethod
     def resolve_trayectos(obj):
@@ -263,6 +264,18 @@ class EstudianteDetailOut(EstudianteOut):
             else:
                 trayectos.add(prog)
         return sorted(list(trayectos))
+
+    @staticmethod
+    def resolve_nivelacion_digital(obj):
+        if hasattr(obj, 'nivelacion_digital'):
+            nd = obj.nivelacion_digital
+            return {
+                "completado": nd.completado,
+                "puntaje": nd.puntaje,
+                "token": nd.token,
+                "respuestas_json": nd.respuestas_json
+            }
+        return None
 
 
 class InscripcionOut(Schema):

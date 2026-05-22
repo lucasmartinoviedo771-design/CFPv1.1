@@ -21,6 +21,73 @@ def generate_token(request, student_id: int):
     nivelacion = get_object_or_404(NivelacionDigital, estudiante=estudiante)
     return {"token": nivelacion.token, "student_name": f"{estudiante.nombre} {estudiante.apellido}"}
 
+QUESTIONS = [
+    {
+        "id": 1,
+        "text": "¿Qué es un \"enlace\" o \"hipervínculo\" en una página web?",
+        "options": ["Una imagen decorativa", "Un texto o imagen que al hacer clic te lleva a otra página o sección", "Un anuncio publicitario", "El título principal de la página"],
+        "correct": 1
+    },
+    {
+        "id": 2,
+        "text": "¿Qué significa \"descargar\" un archivo de internet?",
+        "options": ["Subir un archivo a una página web", "Guardar una copia del archivo en tu dispositivo", "Eliminar el archivo de internet", "Compartir el archivo con otros usuarios en línea"],
+        "correct": 1
+    },
+    {
+        "id": 3,
+        "text": "¿Cuál es la función principal de un explorador web (navegador)?",
+        "options": ["Escribir y editar documentos de texto.", "Mostrar páginas web y permitir la navegación por internet.", "Enviar y recibir correos electrónicos.", "Reproducir música y videos."],
+        "correct": 1
+    },
+    {
+        "id": 4,
+        "text": "¿Qué es una \"contraseña\" o \"clave\" en el contexto de internet?",
+        "options": ["Un programa para proteger la computadora de virus", "Una secuencia secreta de caracteres para acceder a una cuenta o servicio en línea", "El nombre de usuario para iniciar sesión en una página web", "Un código de descuento para compras en línea"],
+        "correct": 1
+    },
+    {
+        "id": 5,
+        "text": "¿Qué significa \"cerrar sesión\" o \"salir\" de una cuenta en línea?",
+        "options": ["Eliminar la cuenta permanentemente", "Desactivar temporalmente la cuenta", "Finalizar la sesión activa y requerir volver a ingresar las credenciales para acceder", "Guardar la información de la sesión para un acceso más rápido la próxima vez"],
+        "correct": 2
+    },
+    {
+        "id": 6,
+        "text": "¿Qué es el \"correo electrónico\" o \"e-mail\"?",
+        "options": ["Un programa para crear presentaciones", "Un servicio para enviar y recibir mensajes a través de internet", "Una red social para compartir mensajes cortos", "Un sistema para realizar videollamadas"],
+        "correct": 1
+    },
+    {
+        "id": 7,
+        "text": "¿Qué precaución básica se debe tener al navegar por internet?",
+        "options": ["Compartir contraseñas con amigos cercanos", "Hacer clic en todos los enlaces que aparezcan", "Evitar ingresar información personal en sitios web no seguros (sin \"https://\")", "Descargar archivos de fuentes desconocidas sin analizarlos"],
+        "correct": 2
+    },
+    {
+        "id": 8,
+        "text": "¿Cuál de los siguientes dispositivos se utiliza principalmente para almacenar información de forma permanente en una computadora?",
+        "options": ["Memoria RAM", "Unidad Central de Procesamiento (CPU)", "Disco duro o unidad de estado sólido (SSD)", "Una marca de computadoras"],
+        "correct": 2
+    },
+    {
+        "id": 9,
+        "text": "¿Cuál de los siguientes iconos suele representar una conexión Wi-Fi en un dispositivo electrónico?",
+        "options": ["Un enchufe", "Unas ondas o barras curvas que se expanden hacia arriba", "Un círculo con una flecha", "Un candado cerrado para navegar por internet", "Una marca de computadoras"],
+        "correct": 1
+    },
+    {
+        "id": 10,
+        "text": "¿Qué unidad se utiliza comúnmente para medir la capacidad de almacenamiento?",
+        "options": ["Hertz (Hz)", "Watts (W)", "Gigabytes (GB) o Terabytes (TB)", "Pixeles"],
+        "correct": 2
+    }
+]
+
+@router.get("/questions")
+def get_questions(request):
+    return {"questions": QUESTIONS}
+
 @router.get("/test/{token}", auth=None)
 def get_test(request, token: str):
     nivelacion = get_object_or_404(NivelacionDigital, token=token)
@@ -29,68 +96,7 @@ def get_test(request, token: str):
     
     return {
         "student_name": f"{nivelacion.estudiante.nombre} {nivelacion.estudiante.apellido}",
-        "questions": [
-            {
-                "id": 1,
-                "text": "¿Qué es un \"enlace\" o \"hipervínculo\" en una página web?",
-                "options": ["Una imagen decorativa", "Un texto o imagen que al hacer clic te lleva a otra página o sección", "Un anuncio publicitario", "El título principal de la página"],
-                "correct": 1
-            },
-            {
-                "id": 2,
-                "text": "¿Qué significa \"descargar\" un archivo de internet?",
-                "options": ["Subir un archivo a una página web", "Guardar una copia del archivo en tu dispositivo", "Eliminar el archivo de internet", "Compartir el archivo con otros usuarios en línea"],
-                "correct": 1
-            },
-            {
-                "id": 3,
-                "text": "¿Cuál es la función principal de un explorador web (navegador)?",
-                "options": ["Escribir y editar documentos de texto.", "Mostrar páginas web y permitir la navegación por internet.", "Enviar y recibir correos electrónicos.", "Reproducir música y videos."],
-                "correct": 1
-            },
-            {
-                "id": 4,
-                "text": "¿Qué es una \"contraseña\" o \"clave\" en el contexto de internet?",
-                "options": ["Un programa para proteger la computadora de virus", "Una secuencia secreta de caracteres para acceder a una cuenta o servicio en línea", "El nombre de usuario para iniciar sesión en una página web", "Un código de descuento para compras en línea"],
-                "correct": 1
-            },
-            {
-                "id": 5,
-                "text": "¿Qué significa \"cerrar sesión\" o \"salir\" de una cuenta en línea?",
-                "options": ["Eliminar la cuenta permanentemente", "Desactivar temporalmente la cuenta", "Finalizar la sesión activa y requerir volver a ingresar las credenciales para acceder", "Guardar la información de la sesión para un acceso más rápido la próxima vez"],
-                "correct": 2
-            },
-            {
-                "id": 6,
-                "text": "¿Qué es el \"correo electrónico\" o \"e-mail\"?",
-                "options": ["Un programa para crear presentaciones", "Un servicio para enviar y recibir mensajes a través de internet", "Una red social para compartir mensajes cortos", "Un sistema para realizar videollamadas"],
-                "correct": 1
-            },
-            {
-                "id": 7,
-                "text": "¿Qué precaución básica se debe tener al navegar por internet?",
-                "options": ["Compartir contraseñas con amigos cercanos", "Hacer clic en todos los enlaces que aparezcan", "Evitar ingresar información personal en sitios web no seguros (sin \"https://\")", "Descargar archivos de fuentes desconocidas sin analizarlos"],
-                "correct": 2
-            },
-            {
-                "id": 8,
-                "text": "¿Cuál de los siguientes dispositivos se utiliza principalmente para almacenar información de forma permanente en una computadora?",
-                "options": ["Memoria RAM", "Unidad Central de Procesamiento (CPU)", "Disco duro o unidad de estado sólido (SSD)", "Una marca de computadoras"],
-                "correct": 2
-            },
-            {
-                "id": 9,
-                "text": "¿Cuál de los siguientes iconos suele representar una conexión Wi-Fi en un dispositivo electrónico?",
-                "options": ["Un enchufe", "Unas ondas o barras curvas que se expanden hacia arriba", "Un círculo con una flecha", "Un candado cerrado para navegar por internet", "Una marca de computadoras"],
-                "correct": 1
-            },
-            {
-                "id": 10,
-                "text": "¿Qué unidad se utiliza comúnmente para medir la capacidad de almacenamiento?",
-                "options": ["Hertz (Hz)", "Watts (W)", "Gigabytes (GB) o Terabytes (TB)", "Pixeles"],
-                "correct": 2
-            }
-        ]
+        "questions": QUESTIONS
     }
 
 

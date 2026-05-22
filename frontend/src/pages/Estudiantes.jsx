@@ -33,6 +33,19 @@ const Modal = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max
     ), document.body);
 };
 
+const NIVELACION_QUESTIONS = [
+    { id: 1, text: '¿Qué es un "enlace" o "hipervínculo" en una página web?', options: ["Una imagen decorativa", "Un texto o imagen que al hacer clic te lleva a otra página o sección", "Un anuncio publicitario", "El título principal de la página"], correct: 1 },
+    { id: 2, text: '¿Qué significa "descargar" un archivo de internet?', options: ["Subir un archivo a una página web", "Guardar una copia del archivo en tu dispositivo", "Eliminar el archivo de internet", "Compartir el archivo con otros usuarios en línea"], correct: 1 },
+    { id: 3, text: '¿Cuál es la función principal de un explorador web (navegador)?', options: ["Escribir y editar documentos de texto.", "Mostrar páginas web y permitir la navegación por internet.", "Enviar y recibir correos electrónicos.", "Reproducir música y videos."], correct: 1 },
+    { id: 4, text: '¿Qué es una "contraseña" o "clave" en el contexto de internet?', options: ["Un programa para proteger la computadora de virus", "Una secuencia secreta de caracteres para acceder a una cuenta o servicio en línea", "El nombre de usuario para iniciar sesión en una página web", "Un código de descuento para compras en línea"], correct: 1 },
+    { id: 5, text: '¿Qué significa "cerrar sesión" o "salir" de una cuenta en línea?', options: ["Eliminar la cuenta permanentemente", "Desactivar temporalmente la cuenta", "Finalizar la sesión activa y requerir volver a ingresar las credenciales para acceder", "Guardar la información de la sesión para un acceso más rápido la próxima vez"], correct: 2 },
+    { id: 6, text: '¿Qué es el "correo electrónico" o "e-mail"?', options: ["Un programa para crear presentaciones", "Un servicio para enviar y recibir mensajes a través de internet", "Una red social para compartir mensajes cortos", "Un sistema para realizar videollamadas"], correct: 1 },
+    { id: 7, text: '¿Qué precaución básica se debe tener al navegar por internet?', options: ["Compartir contraseñas con amigos cercanos", "Hacer clic en todos los enlaces que aparezcan", "Evitar ingresar información personal en sitios web no seguros (sin \"https://\")", "Descargar archivos de fuentes desconocidas sin analizarlos"], correct: 2 },
+    { id: 8, text: '¿Cuál de los siguientes dispositivos se utiliza principalmente para almacenar información de forma permanente en una computadora?', options: ["Memoria RAM", "Unidad Central de Procesamiento (CPU)", "Disco duro o unidad de estado sólido (SSD)", "Una marca de computadoras"], correct: 2 },
+    { id: 9, text: '¿Cuál de los siguientes iconos suele representar una conexión Wi-Fi en un dispositivo electrónico?', options: ["Un enchufe", "Unas ondas o barras curvas que se expanden hacia arriba", "Un círculo con una flecha", "Un candado cerrado para navegar por internet", "Una marca de computadoras"], correct: 1 },
+    { id: 10, text: '¿Qué unidad se utiliza comúnmente para medir la capacidad de almacenamiento?', options: ["Hertz (Hz)", "Watts (W)", "Gigabytes (GB) o Terabytes (TB)", "Pixeles"], correct: 2 }
+];
+
 const initialFormState = {
     apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "Masculino", fecha_nacimiento: "",
     pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
@@ -98,6 +111,7 @@ export default function Estudiantes() {
     });
     const [exportLoading, setExportLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("list"); // "list" or "add"
+    const [showRespuestasModal, setShowRespuestasModal] = useState(false);
     const formCardRef = useRef(null);
 
     const { data: estudiantes = [], isLoading, refetch } = useEstudiantes({
@@ -1054,16 +1068,31 @@ export default function Estudiantes() {
                                             <h4 className="text-lg font-bold text-white tracking-tight">Nivelación: Habilidades Digitales</h4>
                                             <div className="flex items-center gap-3 mt-1">
                                                 {viewData.student.nivelacion_digital ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${viewData.student.nivelacion_digital.completado ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                                                            {viewData.student.nivelacion_digital.completado ? `Completado: ${viewData.student.nivelacion_digital.puntaje}/10` : 'Enviado / Pendiente'}
-                                                        </span>
-                                                        {viewData.student.nivelacion_digital.completado && (
-                                                            <span className="text-xs font-medium text-indigo-300">
-                                                                Propuesta: <span className={viewData.student.nivelacion_digital.puntaje >= 7 ? 'text-emerald-400' : 'text-amber-400'}>
-                                                                    {viewData.student.nivelacion_digital.puntaje >= 7 ? 'Módulo 2' : 'Módulo 1'}
-                                                                </span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${viewData.student.nivelacion_digital.completado ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                                                {viewData.student.nivelacion_digital.completado ? `Completado: ${viewData.student.nivelacion_digital.puntaje}/10` : 'Enviado / Pendiente'}
                                                             </span>
+                                                            {viewData.student.nivelacion_digital.completado && (
+                                                                <span className="text-xs font-medium text-indigo-300">
+                                                                    Asignación final: <span className={viewData.student.nivelacion_digital.puntaje >= 7 && !viewData.student.nivelacion_digital.respuestas_json?.wants_module1 ? 'text-emerald-400' : 'text-amber-400'}>
+                                                                        {viewData.student.nivelacion_digital.puntaje >= 7 && !viewData.student.nivelacion_digital.respuestas_json?.wants_module1 ? 'Módulo 2 (Virtual)' : 'Módulo 1 (Presencial)'}
+                                                                    </span>
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {viewData.student.nivelacion_digital.completado && viewData.student.nivelacion_digital.respuestas_json?.wants_module1 && (
+                                                            <span className="text-[10px] text-orange-300 italic">
+                                                                * El estudiante eligió cursar el Módulo 1 presencial a pesar de su puntaje.
+                                                            </span>
+                                                        )}
+                                                        {viewData.student.nivelacion_digital.completado && (
+                                                            <Button
+                                                                onClick={() => setShowRespuestasModal(true)}
+                                                                className="bg-indigo-600/30 hover:bg-indigo-500/50 border border-indigo-500/50 text-xs py-1 mt-1 w-max"
+                                                            >
+                                                                Ver Cuestionario
+                                                            </Button>
                                                         )}
                                                     </div>
                                                 ) : (
@@ -1072,25 +1101,27 @@ export default function Estudiantes() {
                                             </div>
                                         </div>
                                     </div>
-                                    <Button
-                                        onClick={async () => {
-                                            try {
-                                                const { data } = await apiClientV2.post(`/nivelacion/generate/${viewData.student.id}`);
-                                                const url = `https://politecnico.ar/cfp/nivelacion.html?token=${data.token}`;
-                                                setQrModal({ 
-                                                    open: true, 
-                                                    url, 
-                                                    studentName: `${viewData.student.nombre} ${viewData.student.apellido} (Test Nivelación)` 
-                                                });
-                                            } catch (err) {
-                                                alert("Error al generar el test.");
-                                            }
-                                        }}
-                                        className="bg-brand-accent hover:bg-orange-600 border-none shadow-lg shadow-brand-accent/20"
-                                        startIcon={<Send size={16} />}
-                                    >
-                                        Generar Invitación
-                                    </Button>
+                                    {!viewData.student.nivelacion_digital?.completado && (
+                                        <Button
+                                            onClick={async () => {
+                                                try {
+                                                    const { data } = await apiClientV2.post(`/nivelacion/generate/${viewData.student.id}`);
+                                                    const url = `https://politecnico.ar/cfp/nivelacion.html?token=${data.token}`;
+                                                    setQrModal({ 
+                                                        open: true, 
+                                                        url, 
+                                                        studentName: `${viewData.student.nombre} ${viewData.student.apellido} (Test Nivelación)` 
+                                                    });
+                                                } catch (err) {
+                                                    alert("Error al generar el test.");
+                                                }
+                                            }}
+                                            className="bg-brand-accent hover:bg-orange-600 border-none shadow-lg shadow-brand-accent/20"
+                                            startIcon={<Send size={16} />}
+                                        >
+                                            Generar Invitación
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -1183,6 +1214,80 @@ export default function Estudiantes() {
                         <p className="text-[10px] text-indigo-400 uppercase font-bold mb-1">Link Directo</p>
                         <p className="text-[10px] text-gray-400 break-all select-all cursor-pointer font-mono">{qrModal.url}</p>
                     </div>
+                </div>
+            </Modal>
+
+            {qrModal.open && (
+                <Modal
+                    isOpen={qrModal.open}
+                    onClose={() => setQrModal({ open: false, url: "", studentName: "" })}
+                    title={`Link para Test: ${qrModal.studentName}`}
+                    actions={
+                        <Button onClick={() => setQrModal({ open: false, url: "", studentName: "" })} className="bg-indigo-600 hover:bg-indigo-500 text-white">
+                            Cerrar
+                        </Button>
+                    }
+                >
+                    <div className="flex flex-col items-center gap-4 text-center">
+                        <p className="text-indigo-200">Envía este enlace al estudiante para que pueda realizar su test:</p>
+                        <div className="bg-indigo-950/40 border border-indigo-500/30 p-3 rounded w-full overflow-hidden text-ellipsis whitespace-nowrap text-indigo-300">
+                            {qrModal.url}
+                        </div>
+                        <Button 
+                            onClick={() => {
+                                navigator.clipboard.writeText(qrModal.url);
+                                alert("Enlace copiado al portapapeles.");
+                            }}
+                            className="bg-brand-accent hover:bg-orange-600 border-none text-white w-full"
+                        >
+                            Copiar Enlace
+                        </Button>
+                    </div>
+                </Modal>
+            )}
+
+            <Modal
+                isOpen={showRespuestasModal}
+                onClose={() => setShowRespuestasModal(false)}
+                title={`Respuestas de ${viewData.student?.nombre} ${viewData.student?.apellido}`}
+                maxWidthClass="max-w-2xl"
+                actions={
+                    <Button onClick={() => setShowRespuestasModal(false)} className="bg-indigo-600 hover:bg-indigo-500 text-white">
+                        Cerrar
+                    </Button>
+                }
+            >
+                <div className="space-y-4">
+                    {NIVELACION_QUESTIONS.map(q => {
+                        const answerStr = viewData.student?.nivelacion_digital?.respuestas_json?.answers?.[q.id];
+                        const answerInt = answerStr !== undefined ? parseInt(answerStr) : -1;
+                        return (
+                            <div key={q.id} className="p-3 bg-indigo-950/40 rounded-lg border border-indigo-500/20">
+                                <p className="font-bold text-sm text-indigo-100 mb-2">{q.id}. {q.text}</p>
+                                <div className="space-y-1 pl-2">
+                                    {q.options.map((opt, idx) => {
+                                        let style = "text-indigo-300 text-xs";
+                                        let icon = null;
+                                        if (idx === q.correct && idx === answerInt) {
+                                            style = "text-emerald-400 font-bold";
+                                            icon = "✓";
+                                        } else if (idx === answerInt && idx !== q.correct) {
+                                            style = "text-red-400 font-bold";
+                                            icon = "✗";
+                                        } else if (idx === q.correct) {
+                                            style = "text-emerald-400/70";
+                                        }
+                                        return (
+                                            <div key={idx} className={`flex items-start gap-2 ${style}`}>
+                                                <span className="mt-0.5">{icon || "•"}</span>
+                                                <span>{opt}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </Modal>
 
