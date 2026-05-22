@@ -627,3 +627,31 @@ class PreinscripcionTerciario(TimeStamped):
 
     def __str__(self):
         return f"{self.apellido_nombre} - {self.dni} ({self.get_estado_display()})"
+
+
+class ConfiguracionPreinscripcionTerciario(models.Model):
+    """Singleton — usar siempre id=1."""
+    preinscripcion_abierta = models.BooleanField(default=False)
+    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_fin = models.DateField(null=True, blank=True)
+    mensaje_cierre = models.CharField(
+        max_length=300,
+        default="Las preinscripciones están cerradas en este momento.",
+        blank=True,
+    )
+    hd_cohorte = models.ForeignKey(
+        'Cohorte', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='config_terciario',
+        help_text="Cohorte de HD Módulo 2 donde se inscriben los aprobados",
+    )
+
+    class Meta:
+        verbose_name = "Configuración Preinscripción Terciario"
+
+    def __str__(self):
+        return "Configuración preinscripción terciario"
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj

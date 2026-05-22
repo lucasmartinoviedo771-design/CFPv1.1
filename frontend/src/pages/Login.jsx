@@ -17,11 +17,16 @@ export default function Login() {
     const [showChoice, setShowChoice] = useState(false);
     const [pendingUser, setPendingUser] = useState(null);
 
+    const GRUPOS_TERCIARIO = ['Admin', 'Terciario', 'Rector'];
+    const GRUPOS_CFP = ['Admin', 'Secretaría', 'Regencia', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel', 'Rector'];
+
     const resolveDestino = (userData) => {
         const groups = userData?.groups || [];
-        const isTerciario = groups.includes('Terciario');
-        const isCFP = userData?.is_superuser || groups.some(g => !['Terciario', 'Estudiante'].includes(g));
+        const isSuperuser = userData?.is_superuser || userData?.is_staff;
+        const isTerciario = isSuperuser || groups.some(g => GRUPOS_TERCIARIO.includes(g));
+        const isCFP = isSuperuser || groups.some(g => GRUPOS_CFP.includes(g));
         if (isTerciario && !isCFP) return '/admin-terciario';
+        if (isCFP && !isTerciario) return '/dashboard';
         if (isTerciario && isCFP) return null; // mostrar elección
         return '/dashboard';
     };

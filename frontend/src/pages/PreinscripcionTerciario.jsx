@@ -159,13 +159,36 @@ export default function PreinscripcionTerciario() {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [rechazado, setRechazado] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [config, setConfig] = useState(null);
+
+  useEffect(() => {
+    apiClientV2.get("/preinscripcion-terciario-config")
+      .then(({ data }) => setConfig(data))
+      .catch(() => setConfig({ abierta: false, mensaje_cierre: "No se pudo verificar el estado del formulario." }))
+      .finally(() => setConfigLoading(false));
+  }, []);
 
   // Persistir en localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ form, step }));
   }, [form, step]);
 
-  const onSelect = (name, value) => setForm((p) => ({ ...p, [name]: value }));
+  const onSelect = (name, value) => setForm((p) => {
+    const next = { ...p, [name]: value };
+    if (name === "posee_discapacidad" && value === "no") {
+      next.tipo_discapacidad = "";
+      next.posee_cud = "";
+      next.apoyo_inclusion = "";
+      next.requiere_apoyo_especifico = "";
+      next.descripcion_apoyo = "";
+    }
+    if (name === "posee_estudios_superiores" && value === "no") {
+      next.estudios_superiores_finalizado = "";
+      next.estudios_superiores_carrera = "";
+    }
+    return next;
+  });
   const onChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
@@ -253,22 +276,28 @@ export default function PreinscripcionTerciario() {
 
   if (rechazado) {
     return (
-      <div className="min-h-screen bg-[#b8ccd8] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-xl max-w-md w-full p-10 text-center space-y-6">
-          <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
-            <AlertTriangle size={40} className="text-red-500" />
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#1a1f4e" }}>
+        <div className="max-w-lg w-full text-center space-y-8">
+          <div className="mx-auto w-28 h-28 bg-red-500/20 rounded-full flex items-center justify-center border-4 border-red-500/40">
+            <AlertTriangle size={60} className="text-red-400" />
           </div>
-          <h2 className="text-2xl font-black text-[#1a1f4e]">Residencia requerida</h2>
-          <p className="text-[#1a1f4e]/70 text-sm leading-relaxed">
-            La Tecnicatura en Ciencias de Datos e IA es <strong>exclusiva para residentes de Tierra del Fuego</strong>.
-            Solo pueden preinscribirse personas que residan en la provincia.
-          </p>
+          <div className="space-y-4">
+            <h2 className="text-4xl font-black text-white leading-tight">
+              Solo residentes de<br />Tierra del Fuego
+            </h2>
+            <p className="text-white/60 text-lg leading-relaxed">
+              La <span className="text-[#f5c518] font-semibold">Tecnicatura en Ciencias de Datos e IA</span> es exclusiva para personas que residan en la provincia de Tierra del Fuego, Antártida e Islas del Atlántico Sur.
+            </p>
+            <p className="text-white/40 text-sm">
+              Si creés que esto es un error o tu situación es especial, comunicate con la institución.
+            </p>
+          </div>
           <button
             onClick={() => { setRechazado(false); setForm((p) => ({ ...p, localidad: "" })); }}
-            className="w-full py-3 rounded-xl font-bold text-sm"
-            style={{ background: P.navy, color: P.yellow }}
+            className="px-8 py-4 rounded-2xl font-bold text-base transition-opacity hover:opacity-90"
+            style={{ background: "#f5c518", color: "#1a1f4e" }}
           >
-            Volver al formulario
+            ← Volver al formulario
           </button>
         </div>
       </div>
@@ -295,17 +324,52 @@ export default function PreinscripcionTerciario() {
     );
   }
 
+  const Header = () => (
+    <header style={{ background: P.navy }} className="py-5 px-6 shadow-lg">
+      <div className="max-w-3xl mx-auto flex items-center gap-4">
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-lg flex-shrink-0" style={{ background: P.yellow, color: P.navy }}>P</div>
+        <div>
+          <p className="text-white font-black text-base leading-tight">Centro Politécnico Superior Malvinas Argentinas</p>
+          <p style={{ color: P.yellow }} className="text-xs font-semibold">Tecnicatura en Ciencias de Datos e Inteligencia Artificial</p>
+        </div>
+      </div>
+    </header>
+  );
+
+  if (configLoading) return (
+    <div className="min-h-screen bg-[#b8ccd8] flex flex-col">
+      <Header />
+      <div className="flex-grow flex items-center justify-center text-[#1a1f4e]/50 text-sm">Cargando...</div>
+    </div>
+  );
+
+  if (!config?.abierta) return (
+    <div className="min-h-screen bg-[#b8ccd8] flex flex-col">
+      <Header />
+      <main className="flex-grow flex items-center justify-center px-4 py-16">
+        <div className="max-w-lg w-full text-center space-y-6">
+          <div className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center" style={{ background: P.navy }}>
+            <span className="text-4xl">📋</span>
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-[#1a1f4e] mb-3">Preinscripciones cerradas</h1>
+            <p className="text-[#1a1f4e]/70 text-sm leading-relaxed">
+              {config?.mensaje_cierre || "Las preinscripciones están cerradas en este momento."}
+            </p>
+          </div>
+          {(config?.fecha_inicio || config?.fecha_fin) && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold" style={{ background: P.yellow + "30", color: P.navy }}>
+              📅 Período: {config.fecha_inicio || "—"} al {config.fecha_fin || "—"}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#b8ccd8] flex flex-col">
-      <header style={{ background: P.navy }} className="py-5 px-6 shadow-lg">
-        <div className="max-w-3xl mx-auto flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-lg flex-shrink-0" style={{ background: P.yellow, color: P.navy }}>P</div>
-          <div>
-            <p className="text-white font-black text-base leading-tight">Centro Politécnico Superior Malvinas Argentinas</p>
-            <p style={{ color: P.yellow }} className="text-xs font-semibold">Tecnicatura en Ciencias de Datos e Inteligencia Artificial</p>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="flex-grow flex items-start justify-center py-10 px-4">
         <div className="max-w-3xl w-full">
@@ -380,7 +444,7 @@ export default function PreinscripcionTerciario() {
                     </div>
                     <div className="md:col-span-2">
                       <Field label="Localidad de Residencia" required>
-                        <select name="localidad" value={form.localidad} onChange={onChange} className={inputCls}>
+                        <select name="localidad" value={form.localidad} onChange={(e) => { onChange(e); if (e.target.value === "otras") setRechazado(true); }} className={inputCls}>
                           <option value="">Seleccioná tu localidad...</option>
                           {LOCALIDADES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
                         </select>
