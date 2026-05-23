@@ -3,69 +3,70 @@
 services:
   db:
     image: mysql:8.0
-    container_name: cfp_terciario_db
+    container_name: cfp_db_prod
     restart: always
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-CFP_TERCIARIO}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-CFP}
       MYSQL_USER: ${MYSQL_USER:-cfp_user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     ports:
-      - "127.0.0.1:3309:3306"
+      - "127.0.0.1:3308:3306" # Solo accesible desde localhost
     networks:
-      - cfp_terciario_network
+      - cfp_network
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: cfp_terciario_backend
+    container_name: cfp_backend_prod
     restart: always
     command: /entrypoint.sh
     volumes:
       - media_data:/app/media
     environment:
       - DB_ENGINE=django.db.backends.mysql
-      - DB_NAME=${MYSQL_DATABASE:-CFP_TERCIARIO}
+      - DB_NAME=${MYSQL_DATABASE:-CFP}
       - DB_USER=${MYSQL_USER:-cfp_user}
       - DB_PASSWORD=${MYSQL_PASSWORD}
       - DB_HOST=db
       - DB_PORT=3306
-      - DJANGO_ALLOWED_HOSTS=cfp-terciario.lucasoviedodev.org,localhost,127.0.0.1
+      - DJANGO_ALLOWED_HOSTS=cfp.lucasoviedodev.org,localhost,127.0.0.1
       - DJANGO_DEBUG=${DJANGO_DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY}
-      - CORS_ALLOWED_ORIGINS=https://cfp-terciario.lucasoviedodev.org
+      - CORS_ALLOWED_ORIGINS=http://localhost:8085,http://192.168.1.212,http://192.168.1.212:8085,http://ips6-server.com,https://cfp.lucasoviedodev.org,https://www.lucasoviedodev.org,https://lucasoviedodev.org
+      # Email configuration
       - EMAIL_BACKEND=${EMAIL_BACKEND:-django.core.mail.backends.smtp.EmailBackend}
       - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
       - EMAIL_PORT=${EMAIL_PORT:-587}
       - EMAIL_USE_TLS=${EMAIL_USE_TLS:-True}
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
-      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-Terciario IA <soporte@lucasoviedodev.org>}
-      - FRONTEND_URL=${FRONTEND_URL:-https://cfp-terciario.lucasoviedodev.org}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-CFP <soporte@lucasoviedodev.org>}
+      - FRONTEND_URL=${FRONTEND_URL:-https://cfp.lucasoviedodev.org}
     depends_on:
       - db
     networks:
-      - cfp_terciario_network
+      - cfp_network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: cfp_terciario_frontend
+    container_name: cfp_frontend_prod
     restart: always
     ports:
-      - "127.0.0.1:8087:80"
-      - "127.0.0.1:8447:443"
+      - "127.0.0.1:8085:80"   # Restringido a localhost - solo accesible vía Cloudflare Tunnel
+      - "127.0.0.1:8444:443"  # Restringido a localhost - solo accesible vía Cloudflare Tunnel
     depends_on:
       - backend
     volumes:
       - /home/admin486321/ssl:/etc/nginx/ssl:ro
       - media_data:/app/media:ro
     networks:
-      - cfp_terciario_network
+      - cfp_network
 
 volumes:
   db_data:
@@ -73,5 +74,5 @@ volumes:
 
 
 networks:
-  cfp_terciario_network:
+  cfp_network:
     driver: bridge
