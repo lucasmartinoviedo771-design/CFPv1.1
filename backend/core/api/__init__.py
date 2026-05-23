@@ -20,6 +20,7 @@ from .horarios_cursada import router as horarios_cursada_router
 from .preinscripciones_publicas import router as preinscripciones_publicas_router
 from .autorizaciones import router as autorizaciones_router
 from .nivelacion import router as nivelacion_router
+from .preinscripcion_terciario import router as preinscripcion_terciario_router
 
 
 __all__ = [
@@ -44,4 +45,5 @@ __all__ = [
     "preinscripciones_publicas_router",
     "autorizaciones_router",
     "nivelacion_router",
+    "preinscripcion_terciario_router",
 ]

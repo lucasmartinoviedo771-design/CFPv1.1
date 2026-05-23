@@ -554,3 +554,104 @@ class NivelacionDigital(TimeStamped):
     def __str__(self):
         return f"Nivelación {self.estudiante.apellido} ({self.puntaje}/{self.total_preguntas})"
 
+
+class PreinscripcionTerciario(TimeStamped):
+
+    LOCALIDAD_CHOICES = [
+        ('ushuaia', 'Ushuaia'),
+        ('rg_sur', 'Río Grande - Margen Sur'),
+        ('rg_norte', 'Río Grande - Margen Norte'),
+        ('tolhuin', 'Tolhuin'),
+        ('zona_rural', 'Zona rural (Por ej. Estancia Cullen)'),
+        ('otras', 'Otras Ciudades'),
+    ]
+    SEXO_CHOICES = [('F', 'Femenino'), ('M', 'Masculino'), ('O', 'Otro')]
+    SECUNDARIA_CHOICES = [('si', 'Sí'), ('no', 'No'), ('cursando', 'Cursando el último año')]
+    DISCAPACIDAD_CHOICES = [
+        ('visual', 'Visual'), ('auditiva', 'Auditiva'), ('intelectual', 'Intelectual'),
+        ('motora', 'Motora'), ('tea', 'Trastornos de Espectro Autista'),
+        ('otra', 'Otra discapacidad'), ('multiple', 'Más de una discapacidad'),
+    ]
+    APOYO_CHOICES = [('estatal', 'Sector Estatal'), ('privado', 'Sector Privado'), ('ninguno', 'Ninguno')]
+    ESTADO_CHOICES = [('pendiente', 'Pendiente'), ('aprobada', 'Aprobada'), ('rechazada', 'Rechazada')]
+
+    # Datos personales
+    email = models.EmailField()
+    apellido_nombre = models.CharField(max_length=200, help_text="Tal cual figura en DNI")
+    dni = models.CharField(max_length=15)
+    cuil = models.CharField(max_length=15)
+    sexo = models.CharField(max_length=1, choices=SEXO_CHOICES)
+    celular = models.CharField(max_length=20)
+    fecha_nacimiento = models.DateField()
+    localidad_nacimiento = models.CharField(max_length=100)
+    provincia_nacimiento = models.CharField(max_length=100)
+    nacionalidad = models.CharField(max_length=100)
+    domicilio = models.CharField(max_length=200)
+    localidad = models.CharField(max_length=20, choices=LOCALIDAD_CHOICES)
+
+    # Datos académicos
+    finalizo_secundaria = models.CharField(max_length=10, choices=SECUNDARIA_CHOICES)
+    posee_estudios_superiores = models.BooleanField(default=False)
+    estudios_superiores_finalizado = models.BooleanField(null=True, blank=True)
+    estudios_superiores_carrera = models.CharField(max_length=200, blank=True)
+
+    # Datos tecnológicos
+    posee_pc = models.BooleanField()
+    posee_internet = models.BooleanField()
+
+    # Datos complementarios
+    pueblo_originario = models.BooleanField(default=False)
+    posee_discapacidad = models.BooleanField(default=False)
+    tipo_discapacidad = models.CharField(max_length=20, choices=DISCAPACIDAD_CHOICES, blank=True)
+    posee_cud = models.BooleanField(null=True, blank=True)
+    apoyo_inclusion = models.CharField(max_length=10, choices=APOYO_CHOICES, blank=True)
+    requiere_apoyo_especifico = models.BooleanField(null=True, blank=True)
+    descripcion_apoyo = models.TextField(blank=True)
+
+    # Documentación
+    dni_digitalizado = models.FileField(upload_to='terciario/dni/', null=True, blank=True)
+    titulo_digitalizado = models.FileField(upload_to='terciario/titulo/', null=True, blank=True)
+
+    # Gestión
+    estado = models.CharField(max_length=15, choices=ESTADO_CHOICES, default='pendiente')
+    observaciones = models.TextField(blank=True)
+    hd_inscripcion = models.ForeignKey(
+        'Inscripcion', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='preinscripcion_terciario'
+    )
+
+    class Meta:
+        verbose_name = "Preinscripción Terciario"
+        verbose_name_plural = "Preinscripciones Terciario"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.apellido_nombre} - {self.dni} ({self.get_estado_display()})"
+
+
+class ConfiguracionPreinscripcionTerciario(models.Model):
+    """Singleton — usar siempre id=1."""
+    preinscripcion_abierta = models.BooleanField(default=False)
+    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_fin = models.DateField(null=True, blank=True)
+    mensaje_cierre = models.CharField(
+        max_length=300,
+        default="Las preinscripciones están cerradas en este momento.",
+        blank=True,
+    )
+    hd_cohorte = models.ForeignKey(
+        'Cohorte', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='config_terciario',
+        help_text="Cohorte de HD Módulo 2 donde se inscriben los aprobados",
+    )
+
+    class Meta:
+        verbose_name = "Configuración Preinscripción Terciario"
+
+    def __str__(self):
+        return "Configuración preinscripción terciario"
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj
