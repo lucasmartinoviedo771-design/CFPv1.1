@@ -47,7 +47,7 @@ const NIVELACION_QUESTIONS = [
 ];
 
 const initialFormState = {
-    apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "Masculino", fecha_nacimiento: "",
+    apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "M", fecha_nacimiento: "",
     pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
     nacionalidad: "Argentina", nacionalidad_otra: "",
     lugar_nacimiento: "",
@@ -181,7 +181,7 @@ export default function Estudiantes() {
         }
         const payload = {
             ...form,
-            sexo: form.sexo || "Masculino",
+            sexo: form.sexo || "M",
             fecha_nacimiento: form.fecha_nacimiento || null,
             puede_traer_pc: form.posee_pc ? form.puede_traer_pc : false,
             lugar_trabajo: form.trabaja ? form.lugar_trabajo : "",
@@ -447,7 +447,7 @@ export default function Estudiantes() {
                             <Input name="nombre" label="Nombre" value={form.nombre} onChange={onChange} />
                             <div className="md:col-span-2"><Input name="email" label="Email" type="email" value={form.email} onChange={onChange} /></div>
                             <div className="md:col-span-1">
-                                <Select name="sexo" label="Sexo" value={form.sexo} onChange={onChange} options={[{ value: 'Masculino', label: 'Masculino' }, { value: 'Femenino', label: 'Femenino' }, { value: 'Otro', label: 'Otro' }]} />
+                                <Select name="sexo" label="Sexo" value={form.sexo} onChange={onChange} options={[{ value: 'M', label: 'Masculino' }, { value: 'F', label: 'Femenino' }, { value: 'O', label: 'Otro' }]} />
                             </div>
                             <div className="md:col-span-1"><Input name="fecha_nacimiento" label="Fecha Nacimiento" type="date" value={form.fecha_nacimiento} onChange={onChange} /></div>
                         </div>

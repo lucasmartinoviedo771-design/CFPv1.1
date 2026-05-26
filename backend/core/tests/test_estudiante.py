@@ -24,7 +24,7 @@ class EstudianteModelTest(TestCase):
         self.assertEqual(self.estudiante.apellido, "Pérez")
         self.assertEqual(self.estudiante.nombre, "Juan")
         self.assertEqual(self.estudiante.dni, "12345678")
-        self.assertEqual(self.estudiante.estatus, "Regular")  # Default
+        self.assertEqual(self.estudiante.estatus, "Preinscripto")  # Default
 
     def test_estudiante_str(self):
         """Test del método __str__."""

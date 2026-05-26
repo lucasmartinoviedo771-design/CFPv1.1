@@ -45,7 +45,7 @@ class Command(BaseCommand):
         ]
 
         batch_to_update = []
-        allowed_sexo = {"", "Masculino", "Femenino", "Otro"}
+        allowed_sexo = {"", "M", "F", "O"}
 
         for est in Estudiante.objects.all().iterator():
             total += 1

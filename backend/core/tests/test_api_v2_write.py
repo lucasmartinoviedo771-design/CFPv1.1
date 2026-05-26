@@ -32,7 +32,7 @@ class ApiV2WriteTests(TestCase):
         self.modulo = Modulo.objects.create(bloque=self.bloque, nombre="Modulo 1")
         self.examen = Examen.objects.create(modulo=self.modulo, tipo_examen=Examen.PARCIAL)
         self.bloque_fechas = BloqueDeFechas.objects.create(nombre="Calendario 1")
-        self.cohorte = Cohorte.objects.create(programa=self.programa, bloque_fechas=self.bloque_fechas, nombre="Cohorte A")
+        self.cohorte = Cohorte.objects.create(programa=self.programa, bloque=self.bloque, bloque_fechas=self.bloque_fechas, nombre="Cohorte A")
 
     def test_crear_estudiante(self):
         payload = {

@@ -56,10 +56,13 @@ def activate_inscripciones_on_regular(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Cohorte)
 def create_exams_from_template(sender, instance, created, **kwargs):
     """
-    Cuando se crea o actualiza una Cohorte, revisamos su plantilla de calendario (bloque_fechas).
+    Cuando se crea una Cohorte, revisamos su plantilla de calendario (bloque_fechas).
     Si la plantilla incluye semanas de examen, aseguramos que existan los registros
     de Examen para el Bloque o sus Módulos.
     """
+    if not created:
+        return
+
     from .models import Examen, SemanaConfig
     
     if not instance.bloque_fechas:
@@ -84,3 +87,31 @@ def create_exams_from_template(sender, instance, created, **kwargs):
     if SemanaConfig.PARCIAL in tipos_semana and instance.bloque:
         for modulo in instance.bloque.modulos.all():
             Examen.objects.get_or_create(modulo=modulo, tipo_examen=Examen.PARCIAL)
+
+
+from django.db.models.signals import m2m_changed
+from django.core.exceptions import ValidationError
+
+@receiver(m2m_changed, sender=Bloque.correlativas.through)
+def validate_bloque_correlativas(sender, instance, action, pk_set, **kwargs):
+    if action == "pre_add":
+        for pk in pk_set:
+            if pk == instance.id:
+                raise ValidationError("Un bloque no puede ser correlativo de sí mismo.")
+            
+            # BFS para detectar dependencias circulares
+            visitados = set()
+            cola = [pk]
+            while cola:
+                actual_id = cola.pop(0)
+                if actual_id == instance.id:
+                    raise ValidationError(
+                        f"Dependencia circular detectada: el bloque correlativo genera un ciclo con este bloque."
+                    )
+                if actual_id not in visitados:
+                    visitados.add(actual_id)
+                    try:
+                        actual_block = Bloque.objects.get(pk=actual_id)
+                        cola.extend(actual_block.correlativas.values_list('id', flat=True))
+                    except Bloque.DoesNotExist:
+                        pass

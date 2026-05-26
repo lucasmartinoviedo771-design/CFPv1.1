@@ -2,13 +2,13 @@ import re
 from typing import Any, Tuple
 
 SEXO_CANONICAL = {
-    "m": "Masculino",
-    "masculino": "Masculino",
-    "f": "Femenino",
-    "femenino": "Femenino",
-    "o": "Otro",
-    "otro": "Otro",
-    "indistinto": "Otro",
+    "m": "M",
+    "masculino": "M",
+    "f": "F",
+    "femenino": "F",
+    "o": "O",
+    "otro": "O",
+    "indistinto": "O",
 }
 
 COUNTRY_CANONICAL = {

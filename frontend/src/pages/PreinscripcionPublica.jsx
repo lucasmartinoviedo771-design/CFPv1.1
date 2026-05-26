@@ -553,7 +553,7 @@ export default function PreinscripcionPublica() {
                     <div className="space-y-2">
                       <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Sexo</label>
                       <select className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="sexo" value={form.sexo} onChange={onChange}>
-                        <option value="">Seleccione...</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro/X</option>
+                        <option value="">Seleccione...</option><option value="M">Masculino</option><option value="F">Femenino</option><option value="O">Otro/X</option>
                       </select>
                     </div>
                     <div className="space-y-2">

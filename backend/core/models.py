@@ -127,8 +127,6 @@ class Cohorte(TimeStamped):
         "Bloque",
         on_delete=models.PROTECT,
         related_name="cohortes",
-        null=True,
-        blank=True,
         help_text="Bloque académico al que aplica esta cohorte",
     )
     bloque_fechas = models.ForeignKey(BloqueDeFechas, on_delete=models.PROTECT, related_name="cohortes", help_text="Plantilla de calendario a usar")
@@ -145,6 +143,15 @@ class Cohorte(TimeStamped):
             )
         ]
 
+    def clean(self):
+        super().clean()
+        if self.fecha_inicio and self.fecha_fin and self.fecha_fin < self.fecha_inicio:
+            raise ValidationError("La fecha de fin no puede ser anterior a la fecha de inicio.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.nombre
 
@@ -160,8 +167,8 @@ class Estudiante(TimeStamped):
     dni = models.CharField(max_length=20, unique=True, db_index=True)
     cuit = models.CharField(max_length=20, blank=True, verbose_name="CUIT")
     
-    SEXO_OPCIONES = [('Masculino', 'Masculino'), ('Femenino', 'Femenino'), ('Otro', 'Otro')]
-    sexo = models.CharField(max_length=20, choices=SEXO_OPCIONES, blank=True)
+    SEXO_OPCIONES = [('M', 'Masculino'), ('F', 'Femenino'), ('O', 'Otro')]
+    sexo = models.CharField(max_length=1, choices=SEXO_OPCIONES, blank=True)
     fecha_nacimiento = models.DateField(null=True, blank=True)
 
     # --- Datos de Origen ---
@@ -194,7 +201,7 @@ class Estudiante(TimeStamped):
     nivel_educativo = models.CharField(max_length=60, choices=NIVEL_EDUCATIVO_OPCIONES, blank=True, verbose_name="Nivel Alcanzado")
     
     ESTATUS_REGULARIDAD = [('Regular', 'Regular'), ('Baja', 'Baja'), ('Condicional', 'Condicional'), ('Preinscripto', 'Preinscripto')]
-    estatus = models.CharField(max_length=15, choices=ESTATUS_REGULARIDAD, default='Regular', verbose_name="Estatus de Regularidad")
+    estatus = models.CharField(max_length=15, choices=ESTATUS_REGULARIDAD, default='Preinscripto', verbose_name="Estatus de Regularidad")
 
     # --- Conectividad y Recursos ---
     posee_pc = models.BooleanField(default=False, verbose_name="Posee PC en su Domicilio")
@@ -290,6 +297,23 @@ class Bloque(TimeStamped):
     nombre = models.CharField(max_length=120)
     correlativas = models.ManyToManyField('self', symmetrical=False, blank=True, related_name='es_correlativa_de')
 
+    def clean(self):
+        super().clean()
+        if self.pk:
+            if self.correlativas.filter(pk=self.pk).exists():
+                raise ValidationError("Un bloque no puede ser correlativo de sí mismo.")
+            
+            visitados = set()
+            for corr in self.correlativas.all():
+                cola = [corr]
+                while cola:
+                    actual = cola.pop(0)
+                    if actual.id == self.id:
+                        raise ValidationError(f"Dependencia circular detectada: el bloque correlativo '{corr.nombre}' genera un ciclo que requiere este mismo bloque.")
+                    if actual.id not in visitados:
+                        visitados.add(actual.id)
+                        cola.extend(actual.correlativas.all())
+
     def __str__(self):
         return self.nombre
 
@@ -304,6 +328,15 @@ class Modulo(TimeStamped):
     fecha_fin = models.DateField(null=True, blank=True)
     es_practica = models.BooleanField(default=False)
     asistencia_requerida_practica = models.PositiveIntegerField(default=80)
+
+    def clean(self):
+        super().clean()
+        if self.fecha_inicio and self.fecha_fin and self.fecha_fin < self.fecha_inicio:
+            raise ValidationError("La fecha de fin no puede ser anterior a la fecha de inicio.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.nombre
@@ -367,6 +400,24 @@ class HorarioCursada(TimeStamped):
         if self.modulo_id and self.modulo.bloque_id != self.bloque_id:
             raise ValidationError("El módulo debe pertenecer al bloque seleccionado.")
 
+        if not self.modulo_id:
+            qs = HorarioCursada.objects.filter(
+                cohorte=self.cohorte,
+                bloque=self.bloque,
+                modulo__isnull=True,
+                dia_semana=self.dia_semana,
+                hora_inicio=self.hora_inicio,
+                hora_fin=self.hora_fin,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError("Ya existe un horario de cursada idéntico (sin módulo) para esta cohorte y bloque.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
 class Examen(TimeStamped):
     PARCIAL = "PARCIAL"
     RECUP = "RECUP"
@@ -385,7 +436,7 @@ class Examen(TimeStamped):
     bloque = models.ForeignKey(Bloque, on_delete=models.CASCADE, related_name="examenes", null=True, blank=True)
     tipo_examen = models.CharField(max_length=15, choices=TIPOS_EXAMEN)
     fecha = models.DateField(null=True, blank=True)
-    peso = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    peso = models.DecimalField(max_digits=5, decimal_places=2, default=1.00)
 
     def __str__(self):
         if self.modulo:
@@ -408,6 +459,20 @@ class Examen(TimeStamped):
         indexes = [
             models.Index(fields=["modulo", "tipo_examen"]),
             models.Index(fields=["bloque", "tipo_examen"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(peso__gt=0),
+                name='check_peso_positivo'
+            ),
+            models.UniqueConstraint(
+                fields=['modulo', 'tipo_examen'],
+                name='uniq_examen_modulo_tipo'
+            ),
+            models.UniqueConstraint(
+                fields=['bloque', 'tipo_examen'],
+                name='uniq_examen_bloque_tipo'
+            )
         ]
 
 class Inscripcion(TimeStamped):
@@ -475,15 +540,39 @@ class Nota(TimeStamped):
             models.Index(fields=["examen", "estudiante", "intento"]),
             models.Index(fields=["estudiante", "es_nota_definitiva"]),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['examen', 'estudiante', 'intento'],
+                name='uniq_nota_examen_estudiante_intento'
+            ),
+            models.UniqueConstraint(
+                fields=['examen', 'estudiante'],
+                condition=models.Q(es_nota_definitiva=True),
+                name='uniq_nota_definitiva_por_examen_estudiante'
+            ),
+            models.CheckConstraint(
+                check=models.Q(calificacion__gte=0) & models.Q(calificacion__lte=10),
+                name='check_calificacion_rango_valido'
+            )
+        ]
 
     def clean(self):
         tipos_final = [Examen.FINAL_VIRTUAL, Examen.FINAL_SINC, Examen.EQUIVALENCIA]
         if self.es_equivalencia and self.examen and self.examen.tipo_examen not in tipos_final:
             raise ValidationError("La equivalencia solo puede registrarse sobre exámenes de tipo FINAL o EQUIVALENCIA.")
-        if self.aprobado and self.calificacion is not None and self.calificacion < 6:
-            raise ValidationError("Si 'aprobado=True', la calificación debe ser >= 6.")
+        if self.calificacion is not None:
+            deberia_aprobar = self.calificacion >= 6
+            if self.aprobado != deberia_aprobar:
+                raise ValidationError("El campo 'aprobado' es inconsistente con la calificación ingresada.")
         if self.fecha_calificacion is None:
             self.fecha_calificacion = timezone.now()
+
+    def save(self, *args, **kwargs):
+        if self.calificacion is not None:
+            self.aprobado = self.calificacion >= 6
+        if self.fecha_calificacion is None:
+            self.fecha_calificacion = timezone.now()
+        super().save(*args, **kwargs)
 
 class Asistencia(TimeStamped):
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE, related_name="asistencias")
@@ -624,6 +713,10 @@ class PreinscripcionTerciario(TimeStamped):
         verbose_name = "Preinscripción Terciario"
         verbose_name_plural = "Preinscripciones Terciario"
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['dni'], name='uniq_preinscripcion_dni'),
+            models.UniqueConstraint(fields=['email'], name='uniq_preinscripcion_email'),
+        ]
 
     def __str__(self):
         return f"{self.apellido_nombre} - {self.dni} ({self.get_estado_display()})"
@@ -644,12 +737,24 @@ class ConfiguracionPreinscripcionTerciario(models.Model):
         related_name='config_terciario',
         help_text="Cohorte de HD Módulo 2 donde se inscriben los aprobados",
     )
+    programa_terciario = models.ForeignKey(
+        'Programa',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='configuracion_preinscripcion',
+        help_text="Programa terciario al que aplica esta configuración"
+    )
 
     class Meta:
         verbose_name = "Configuración Preinscripción Terciario"
 
     def __str__(self):
         return "Configuración preinscripción terciario"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
 
     @classmethod
     def get(cls):
