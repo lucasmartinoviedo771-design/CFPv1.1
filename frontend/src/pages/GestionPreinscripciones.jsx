@@ -190,7 +190,7 @@ export default function GestionPreinscripciones() {
         <div className="space-y-6 animate-fade-in-up">
             <div className="flex justify-between items-end">
                 <div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight">Cola de Preinscripciones</h1>
+                    <h1 className="text-2xl font-bold text-white tracking-tight">Preinscripciones CFP</h1>
                     <p className="text-indigo-300">Revisión y aprobación masiva de nuevos Estudiantes.</p>
                 </div>
                 <div className="flex gap-3">
