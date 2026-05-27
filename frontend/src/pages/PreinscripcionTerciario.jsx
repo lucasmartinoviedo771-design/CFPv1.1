@@ -342,8 +342,8 @@ export default function PreinscripcionTerciario() {
       <Header />
       <main className="flex-grow flex items-center justify-center px-4 py-16">
         <div className="max-w-lg w-full text-center space-y-6">
-          <div className="text-xs md:text-sm font-black uppercase tracking-widest text-[#1a1f4e]/80 leading-snug">
-            Tecnicatura en Ciencias de Datos e Inteligencia Artificial
+          <div className="text-lg md:text-xl font-black uppercase tracking-widest text-[#1a1f4e] leading-tight max-w-md mx-auto">
+            Tecnicatura en Ciencias de<br />Datos e Inteligencia Artificial
           </div>
           <div className="w-20 h-20 rounded-2xl mx-auto flex items-center justify-center" style={{ background: P.navy }}>
             <span className="text-4xl">📋</span>
