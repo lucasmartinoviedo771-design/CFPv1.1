@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useContext } from "react";
 import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
 import { apiClientV2 } from "../api/client";
 import authService from "../services/authService";
+import { UserContext } from "../App";
 import {
   Search, Eye, X, CheckCircle2, XCircle, Clock, LogOut,
   Users, BookCheck, AlertCircle, MapPin, BarChart3, CalendarDays,
@@ -1388,6 +1389,7 @@ function UsuariosPanel() {
 
 export default function AdminTerciario() {
   const navigate = useNavigate();
+  const { user } = useContext(UserContext);
   const [tab, setTab] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [stats, setStats] = useState(null);
@@ -1396,6 +1398,10 @@ export default function AdminTerciario() {
   const [search, setSearch] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("pendiente");
   const [selected, setSelected] = useState(null);
+
+  const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
+  const tieneTerciario = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_TERCIARIO.includes(g)));
+  const tieneAmbos = tieneCFP && tieneTerciario;
 
   const fetchStats = useCallback(async () => {
     try {
@@ -1493,8 +1499,50 @@ export default function AdminTerciario() {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-grow overflow-auto p-8">
+      {/* Main content container */}
+      <div className="flex-grow flex flex-col min-h-screen overflow-hidden">
+        {/* Top bar / Header with Switcher */}
+        <header className="bg-white border-b border-[#b8ccd8]/50 h-16 flex items-center justify-between px-8 z-20 flex-shrink-0 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-black text-[#1a1f4e]/40 uppercase tracking-widest">
+            <span>Tecnicatura en Ciencia de Datos e IA</span>
+          </div>
+
+          <div className="flex items-center gap-6">
+            {tieneAmbos && (
+              <div className="flex items-center bg-[#1a1f4e]/5 p-0.5 rounded-xl border border-[#1a1f4e]/10 mr-2 shadow-inner">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="px-4 py-1.5 rounded-lg text-xs font-bold text-[#1a1f4e]/60 hover:text-[#1a1f4e] transition-all hover:bg-[#1a1f4e]/5 active:scale-95"
+                >
+                  CFP
+                </button>
+                <button
+                  className="px-4 py-1.5 rounded-lg text-xs font-black bg-[#1a1f4e] text-[#f5c518] shadow-lg shadow-[#1a1f4e]/20 transition-all cursor-default"
+                >
+                  Terciario
+                </button>
+              </div>
+            )}
+
+            {/* User Info / Avatar matching the topbar style but light themed */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-sm font-semibold text-[#1a1f4e]">
+                  {user?.username || 'Usuario'}
+                </span>
+                <span className="text-[10px] font-bold text-[#1a1f4e]/40 uppercase">
+                  {user?.groups?.[0] || 'Terciario'}
+                </span>
+              </div>
+              <div className="h-9 w-9 rounded-xl flex items-center justify-center font-bold text-white shadow-sm transition-all"
+                style={{ background: P.navy }}>
+                {(user?.username || 'U').charAt(0).toUpperCase()}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-grow overflow-auto p-8 bg-[#eef2f7]">
         {/* DASHBOARD */}
         {tab === "dashboard" && (
           <div className="space-y-6 animate-in fade-in duration-300">
@@ -1637,6 +1685,7 @@ export default function AdminTerciario() {
         {/* CONFIGURACIÓN */}
         {tab === "configuracion" && <ConfiguracionPanel />}
       </main>
+      </div>
 
       {selected && (
         <DetailModal p={selected} onClose={() => setSelected(null)} onSaved={() => { fetchData(); fetchStats(); setSelected(null); }} />
