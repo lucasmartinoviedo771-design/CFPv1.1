@@ -319,13 +319,13 @@ export default function PreinscripcionTerciario() {
   }
 
   const Header = () => (
-    <header style={{ background: P.navy }} className="py-5 px-6 shadow-lg">
-      <div className="max-w-3xl mx-auto flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-lg flex-shrink-0" style={{ background: P.yellow, color: P.navy }}>P</div>
-        <div>
-          <p className="text-white font-black text-base leading-tight">Centro Politécnico Superior Malvinas Argentinas</p>
-          <p style={{ color: P.yellow }} className="text-xs font-semibold">Tecnicatura en Ciencias de Datos e Inteligencia Artificial</p>
-        </div>
+    <header style={{ background: P.navy }} className="shadow-lg">
+      <div className="max-w-3xl mx-auto">
+        <img 
+          src="/banner_preinscripcion.png" 
+          alt="Centro Politécnico Superior Malvinas Argentinas" 
+          className="w-full h-auto object-contain block"
+        />
       </div>
     </header>
   );

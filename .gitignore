@@ -96,3 +96,4 @@ backend/generate_gmail_token.py
 .claude/
 send_test_email.py
 ssh_pass.py
+Temporal/
