@@ -1050,10 +1050,25 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
           <p className="text-xs text-[#1a1f4e]/50 italic">El rol seleccionado tiene acceso a ambos sistemas automáticamente.</p>
         ) : (
           <div className="flex gap-3">
-            <label className={`flex items-center gap-2 px-4 py-3 rounded-xl cursor-pointer border transition-all flex-1 ${accCFP ? "border-indigo-400 bg-indigo-50" : "border-[#b8ccd8] hover:bg-[#b8ccd8]/20"}`}>
-              <input type="checkbox" checked={accCFP} onChange={() => toggleAcceso("cfp")} className="accent-indigo-500" />
-              <span className="text-sm font-bold text-indigo-700">Panel CFP</span>
-            </label>
+            {(() => {
+              const esCFPRole = rolActual && GRUPOS_CFP.includes(rolActual);
+              return (
+                <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all flex-1 ${
+                  accCFP ? "border-indigo-400 bg-indigo-50" : "border-[#b8ccd8] hover:bg-[#b8ccd8]/20"
+                } ${esCFPRole ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
+                  <input
+                    type="checkbox"
+                    checked={accCFP}
+                    disabled={!!esCFPRole}
+                    onChange={() => toggleAcceso("cfp")}
+                    className="accent-indigo-500"
+                  />
+                  <span className="text-sm font-bold text-indigo-700">
+                    Panel CFP {esCFPRole && <span className="text-[10px] font-normal text-indigo-500">(Requerido por rol)</span>}
+                  </span>
+                </label>
+              );
+            })()}
             <label className={`flex items-center gap-2 px-4 py-3 rounded-xl cursor-pointer border transition-all flex-1 ${accTerciario ? "border-[#f5c518] bg-[#f5c518]/10" : "border-[#b8ccd8] hover:bg-[#b8ccd8]/20"}`}>
               <input type="checkbox" checked={accTerciario} onChange={() => toggleAcceso("terciario")} className="accent-[#f5c518]" />
               <span className="text-sm font-bold text-[#1a1f4e]">Panel Terciario</span>
