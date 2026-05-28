@@ -309,5 +309,13 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='CFP <soporte@lucasoviedo
 CFP_FROM_EMAIL = env('CFP_FROM_EMAIL', default='Centro de Formación Profesional <estudiantes.cfp@malvinastdf.edu.ar>')
 TERCIARIO_FROM_EMAIL = env('TERCIARIO_FROM_EMAIL', default='Tecnicatura Superior - Politécnico <inscripciones@politecnico.ar>')
 
+# SMTP específico para el CFP (Google Workspace)
+CFP_EMAIL_HOST = env('CFP_EMAIL_HOST', default='smtp.gmail.com')
+CFP_EMAIL_PORT = env.int('CFP_EMAIL_PORT', default=587)
+CFP_EMAIL_USE_TLS = env.bool('CFP_EMAIL_USE_TLS', default=True)
+CFP_EMAIL_USE_SSL = env.bool('CFP_EMAIL_USE_SSL', default=False)
+CFP_EMAIL_HOST_USER = env('CFP_EMAIL_HOST_USER', default='')
+CFP_EMAIL_HOST_PASSWORD = env('CFP_EMAIL_HOST_PASSWORD', default='')
+
 # URL del frontend para enlaces en emails
 FRONTEND_URL = env('FRONTEND_URL', default='https://cfp.lucasoviedodev.org')

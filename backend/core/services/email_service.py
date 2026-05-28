@@ -129,18 +129,29 @@ def enviar_correo_bienvenida(estudiante_id: int):
 
         html_content = render_to_string('emails/bienvenida_campus.html', context)
         
-        # Crear el mensaje
-        message = MIMEText(html_content, 'html')
-        message['to'] = estudiante.email
-        message['from'] = settings.CFP_FROM_EMAIL
-        message['subject'] = '¡Bienvenido/a! Ya puedes comenzar tu cursada virtual en el CFP'
+        from django.core.mail import EmailMessage
+        from django.core.mail.backends.smtp import EmailBackend
         
-        # Codificar en base64
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        connection = EmailBackend(
+            host=settings.CFP_EMAIL_HOST,
+            port=settings.CFP_EMAIL_PORT,
+            username=settings.CFP_EMAIL_HOST_USER,
+            password=settings.CFP_EMAIL_HOST_PASSWORD,
+            use_tls=settings.CFP_EMAIL_USE_TLS,
+            use_ssl=settings.CFP_EMAIL_USE_SSL,
+        )
+
+        email = EmailMessage(
+            subject='¡Bienvenido/a! Ya puedes comenzar tu cursada virtual en el CFP',
+            body=html_content,
+            from_email=settings.CFP_FROM_EMAIL,
+            to=[estudiante.email],
+            connection=connection,
+        )
+        email.content_subtype = "html"
         
-        # Enviar
-        service.users().messages().send(userId='me', body={'raw': raw}).execute()
-        logger.info(f"Correo OAuth2 enviado a {estudiante.email}")
+        email.send(fail_silently=False)
+        logger.info(f"Correo de bienvenida enviado a {estudiante.email} usando SMTP")
         return True
 
     except Exception as e:
@@ -230,14 +241,29 @@ def enviar_correo_nivelacion(estudiante_id: int):
         </html>
         """
 
-        message = MIMEText(html_content, 'html')
-        message['to'] = estudiante.email
-        message['from'] = settings.CFP_FROM_EMAIL
-        message['subject'] = 'Autodiagnóstico de Nivelación - Habilidades Digitales - CFP'
+        from django.core.mail import EmailMessage
+        from django.core.mail.backends.smtp import EmailBackend
+        
+        connection = EmailBackend(
+            host=settings.CFP_EMAIL_HOST,
+            port=settings.CFP_EMAIL_PORT,
+            username=settings.CFP_EMAIL_HOST_USER,
+            password=settings.CFP_EMAIL_HOST_PASSWORD,
+            use_tls=settings.CFP_EMAIL_USE_TLS,
+            use_ssl=settings.CFP_EMAIL_USE_SSL,
+        )
 
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        service.users().messages().send(userId='me', body={'raw': raw}).execute()
-        logger.info(f"Correo de nivelación enviado a {estudiante.email}")
+        email = EmailMessage(
+            subject='Autodiagnóstico de Nivelación - Habilidades Digitales - CFP',
+            body=html_content,
+            from_email=settings.CFP_FROM_EMAIL,
+            to=[estudiante.email],
+            connection=connection,
+        )
+        email.content_subtype = "html"
+
+        email.send(fail_silently=False)
+        logger.info(f"Correo de nivelación enviado a {estudiante.email} usando SMTP")
         return True
     except Exception as e:
         logger.error(f"Error enviando correo de nivelación: {str(e)}")

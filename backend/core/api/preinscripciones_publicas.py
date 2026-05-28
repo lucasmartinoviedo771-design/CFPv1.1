@@ -385,11 +385,22 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
         </html>
         """
         
+        from django.core.mail.backends.smtp import EmailBackend
+        connection = EmailBackend(
+            host=settings.CFP_EMAIL_HOST,
+            port=settings.CFP_EMAIL_PORT,
+            username=settings.CFP_EMAIL_HOST_USER,
+            password=settings.CFP_EMAIL_HOST_PASSWORD,
+            use_tls=settings.CFP_EMAIL_USE_TLS,
+            use_ssl=settings.CFP_EMAIL_USE_SSL,
+        )
+
         email = EmailMessage(
             subject=subject,
             body=html_content,
             from_email=settings.CFP_FROM_EMAIL,
             to=[estudiante.email],
+            connection=connection,
         )
         email.content_subtype = "html"
         email.encoding = "utf-8"
