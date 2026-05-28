@@ -132,7 +132,7 @@ def enviar_correo_bienvenida(estudiante_id: int):
         # Crear el mensaje
         message = MIMEText(html_content, 'html')
         message['to'] = estudiante.email
-        message['from'] = settings.DEFAULT_FROM_EMAIL
+        message['from'] = settings.CFP_FROM_EMAIL
         message['subject'] = '¡Bienvenido/a! Ya puedes comenzar tu cursada virtual en el CFP'
         
         # Codificar en base64
@@ -232,7 +232,7 @@ def enviar_correo_nivelacion(estudiante_id: int):
 
         message = MIMEText(html_content, 'html')
         message['to'] = estudiante.email
-        message['from'] = settings.DEFAULT_FROM_EMAIL
+        message['from'] = settings.CFP_FROM_EMAIL
         message['subject'] = 'Autodiagnóstico de Nivelación - Habilidades Digitales - CFP'
 
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode()

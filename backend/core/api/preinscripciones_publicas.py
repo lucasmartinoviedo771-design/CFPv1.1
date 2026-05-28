@@ -388,7 +388,7 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
         email = EmailMessage(
             subject=subject,
             body=html_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=settings.CFP_FROM_EMAIL,
             to=[estudiante.email],
         )
         email.content_subtype = "html"

@@ -306,6 +306,8 @@ EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='CFP <soporte@lucasoviedodev.org>')
+CFP_FROM_EMAIL = env('CFP_FROM_EMAIL', default='Centro de Formación Profesional <estudiantes.cfp@malvinastdf.edu.ar>')
+TERCIARIO_FROM_EMAIL = env('TERCIARIO_FROM_EMAIL', default='Tecnicatura Superior - Politécnico <inscripciones@politecnico.ar>')
 
 # URL del frontend para enlaces en emails
 FRONTEND_URL = env('FRONTEND_URL', default='https://cfp.lucasoviedodev.org')
