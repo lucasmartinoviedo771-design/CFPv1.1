@@ -240,7 +240,19 @@ export default function PreinscripcionTerciario() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!validate(5)) return;
+    if (step < 4) {
+      nextStep();
+      return;
+    }
+    
+    // Validar todos los pasos secuencialmente antes de enviar
+    for (let i = 1; i <= 4; i++) {
+      if (!validate(i)) {
+        setStep(i);
+        return;
+      }
+    }
+    
     setSaving(true);
     try {
       const fd = new FormData();
