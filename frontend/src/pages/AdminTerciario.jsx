@@ -1078,7 +1078,10 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
         nuevoTer = !accTerciario;
       }
       if (!nuevoCFP && !nuevoTer) {
-        return; // No permitimos que quede vacío
+        // En lugar de retornar silenciosamente (lo que deja el checkbox desmarcado visualmente en el navegador),
+        // forzamos a React a re-renderizar y volver a marcarlo llamando a onChange con el estado original.
+        onChange(construirGrupos(rolActual, accCFP, accTerciario, is_superuser));
+        return;
       }
     }
 
