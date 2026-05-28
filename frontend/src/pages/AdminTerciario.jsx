@@ -959,7 +959,7 @@ function AccesoBadge({ tieneAcceso, sistema }) {
 }
 
 function tieneAccesoCFP(user) {
-  return user.is_superuser || user.is_staff || user.groups.some(g => GRUPOS_CFP.includes(g));
+  return user.is_superuser || user.is_staff || (user.groups.some(g => GRUPOS_CFP.includes(g)) && !user.groups.includes("Sin CFP"));
 }
 function tieneAccesoTerciario(user) {
   return user.is_superuser || user.is_staff || user.groups.some(g => GRUPOS_TERCIARIO.includes(g));
@@ -987,7 +987,7 @@ function derivarEstado(grupos, is_superuser) {
       }
     } else if (rolActual === "Secretaría") {
       // Uno, el otro o ambos
-      accCFP = grupos.includes("Secretaría");
+      accCFP = grupos.includes("Secretaría") && !grupos.includes("Sin CFP");
       accTerciario = grupos.includes("Terciario");
       if (!accCFP && !accTerciario) {
         accCFP = true; // Fallback por defecto
@@ -1018,11 +1018,12 @@ function construirGrupos(rol, accCFP, accTerciario, is_superuser) {
         grupos.push("Terciario");
       }
     } else if (rol === "Secretaría") {
-      if (accCFP) {
-        grupos.push(rol);
-      }
+      grupos.push(rol);
       if (accTerciario) {
         grupos.push("Terciario");
+      }
+      if (!accCFP) {
+        grupos.push("Sin CFP");
       }
     }
   }
@@ -1031,9 +1032,17 @@ function construirGrupos(rol, accCFP, accTerciario, is_superuser) {
 }
 
 function RolYAccesoForm({ grupos, is_superuser, onChange }) {
-  const { rolActual, accCFP, accTerciario } = derivarEstado(grupos, is_superuser);
+  const { rolActual: derivedRol, accCFP, accTerciario } = derivarEstado(grupos, is_superuser);
+  const [rolActual, setRolActual] = useState(derivedRol || "");
+
+  useEffect(() => {
+    if (derivedRol) {
+      setRolActual(derivedRol);
+    }
+  }, [derivedRol]);
 
   const setRol = (nuevoRol) => {
+    setRolActual(nuevoRol);
     let nuevoCFP = false;
     let nuevoTer = false;
 
@@ -1120,11 +1129,12 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
             {(() => {
               const deshabilitadoCFP = is_superuser || 
                 !rolActual || 
-                rolActual === "Secretaría" ||
+                (rolActual === "Secretaría" && accCFP && !accTerciario) ||
                 ((rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") && accCFP);
 
               const deshabilitadoTer = is_superuser || 
                 !rolActual || 
+                (rolActual === "Secretaría" && accTerciario && !accCFP) ||
                 ((rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") && accTerciario);
 
               const tooltipCFP = (!rolActual)

@@ -24,7 +24,7 @@ export default function Login() {
         const groups = userData?.groups || [];
         const isSuperuser = userData?.is_superuser || userData?.is_staff;
         const isTerciario = isSuperuser || groups.some(g => GRUPOS_TERCIARIO.includes(g));
-        const isCFP = isSuperuser || groups.some(g => GRUPOS_CFP.includes(g));
+        const isCFP = isSuperuser || (groups.some(g => GRUPOS_CFP.includes(g)) && !groups.includes("Sin CFP"));
         if (isTerciario && !isCFP) return '/admin-terciario';
         if (isCFP && !isTerciario) return '/dashboard';
         if (isTerciario && isCFP) return null; // mostrar elección
