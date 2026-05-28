@@ -1122,36 +1122,58 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
         ) : (
           <div className="flex gap-3">
             {(() => {
-              const deshabilitado = rolActual === "Estudiante";
-              const labelCFP = rolActual === "Estudiante" ? "Panel CFP (No disponible)" : "Panel CFP";
-              const labelTer = rolActual === "Estudiante" ? "Panel Terciario (No disponible)" : "Panel Terciario";
+              const deshabilitadoCFP = is_superuser || 
+                rolActual === "Estudiante" || 
+                (rolActual === "Secretaría" && accCFP && !accTerciario) ||
+                ((rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") && accCFP);
+
+              const deshabilitadoTer = is_superuser || 
+                rolActual === "Estudiante" || 
+                (rolActual === "Secretaría" && !accCFP && accTerciario) ||
+                ((rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") && accTerciario);
+
+              const tooltipCFP = (rolActual === "Estudiante")
+                ? " (No disponible)"
+                : deshabilitadoCFP
+                  ? " (Requerido)"
+                  : "";
+
+              const tooltipTer = (rolActual === "Estudiante")
+                ? " (No disponible)"
+                : deshabilitadoTer
+                  ? " (Requerido)"
+                  : "";
 
               return (
                 <>
                   <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all flex-1 ${
                     accCFP ? "border-indigo-400 bg-indigo-50" : "border-[#b8ccd8] hover:bg-[#b8ccd8]/20"
-                  } ${deshabilitado ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
+                  } ${deshabilitadoCFP ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
                     <input
                       type="checkbox"
                       checked={accCFP}
-                      disabled={deshabilitado}
+                      disabled={deshabilitadoCFP}
                       onChange={() => toggleAcceso("cfp")}
                       className="accent-indigo-500"
                     />
-                    <span className="text-sm font-bold text-indigo-700">{labelCFP}</span>
+                    <span className="text-sm font-bold text-indigo-700">
+                      Panel CFP<span className="text-[10px] font-normal text-indigo-500">{tooltipCFP}</span>
+                    </span>
                   </label>
 
                   <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all flex-1 ${
                     accTerciario ? "border-[#f5c518] bg-[#f5c518]/10" : "border-[#b8ccd8] hover:bg-[#b8ccd8]/20"
-                  } ${deshabilitado ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
+                  } ${deshabilitadoTer ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
                     <input
                       type="checkbox"
                       checked={accTerciario}
-                      disabled={deshabilitado}
+                      disabled={deshabilitadoTer}
                       onChange={() => toggleAcceso("terciario")}
                       className="accent-[#f5c518]"
                     />
-                    <span className="text-sm font-bold text-[#1a1f4e]">{labelTer}</span>
+                    <span className="text-sm font-bold text-[#1a1f4e]">
+                      Panel Terciario<span className="text-[10px] font-normal text-indigo-500">{tooltipTer}</span>
+                    </span>
                   </label>
                 </>
               );
