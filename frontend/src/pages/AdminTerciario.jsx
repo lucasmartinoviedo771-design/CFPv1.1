@@ -1124,12 +1124,11 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
             {(() => {
               const deshabilitadoCFP = is_superuser || 
                 rolActual === "Estudiante" || 
-                (rolActual === "Secretaría" && accCFP && !accTerciario) ||
+                rolActual === "Secretaría" ||
                 ((rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") && accCFP);
 
               const deshabilitadoTer = is_superuser || 
                 rolActual === "Estudiante" || 
-                (rolActual === "Secretaría" && !accCFP && accTerciario) ||
                 ((rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") && accTerciario);
 
               const tooltipCFP = (rolActual === "Estudiante")
