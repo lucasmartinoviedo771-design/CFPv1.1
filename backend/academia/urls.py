@@ -13,11 +13,11 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 from core.api.viewsets import (
-    EstudianteViewSet, ProgramaViewSet, BloqueViewSet, ModuloViewSet, ExamenViewSet, NotaViewSet, KPIViewSet, InscripcionViewSet, UserView, ChangePasswordView,
+    EstudianteViewSet, ProgramaViewSet, BloqueViewSet, ModuloViewSet, ExamenViewSet, NotaViewSet, InscripcionViewSet, UserView, ChangePasswordView,
     BloqueDeFechasViewSet, SemanaConfigViewSet, CohorteViewSet, HistoricoCursoView, LogoutView, UserViewSet, GroupViewSet
 )
 from core.api.analytics_views import (
-    DashboardStatsView, EstructuraProgramaView, AnalyticsEnrollmentsView, AnalyticsAttendanceView, AnalyticsGradesView, AnalyticsDropoutView, AnalyticsGraduatesView, CoursesGraphView
+    DashboardStatsView, EstructuraProgramaView, AnalyticsEnrollmentsView, AnalyticsAttendanceView, AnalyticsGradesView, AnalyticsDropoutView, AnalyticsGraduatesView, CoursesGraphView, KPIViewSet
 )
 from core.api.import_views import (
     ImportInscripcionesViewSet, ImportAsistenciaViewSet, ImportNotasViewSet

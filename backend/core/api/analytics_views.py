@@ -23,11 +23,11 @@ import os
 import json
 from io import StringIO
 
-from .models import (
+from ..models import (
     Estudiante, Programa, Bloque, Modulo, Examen, Nota, Asistencia, Inscripcion,
     BloqueDeFechas, SemanaConfig, Cohorte
 )
-from .serializers import (
+from ..serializers import (
     ProgramaSerializer,
     ProgramaDetailSerializer,
     BloqueDetailSerializer,
@@ -45,8 +45,8 @@ from .serializers import (
     UserSerializer,
     GroupSerializer
 )
-from .roles import can_assign_role, list_roles, IsInAGroup
-from .filters import EstudianteFilter
+from ..roles import can_assign_role, list_roles, IsInAGroup
+from ..filters import EstudianteFilter
 
 
 class KPIViewSet(viewsets.ViewSet):
