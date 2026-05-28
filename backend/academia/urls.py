@@ -12,11 +12,15 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
-from core.views import (
-    EstudianteViewSet, ProgramaViewSet, BloqueViewSet, ModuloViewSet, ExamenViewSet, NotaViewSet, KPIViewSet, InscripcionViewSet, ImportInscripcionesViewSet, ImportAsistenciaViewSet, ImportNotasViewSet, DashboardStatsView, UserView, EstructuraProgramaView, ChangePasswordView,
-    BloqueDeFechasViewSet, SemanaConfigViewSet, CohorteViewSet, HistoricoCursoView, LogoutView, UserViewSet, GroupViewSet,
-    AnalyticsEnrollmentsView, AnalyticsAttendanceView, AnalyticsGradesView, AnalyticsDropoutView, AnalyticsGraduatesView,
-    CoursesGraphView
+from core.api.viewsets import (
+    EstudianteViewSet, ProgramaViewSet, BloqueViewSet, ModuloViewSet, ExamenViewSet, NotaViewSet, KPIViewSet, InscripcionViewSet, UserView, ChangePasswordView,
+    BloqueDeFechasViewSet, SemanaConfigViewSet, CohorteViewSet, HistoricoCursoView, LogoutView, UserViewSet, GroupViewSet
+)
+from core.api.analytics_views import (
+    DashboardStatsView, EstructuraProgramaView, AnalyticsEnrollmentsView, AnalyticsAttendanceView, AnalyticsGradesView, AnalyticsDropoutView, AnalyticsGraduatesView, CoursesGraphView
+)
+from core.api.import_views import (
+    ImportInscripcionesViewSet, ImportAsistenciaViewSet, ImportNotasViewSet
 )
 
 router = DefaultRouter()

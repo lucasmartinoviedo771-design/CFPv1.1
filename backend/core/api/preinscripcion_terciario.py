@@ -94,25 +94,101 @@ def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
 
 def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
     try:
-        send_mail(
-            subject="Confirmación de Preinscripción - Tecnicatura en Ciencias de Datos e IA",
-            message=f"""Estimado/a {preinscripcion.apellido_nombre},
+        from django.core.mail import EmailMessage
+        subject = "Bienvenidos/as a la Tecnicatura — Todo lo que necesitás saber para comenzar"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333333; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f5; }}
+                .container {{ max-width: 650px; margin: 0 auto; background-color: #ffffff; overflow: hidden; }}
+                .header {{ background-color: #1a1f4e; color: #ffffff; padding: 25px 20px; text-align: center; border-bottom: 5px solid #f5c518; }}
+                .header h1 {{ margin: 0; font-size: 24px; letter-spacing: 0.5px; }}
+                .header h2 {{ margin: 5px 0 0 0; font-size: 16px; font-weight: normal; color: #b8ccd8; }}
+                .content {{ padding: 30px 35px; }}
+                .highlight-box {{ background-color: #f8fafc; padding: 20px; border-left: 4px solid #f5c518; margin: 25px 0; border-radius: 0 8px 8px 0; }}
+                .highlight-box h3 {{ color: #1a1f4e; margin-top: 0; margin-bottom: 10px; font-size: 18px; }}
+                .btn {{ display: inline-block; padding: 12px 24px; background-color: #1a1f4e; color: #ffffff !important; text-decoration: none; font-weight: bold; border-radius: 8px; margin-top: 10px; }}
+                .date-box {{ background-color: #eef2f7; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; font-size: 16px; font-weight: bold; color: #1a1f4e; }}
+                .checklist {{ background-color: #f0fdf4; padding: 20px; border-radius: 8px; border: 1px solid #bbf7d0; margin: 25px 0; }}
+                .checklist h3 {{ color: #166534; margin-top: 0; }}
+                .contacto-box {{ background-color: #f1f5f9; padding: 25px; border-radius: 8px; font-size: 15px; margin-top: 30px; border: 1px solid #e2e8f0; }}
+                .contacto-item {{ margin-bottom: 8px; line-height: 1.5; }}
+                .footer {{ background-color: #0f172a; color: #e2e8f0; text-align: center; padding: 25px 20px; font-size: 15px; font-weight: bold; letter-spacing: 0.5px; }}
+                a {{ color: #0284c7; text-decoration: none; font-weight: 600; }}
+                a:hover {{ text-decoration: underline; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Centro Politécnico Superior</h1>
+                    <h2>Tecnicatura Superior en Ciencia de Datos e Inteligencia Artificial</h2>
+                </div>
+                <div class="content">
+                    <p style="font-size: 17px; margin-top: 0;">Estimado/a <strong>{preinscripcion.apellido_nombre}</strong>,</p>
+                    <p>¡Bienvenidos/as a esta nueva etapa! Tu preinscripción fue recibida correctamente. Están a punto de comenzar un camino apasionante en el mundo de los datos y la inteligencia artificial, y queremos acompañarlos/as desde el primer paso.</p>
+                    
+                    <p>A continuación les compartimos información importante sobre el curso introductorio y el inicio de la cursada:</p>
 
-Tu preinscripción a la Tecnicatura en Ciencias de Datos e Inteligencia Artificial
-del Centro Politécnico Superior Malvinas Argentinas fue recibida correctamente.
+                    <div class="highlight-box">
+                        <h3>🎯 INTROTEC</h3>
+                        <p>Es el curso de ingreso <strong>obligatorio y no eliminatorio</strong> de la Tecnicatura — no es un filtro, es un <strong>puente</strong>. Te acompaña en tus primeros pasos en el nivel terciario virtual con contenidos de <strong>inglés técnico y matemática</strong>, y te introduce al campus Moodle y las habilidades digitales necesarias para cursar.</p>
+                        <a href="https://view.genially.com/6a10ecab5a7c072980bbb3a2" target="_blank" class="btn">Mirá la Presentación aquí</a>
+                    </div>
 
-DNI: {preinscripcion.dni}
-Email registrado: {preinscripcion.email}
+                    <div class="date-box">
+                        📅 Fecha de inicio del INTROTEC: 31/07/2026 a las 19:00 hs.
+                    </div>
 
-En los próximos días recibirás información sobre los pasos a seguir.
+                    <div class="highlight-box" style="border-left-color: #0284c7;">
+                        <h3 style="color: #0284c7;">💻 Curso de Habilidades Digitales</h3>
+                        <p>Dentro del INTROTEC encontrarás este curso — <strong>autogestionado y disponible desde este momento</strong>. Recorre Moodle, Herramientas de Google, Inteligencia Artificial y presentaciones. Al completarlo obtenés un certificado oficial del CFP.</p>
+                        <p><em>No es obligatorio, pero es muy recomendable si estás dando tus primeros pasos en el mundo digital. ¡Podés hacerlo en cualquier momento del cuatrimestre!</em></p>
+                        <a href="https://view.genially.com/6a15e9e0cddf7419df1c20d0" target="_blank" class="btn" style="background-color: #0284c7;">Ver Presentación del Curso</a>
+                    </div>
 
-Centro Politécnico Superior Malvinas Argentinas
-tecnicaturedatos@tdf.edu.ar
-""",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[preinscripcion.email],
-            fail_silently=True,
+                    <div class="checklist">
+                        <h3>📌 Primeros Pasos</h3>
+                        <p>Para acceder, primero <strong>registrate</strong> en el campus siguiendo los pasos de la <strong>Hoja de Ruta</strong>. Mirá con detenimiento la Hoja de Ruta, allí se explica:</p>
+                        <ul style="color: #166534;">
+                            <li>✅ Registro en el campus.</li>
+                            <li>✅ Fechas importantes.</li>
+                            <li>✅ Equivalencias.</li>
+                            <li>✅ Entrega de documentación.</li>
+                        </ul>
+                        <a href="https://view.genially.com/6a10ecab5a7c072980bbb3a2" target="_blank" style="display: inline-block; margin-top: 10px; font-weight: bold; color: #166534; text-decoration: underline;">👉 Abrir Hoja de Ruta</a>
+                    </div>
+
+                    <div class="contacto-box">
+                        <p style="margin-top: 0; font-weight: bold; color: #1a1f4e;">Ante cualquier inquietud, ¡estamos para ayudarte!</p>
+                        <div class="contacto-item">📍 <strong>Río Grande:</strong> <a href="mailto:Tutoria.cetns.rg@gmail.com">Tutoria.cetns.rg@gmail.com</a></div>
+                        <div class="contacto-item">📍 <strong>Ushuaia:</strong> <a href="mailto:Tutoria.cetns.ush@tdf.edu.ar">Tutoria.cetns.ush@tdf.edu.ar</a></div>
+                        <div class="contacto-item">📍 <strong>Tolhuin:</strong> <a href="mailto:Tutoria.cetns.tol@tdf.edu.ar">Tutoria.cetns.tol@tdf.edu.ar</a></div>
+                    </div>
+                    
+                    <p style="margin-top: 30px; font-size: 14px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                        <em>Datos registrados: Nombre: {preinscripcion.apellido_nombre} | DNI: {preinscripcion.dni}</em>
+                    </p>
+                </div>
+                <div class="footer">
+                    Este es un mensaje automático del Centro Politécnico Superior.<br>Por favor, no respondas a este correo.
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        email = EmailMessage(
+            subject=subject,
+            body=html_content,
+            from_email="Centro Politécnico Superior <inscripciones@politecnico.ar>",
+            to=[preinscripcion.email],
         )
+        email.content_subtype = "html"
+        email.send(fail_silently=True)
     except Exception:
         pass
 
