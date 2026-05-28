@@ -744,7 +744,6 @@ const ROLES_FUNCIONALES = [
   { nombre: "Docente",              color: "bg-green-100 text-green-800" },
   { nombre: "Preceptor",            color: "bg-orange-100 text-orange-800" },
   { nombre: "Bedel",                color: "bg-rose-100 text-rose-800" },
-  { nombre: "Estudiante",           color: "bg-gray-100 text-gray-500" },
 ];
 
 // Compatibilidad con código existente que usa GRUPOS_CONFIG
@@ -968,7 +967,7 @@ function tieneAccesoTerciario(user) {
 
 // Helper: dado el listado de grupos del usuario, deriva rol y accesos
 function derivarEstado(grupos, is_superuser) {
-  const rolActual = ROLES_FUNCIONALES.find(r => r.nombre !== "Estudiante" && grupos.includes(r.nombre))?.nombre || "Estudiante";
+  const rolActual = ROLES_FUNCIONALES.find(r => grupos.includes(r.nombre))?.nombre || "";
 
   let accCFP = is_superuser;
   let accTerciario = is_superuser;
@@ -994,7 +993,7 @@ function derivarEstado(grupos, is_superuser) {
         accCFP = true; // Fallback por defecto
       }
     } else {
-      // Estudiante (ninguno por ahora)
+      // Sin rol seleccionado
       accCFP = false;
       accTerciario = false;
     }
@@ -1008,7 +1007,7 @@ function construirGrupos(rol, accCFP, accTerciario, is_superuser) {
   if (is_superuser) return [];
   const grupos = [];
 
-  if (rol && rol !== "Estudiante") {
+  if (rol) {
     if (rol === "Admin" || rol === "Rector" || rol === "Regencia") {
       grupos.push(rol);
       grupos.push("Terciario");
@@ -1044,9 +1043,6 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
     } else if (nuevoRol === "Bedel") {
       nuevoCFP = false;
       nuevoTer = true;
-    } else if (nuevoRol === "Estudiante") {
-      nuevoCFP = false;
-      nuevoTer = false;
     } else {
       // Secretaría, Coordinación Docente, Docente, Preceptor
       nuevoCFP = true;
@@ -1123,22 +1119,22 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
           <div className="flex gap-3">
             {(() => {
               const deshabilitadoCFP = is_superuser || 
-                rolActual === "Estudiante" || 
+                !rolActual || 
                 rolActual === "Secretaría" ||
                 ((rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") && accCFP);
 
               const deshabilitadoTer = is_superuser || 
-                rolActual === "Estudiante" || 
+                !rolActual || 
                 ((rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") && accTerciario);
 
-              const tooltipCFP = (rolActual === "Estudiante")
-                ? " (No disponible)"
+              const tooltipCFP = (!rolActual)
+                ? " (Seleccioná un rol)"
                 : deshabilitadoCFP
                   ? " (Requerido)"
                   : "";
 
-              const tooltipTer = (rolActual === "Estudiante")
-                ? " (No disponible)"
+              const tooltipTer = (!rolActual)
+                ? " (Seleccioná un rol)"
                 : deshabilitadoTer
                   ? " (Requerido)"
                   : "";
