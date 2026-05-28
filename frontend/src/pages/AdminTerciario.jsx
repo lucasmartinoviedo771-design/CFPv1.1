@@ -969,8 +969,37 @@ function tieneAccesoTerciario(user) {
 // Helper: dado el listado de grupos del usuario, deriva rol y accesos
 function derivarEstado(grupos, is_superuser) {
   const rolActual = ROLES_FUNCIONALES.find(r => r.nombre !== "Estudiante" && grupos.includes(r.nombre))?.nombre || "Estudiante";
-  const accCFP = is_superuser || grupos.some(g => GRUPOS_CFP.includes(g));
-  const accTerciario = is_superuser || grupos.some(g => GRUPOS_TERCIARIO.includes(g));
+
+  let accCFP = is_superuser;
+  let accTerciario = is_superuser;
+
+  if (!is_superuser) {
+    if (rolActual === "Admin" || rolActual === "Rector" || rolActual === "Regencia") {
+      accCFP = true;
+      accTerciario = true;
+    } else if (rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") {
+      // Uno o el otro, nunca ambos.
+      if (grupos.includes("Terciario")) {
+        accCFP = false;
+        accTerciario = true;
+      } else {
+        accCFP = true;
+        accTerciario = false;
+      }
+    } else if (rolActual === "Secretaría") {
+      // Uno, el otro o ambos
+      accCFP = grupos.includes("Secretaría");
+      accTerciario = grupos.includes("Terciario");
+      if (!accCFP && !accTerciario) {
+        accCFP = true; // Fallback por defecto
+      }
+    } else {
+      // Estudiante (ninguno por ahora)
+      accCFP = false;
+      accTerciario = false;
+    }
+  }
+
   return { rolActual, accCFP, accTerciario };
 }
 
@@ -978,15 +1007,27 @@ function derivarEstado(grupos, is_superuser) {
 function construirGrupos(rol, accCFP, accTerciario, is_superuser) {
   if (is_superuser) return [];
   const grupos = [];
-  // El rol se agrega solo si tiene acceso a CFP (el rol ES el acceso CFP)
-  // Admin y Rector siempre van (implican ambos sistemas)
-  if (rol && (accCFP || ROLES_AMBOS_SISTEMAS.includes(rol))) {
-    grupos.push(rol);
+
+  if (rol && rol !== "Estudiante") {
+    if (rol === "Admin" || rol === "Rector" || rol === "Regencia") {
+      grupos.push(rol);
+      grupos.push("Terciario");
+    } else if (rol === "Coordinación Docente" || rol === "Docente" || rol === "Preceptor" || rol === "Bedel") {
+      // Uno o el otro, nunca ambos
+      grupos.push(rol);
+      if (accTerciario) {
+        grupos.push("Terciario");
+      }
+    } else if (rol === "Secretaría") {
+      if (accCFP) {
+        grupos.push(rol);
+      }
+      if (accTerciario) {
+        grupos.push("Terciario");
+      }
+    }
   }
-  // Flag Terciario: solo si no es Admin/Rector (esos ya tienen ambos)
-  if (accTerciario && !ROLES_AMBOS_SISTEMAS.includes(rol)) {
-    grupos.push("Terciario");
-  }
+
   return grupos;
 }
 
@@ -994,17 +1035,22 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
   const { rolActual, accCFP, accTerciario } = derivarEstado(grupos, is_superuser);
 
   const setRol = (nuevoRol) => {
-    let nuevoCFP = accCFP;
-    let nuevoTer = accTerciario;
+    let nuevoCFP = false;
+    let nuevoTer = false;
 
-    if (ROLES_AMBOS_SISTEMAS.includes(nuevoRol)) {
+    if (nuevoRol === "Admin" || nuevoRol === "Rector" || nuevoRol === "Regencia") {
       nuevoCFP = true;
+      nuevoTer = true;
+    } else if (nuevoRol === "Bedel") {
+      nuevoCFP = false;
       nuevoTer = true;
     } else if (nuevoRol === "Estudiante") {
       nuevoCFP = false;
       nuevoTer = false;
     } else {
+      // Secretaría, Coordinación Docente, Docente, Preceptor
       nuevoCFP = true;
+      nuevoTer = false;
     }
 
     const nuevosGrupos = construirGrupos(nuevoRol, nuevoCFP, nuevoTer, is_superuser);
@@ -1012,8 +1058,30 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
   };
 
   const toggleAcceso = (sistema) => {
-    const nuevoCFP = sistema === "cfp" ? !accCFP : accCFP;
-    const nuevoTer = sistema === "terciario" ? !accTerciario : accTerciario;
+    let nuevoCFP = accCFP;
+    let nuevoTer = accTerciario;
+
+    if (rolActual === "Coordinación Docente" || rolActual === "Docente" || rolActual === "Preceptor" || rolActual === "Bedel") {
+      // Uno o el otro, nunca ambos, nunca vacío
+      if (sistema === "cfp") {
+        nuevoCFP = true;
+        nuevoTer = false;
+      } else {
+        nuevoCFP = false;
+        nuevoTer = true;
+      }
+    } else if (rolActual === "Secretaría") {
+      // Uno, el otro o ambos, nunca vacío
+      if (sistema === "cfp") {
+        nuevoCFP = !accCFP;
+      } else {
+        nuevoTer = !accTerciario;
+      }
+      if (!nuevoCFP && !nuevoTer) {
+        return; // No permitimos que quede vacío
+      }
+    }
+
     onChange(construirGrupos(rolActual, nuevoCFP, nuevoTer, is_superuser));
   };
 
@@ -1046,33 +1114,45 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
       {/* Acceso al sistema */}
       <div>
         <p className="text-xs font-black uppercase tracking-widest text-[#1a1f4e]/40 mb-2">Acceso al sistema</p>
-        {ROLES_AMBOS_SISTEMAS.includes(rolActual) ? (
+        {(rolActual === "Admin" || rolActual === "Rector" || rolActual === "Regencia") ? (
           <p className="text-xs text-[#1a1f4e]/50 italic">El rol seleccionado tiene acceso a ambos sistemas automáticamente.</p>
         ) : (
           <div className="flex gap-3">
             {(() => {
-              const esCFPRole = rolActual && GRUPOS_CFP.includes(rolActual);
+              const deshabilitado = rolActual === "Estudiante";
+              const labelCFP = rolActual === "Estudiante" ? "Panel CFP (No disponible)" : "Panel CFP";
+              const labelTer = rolActual === "Estudiante" ? "Panel Terciario (No disponible)" : "Panel Terciario";
+
               return (
-                <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all flex-1 ${
-                  accCFP ? "border-indigo-400 bg-indigo-50" : "border-[#b8ccd8] hover:bg-[#b8ccd8]/20"
-                } ${esCFPRole ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
-                  <input
-                    type="checkbox"
-                    checked={accCFP}
-                    disabled={!!esCFPRole}
-                    onChange={() => toggleAcceso("cfp")}
-                    className="accent-indigo-500"
-                  />
-                  <span className="text-sm font-bold text-indigo-700">
-                    Panel CFP {esCFPRole && <span className="text-[10px] font-normal text-indigo-500">(Requerido por rol)</span>}
-                  </span>
-                </label>
+                <>
+                  <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all flex-1 ${
+                    accCFP ? "border-indigo-400 bg-indigo-50" : "border-[#b8ccd8] hover:bg-[#b8ccd8]/20"
+                  } ${deshabilitado ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
+                    <input
+                      type="checkbox"
+                      checked={accCFP}
+                      disabled={deshabilitado}
+                      onChange={() => toggleAcceso("cfp")}
+                      className="accent-indigo-500"
+                    />
+                    <span className="text-sm font-bold text-indigo-700">{labelCFP}</span>
+                  </label>
+
+                  <label className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all flex-1 ${
+                    accTerciario ? "border-[#f5c518] bg-[#f5c518]/10" : "border-[#b8ccd8] hover:bg-[#b8ccd8]/20"
+                  } ${deshabilitado ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
+                    <input
+                      type="checkbox"
+                      checked={accTerciario}
+                      disabled={deshabilitado}
+                      onChange={() => toggleAcceso("terciario")}
+                      className="accent-[#f5c518]"
+                    />
+                    <span className="text-sm font-bold text-[#1a1f4e]">{labelTer}</span>
+                  </label>
+                </>
               );
             })()}
-            <label className={`flex items-center gap-2 px-4 py-3 rounded-xl cursor-pointer border transition-all flex-1 ${accTerciario ? "border-[#f5c518] bg-[#f5c518]/10" : "border-[#b8ccd8] hover:bg-[#b8ccd8]/20"}`}>
-              <input type="checkbox" checked={accTerciario} onChange={() => toggleAcceso("terciario")} className="accent-[#f5c518]" />
-              <span className="text-sm font-bold text-[#1a1f4e]">Panel Terciario</span>
-            </label>
           </div>
         )}
       </div>
