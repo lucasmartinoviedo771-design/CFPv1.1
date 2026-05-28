@@ -968,7 +968,7 @@ function tieneAccesoTerciario(user) {
 
 // Helper: dado el listado de grupos del usuario, deriva rol y accesos
 function derivarEstado(grupos, is_superuser) {
-  const rolActual = ROLES_FUNCIONALES.find(r => r.nombre !== "Estudiante" && grupos.includes(r.nombre))?.nombre || "";
+  const rolActual = ROLES_FUNCIONALES.find(r => r.nombre !== "Estudiante" && grupos.includes(r.nombre))?.nombre || "Estudiante";
   const accCFP = is_superuser || grupos.some(g => GRUPOS_CFP.includes(g));
   const accTerciario = is_superuser || grupos.some(g => GRUPOS_TERCIARIO.includes(g));
   return { rolActual, accCFP, accTerciario };
@@ -994,7 +994,20 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
   const { rolActual, accCFP, accTerciario } = derivarEstado(grupos, is_superuser);
 
   const setRol = (nuevoRol) => {
-    const nuevosGrupos = construirGrupos(nuevoRol, accCFP, accTerciario, is_superuser);
+    let nuevoCFP = accCFP;
+    let nuevoTer = accTerciario;
+
+    if (ROLES_AMBOS_SISTEMAS.includes(nuevoRol)) {
+      nuevoCFP = true;
+      nuevoTer = true;
+    } else if (nuevoRol === "Estudiante") {
+      nuevoCFP = false;
+      nuevoTer = false;
+    } else {
+      nuevoCFP = true;
+    }
+
+    const nuevosGrupos = construirGrupos(nuevoRol, nuevoCFP, nuevoTer, is_superuser);
     onChange(nuevosGrupos);
   };
 
