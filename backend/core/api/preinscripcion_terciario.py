@@ -184,7 +184,7 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
         email = EmailMessage(
             subject=subject,
             body=html_content,
-            from_email="Centro Politécnico Superior <inscripciones@politecnico.ar>",
+            from_email=settings.DEFAULT_FROM_EMAIL,
             to=[preinscripcion.email],
         )
         email.content_subtype = "html"
