@@ -113,7 +113,7 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True  # Habilitado para HTTPS (Cloudflare)
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    # X_FRAME_OPTIONS = 'DENY' # Deshabilitado para permitir embebido en sitios oficiales
+    X_FRAME_OPTIONS = 'SAMEORIGIN'  # Evita clickjacking pero permite embebido dentro del mismo dominio
 
 ROOT_URLCONF = "academia.urls"
 
@@ -319,3 +319,6 @@ CFP_EMAIL_HOST_PASSWORD = env('CFP_EMAIL_HOST_PASSWORD', default='')
 
 # URL del frontend para enlaces en emails
 FRONTEND_URL = env('FRONTEND_URL', default='https://cfp.lucasoviedodev.org')
+
+# Configuración de Google reCAPTCHA v3
+RECAPTCHA_SECRET_KEY = env('RECAPTCHA_SECRET_KEY', default='')

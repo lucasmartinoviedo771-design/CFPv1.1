@@ -342,6 +342,12 @@ def crear_preinscripcion_terciario(request):
     data = request.POST
     files = request.FILES
 
+    # Validación de Seguridad reCAPTCHA v3
+    from core.utils.recaptcha import verify_recaptcha
+    recaptcha_token = data.get("recaptcha_token", "")
+    if not verify_recaptcha(recaptcha_token, action="preinscripcion_terciario"):
+        raise HttpError(400, "Fallo la validación de seguridad (reCAPTCHA). Por favor intente nuevamente.")
+
     localidad = data.get("localidad", "")
     if localidad == "otras":
         raise HttpError(400, "La Tecnicatura es solo para residentes de Tierra del Fuego.")

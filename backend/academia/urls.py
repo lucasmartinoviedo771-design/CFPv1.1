@@ -23,6 +23,8 @@ from core.api.import_views import (
     ImportInscripcionesViewSet, ImportAsistenciaViewSet, ImportNotasViewSet
 )
 
+from core.views import protected_media_view
+
 router = DefaultRouter()
 # DRF desactivado: API principal es /api/v2 con Django Ninja
 
@@ -30,7 +32,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # Nueva API Django Ninja (convivencia en /api/v2/)
     path("api/v2/", api_v2.urls),
+    # RUTA SEGURA: Control de acceso a archivos subidos
+    path("media/<path:path>", protected_media_view, name="protected_media"),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

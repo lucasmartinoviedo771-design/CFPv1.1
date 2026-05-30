@@ -240,6 +240,10 @@ function loadSaved() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { form: INIT_FORM, step: 1 };
     const parsed = JSON.parse(raw);
+    if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+      localStorage.removeItem(STORAGE_KEY);
+      return { form: INIT_FORM, step: 1 };
+    }
     return { form: { ...INIT_FORM, ...parsed.form }, step: parsed.step || 1 };
   } catch { return { form: INIT_FORM, step: 1 }; }
 }
@@ -263,9 +267,10 @@ export default function PreinscripcionTerciario() {
       .finally(() => setConfigLoading(false));
   }, []);
 
-  // Persistir en localStorage
+  // Persistir en localStorage con expiración de 24 horas
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ form, step }));
+    const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ form, step, expiresAt }));
   }, [form, step]);
 
   const onSelect = (name, value) => setForm((p) => {

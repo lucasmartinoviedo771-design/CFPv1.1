@@ -447,10 +447,14 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
 
 @router.post("", response=PreinscripcionOut, auth=None)
 def crear_preinscripcion_publica(request):
-    # ... (código existente hasta el final del try/transaction)
-    # [Mantengo la lógica existente hasta la línea 400 aprox]
     post = request.POST
     files = request.FILES
+
+    # Validación de Seguridad reCAPTCHA v3
+    from core.utils.recaptcha import verify_recaptcha
+    recaptcha_token = post.get("recaptcha_token", "")
+    if not verify_recaptcha(recaptcha_token, action="preinscripcion_publica"):
+        raise HttpError(400, "Fallo la validación de seguridad (reCAPTCHA). Por favor intente nuevamente.")
 
     dni = normalize_dni_digits(post.get("dni", ""))
     if len(dni) != 8:
