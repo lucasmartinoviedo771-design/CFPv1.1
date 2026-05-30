@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ToggleRight, ToggleLeft, AlertCircle, CheckCircle2 } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
+import { formatDateDisplay } from "../../utils/dateFormat";
 
 export function ConfiguracionPanel() {
   const [cfg, setCfg] = useState(null);
@@ -83,8 +84,8 @@ export function ConfiguracionPanel() {
           <p className={`text-sm mt-0.5 ${cfg.abierta ? "text-green-700" : "text-red-600"}`}>
             {hasFechas
               ? cfg.abierta
-                ? `El formulario acepta inscripciones hasta el ${cfg.fecha_fin || "—"}.`
-                : `Fuera del período configurado. ${cfg.fecha_inicio ? `Abre el ${cfg.fecha_inicio}.` : ""}`
+                ? `El formulario acepta inscripciones hasta el ${formatDateDisplay(cfg.fecha_fin)}.`
+                : `Fuera del período configurado. ${cfg.fecha_inicio ? `Abre el ${formatDateDisplay(cfg.fecha_inicio)}.` : ""}`
               : cfg.abierta
                 ? "Habilitado manualmente — sin período configurado."
                 : "Cerrado manualmente — sin período configurado."}
@@ -174,7 +175,7 @@ export function ConfiguracionPanel() {
             <CheckCircle2 size={18} className="flex-shrink-0" />
             <div>
               <p>{cohorteActiva.nombre}</p>
-              <p className="text-xs font-normal text-green-700 mt-0.5">{cohorteActiva.fecha_inicio} → {cohorteActiva.fecha_fin || "..."}</p>
+              <p className="text-xs font-normal text-green-700 mt-0.5">{formatDateDisplay(cohorteActiva.fecha_inicio)} → {formatDateDisplay(cohorteActiva.fecha_fin)}</p>
             </div>
           </div>
         ) : (

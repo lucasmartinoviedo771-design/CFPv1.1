@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { Search, Download, Printer, ChevronRight } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
 import { P } from "./AdminUI";
+import { formatDateDisplay } from "../../utils/dateFormat";
 
 const HD_ESTADO_LABELS = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
 
@@ -215,7 +216,7 @@ export function AlumnosPanel() {
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                             {[
                               ["Sexo", a.sexo],
-                              ["Fecha Nacimiento", a.fecha_nacimiento],
+                              ["Fecha Nacimiento", formatDateDisplay(a.fecha_nacimiento)],
                               ["Domicilio", a.domicilio],
                               ["Barrio", a.barrio],
                               ["Ciudad", a.ciudad],

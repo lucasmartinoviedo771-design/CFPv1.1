@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { Search, AlertCircle, Download, Printer } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
 import { P } from "./AdminUI";
+import { formatDateDisplay } from "../../utils/dateFormat";
 
 const HD_ESTADO_LABELS = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
 const HD_ESTADO_COLORS = {
@@ -86,7 +87,7 @@ export function CohortePanel({ onGoConfig }) {
       th,td{border:1px solid #ccc;padding:6px 10px}th{background:#1a1f4e;color:#f5c518}
       h2{color:#1a1f4e}@media print{button{display:none}}</style></head>
       <body><h2>Cohorte: ${cohorte?.nombre}</h2>
-      <p>Período: ${cohorte?.fecha_inicio || "—"} → ${cohorte?.fecha_fin || "—"} | Total: ${alumnosFiltrados.length} inscriptos</p>
+      <p>Período: ${formatDateDisplay(cohorte?.fecha_inicio)} → ${formatDateDisplay(cohorte?.fecha_fin)} | Total: ${alumnosFiltrados.length} inscriptos</p>
       <table><thead><tr><th>#</th><th>Apellido y Nombre</th><th>DNI</th><th>Email</th><th>Teléfono</th><th>Estado HD</th></tr></thead>
       <tbody>${filas}</tbody></table>
       <script>window.onload=()=>window.print()</script></body></html>`;
@@ -151,11 +152,11 @@ export function CohortePanel({ onGoConfig }) {
                   </div>
                   <div className="flex justify-between py-2 border-b border-[#b8ccd8]/40">
                     <span className="text-[#1a1f4e]/50 font-medium">Fecha inicio</span>
-                    <span className="font-semibold text-[#1a1f4e]">{cohorte.fecha_inicio || "—"}</span>
+                    <span className="font-semibold text-[#1a1f4e]">{formatDateDisplay(cohorte.fecha_inicio)}</span>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-[#1a1f4e]/50 font-medium">Fecha fin</span>
-                    <span className="font-semibold text-[#1a1f4e]">{cohorte.fecha_fin || "—"}</span>
+                    <span className="font-semibold text-[#1a1f4e]">{formatDateDisplay(cohorte.fecha_fin)}</span>
                   </div>
                 </div>
               </div>
