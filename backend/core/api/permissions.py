@@ -19,12 +19,18 @@ def require_authenticated_group(func):
 
 
 def require_admin(func):
-    """Decorator que sólo permite Admin/staff/superuser."""
+    """Decorator que sólo permite Admin/staff/superuser o miembros de grupos de gestión (Rector, Regencia, Secretaría)."""
     @wraps(func)
     def wrapper(request, *args, **kwargs):
         if not request.user or not request.user.is_authenticated:
             raise HttpError(401, "Authentication credentials were not provided.")
-        if not (request.user.is_staff or request.user.is_superuser or request.user.groups.filter(name="Admin").exists()):
+        allowed_groups = ["Admin", "Rector", "Regencia", "Secretaría"]
+        is_allowed = (
+            request.user.is_staff or 
+            request.user.is_superuser or 
+            request.user.groups.filter(name__in=allowed_groups).exists()
+        )
+        if not is_allowed:
             raise HttpError(403, "You do not have permission to perform this action.")
         return func(request, *args, **kwargs)
     return wrapper

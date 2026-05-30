@@ -94,6 +94,9 @@ function construirGrupos(rol, accCFP, accTerciario, is_superuser) {
       if (accTerciario) {
         grupos.push("Terciario");
       }
+      if (!accCFP) {
+        grupos.push("Sin CFP");
+      }
     } else if (rol === "Secretaría") {
       grupos.push(rol);
       if (accTerciario) {
@@ -378,7 +381,7 @@ function NuevoUsuarioModal({ onClose, onSaved }) {
   );
 }
 
-const GRUPOS_PUEDEN_ASIGNAR = ["Admin", "Rector", "Regencia", "Terciario", "Secretaría"];
+const GRUPOS_PUEDEN_ASIGNAR = ["Admin", "Rector", "Regencia", "Secretaría"];
 
 function puedeAsignarRoles(currentUser) {
   if (!currentUser) return false;
@@ -390,7 +393,7 @@ export function UsuariosPanel() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filtro, setFiltro] = useState("terciario"); 
+  const [filtro, setFiltro] = useState("todos"); 
   const [editUser, setEditUser] = useState(null);
   const [resettingId, setResettingId] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -423,7 +426,7 @@ export function UsuariosPanel() {
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
     const matchQ = (
-      u.username?.includes(q) ||
+      u.username?.toLowerCase().includes(q) ||
       u.email?.toLowerCase().includes(q) ||
       u.first_name?.toLowerCase().includes(q) ||
       u.last_name?.toLowerCase().includes(q)

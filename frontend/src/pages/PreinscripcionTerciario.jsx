@@ -139,6 +139,16 @@ const INIT_FORM = {
   apoyo_inclusion: "", requiere_apoyo_especifico: "", descripcion_apoyo: "",
 };
 
+const getEmailPorLocalidad = (localidad) => {
+  if (localidad === "ushuaia") {
+    return "Tutoria.cetns.ush@tdf.edu.ar";
+  }
+  if (localidad === "tolhuin") {
+    return "Tutoria.cetns.tol@tdf.edu.ar";
+  }
+  return "Tutoria.cetns.rg@gmail.com";
+};
+
 function loadSaved() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -323,7 +333,7 @@ export default function PreinscripcionTerciario() {
             Tu preinscripción fue registrada correctamente. En los próximos días recibirás un email con información en <strong>{form.email}</strong>.
           </p>
           <p className="text-xs text-[#1a1f4e]/50">
-            Ante dudas: <a href="mailto:tecnicaturadatos@tdf.edu.ar" className="underline">tecnicaturadatos@tdf.edu.ar</a>
+            Ante dudas: <a href={`mailto:${getEmailPorLocalidad(form.localidad)}`} className="underline">{getEmailPorLocalidad(form.localidad)}</a>
           </p>
         </div>
       </div>
@@ -631,7 +641,7 @@ export default function PreinscripcionTerciario() {
           </div>
 
           <p className="text-center text-xs text-[#1a1f4e]/50 mt-6">
-            Contacto: <a href="mailto:tecnicaturadatos@tdf.edu.ar" className="underline">tecnicaturadatos@tdf.edu.ar</a>
+            Contacto: <a href={`mailto:${getEmailPorLocalidad(form.localidad)}`} className="underline">{getEmailPorLocalidad(form.localidad)}</a>
           </p>
         </div>
       </main>
