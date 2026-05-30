@@ -210,14 +210,29 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
 
 def _esta_abierta(cfg):
     """Si hay fechas configuradas, el período manda. Si no, usa el toggle manual."""
-    from datetime import date
+    from datetime import date, datetime
     hoy = date.today()
-    if cfg.fecha_inicio and cfg.fecha_fin:
-        return cfg.fecha_inicio <= hoy <= cfg.fecha_fin
-    if cfg.fecha_inicio:
-        return hoy >= cfg.fecha_inicio
-    if cfg.fecha_fin:
-        return hoy <= cfg.fecha_fin
+    
+    fecha_ini = cfg.fecha_inicio
+    fecha_fi = cfg.fecha_fin
+    
+    if isinstance(fecha_ini, str) and fecha_ini:
+        try:
+            fecha_ini = datetime.strptime(fecha_ini, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    if isinstance(fecha_fi, str) and fecha_fi:
+        try:
+            fecha_fi = datetime.strptime(fecha_fi, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    if fecha_ini and fecha_fi:
+        return fecha_ini <= hoy <= fecha_fi
+    if fecha_ini:
+        return hoy >= fecha_ini
+    if fecha_fi:
+        return hoy <= fecha_fi
     return cfg.preinscripcion_abierta
 
 
@@ -289,6 +304,7 @@ def set_config_preinscripcion(
         update_fields.append("hd_cohorte_id")
     if update_fields:
         cfg.save(update_fields=update_fields)
+        cfg.refresh_from_db()
     return _cfg_to_dict(cfg)
 
 
