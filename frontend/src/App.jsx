@@ -47,7 +47,7 @@ const THEME_STORAGE_KEY = "cfp_theme_mode";
 
 // PrivateRoute component
 const PrivateRoute = ({ children }) => {
-  const isAuthenticated = authService.getAccessToken();
+  const isAuthenticated = authService.isLoggedIn();
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
@@ -67,18 +67,17 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        const access = authService.getAccessToken();
-        const refresh = authService.getRefreshToken();
-        if (!access && refresh) {
-          await authService.refresh(refresh);
-        }
-        const accessNow = authService.getAccessToken();
-        if (accessNow) {
-          const me = await authService.getUserDetails();
-          if (me) setUser(me);
+        // Intenta refrescar el token via cookie (silencioso)
+        await authService.refresh().catch(() => null);
+        const me = await authService.getUserDetails();
+        if (me) {
+          setUser(me);
+          sessionStorage.setItem('cfp_session', '1');
+        } else {
+          sessionStorage.removeItem('cfp_session');
         }
       } catch (e) {
-        // ignore; interceptor will handle redirects on 401
+        sessionStorage.removeItem('cfp_session');
       } finally {
         setInitializing(false);
       }

@@ -1,110 +1,72 @@
-
 import axios from 'axios';
 import { handleApiError } from '../utils/errorHandler';
 
-/**
- * Inicia sesión y almacena los tokens en sessionStorage
- * @param {string} username - Nombre de usuario
- * @param {string} password - Contraseña
- * @returns {Promise<Object>} Datos de respuesta con tokens
- */
-// Base de API derivada de VITE_API_V2_BASE (quita el sufijo /api/v2). Ej: "/api/v2" -> "", "http://host/api/v2" -> "http://host"
 const normalize = (url) => (url || '').replace(/\/+$/, '');
 const API_URL = normalize(import.meta.env.VITE_API_V2_BASE || '/api/v2');
 
+// Los tokens ya no se guardan en localStorage — el servidor los setea
+// como cookies HttpOnly. El frontend solo trackea si hay sesión activa.
+const SESSION_KEY = 'cfp_session';
+
 const login = async (username, password) => {
     try {
-        const response = await axios.post(`${API_URL}/token`, {
-            username,
-            password,
-        });
-        if (response.data.access) {
-            localStorage.setItem('accessToken', response.data.access);
-            localStorage.setItem('refreshToken', response.data.refresh);
-        }
+        const response = await axios.post(
+            `${API_URL}/token`,
+            { username, password },
+            { withCredentials: true }
+        );
+        sessionStorage.setItem(SESSION_KEY, '1');
         return response.data;
     } catch (err) {
         throw new Error(handleApiError(err, 'Error al iniciar sesión'));
     }
 };
 
-/**
- * Refresca el token de acceso usando el refresh token
- * @param {string} refreshToken - Token de refresco
- * @returns {Promise<string>} Nuevo token de acceso
- */
-const refresh = async (refreshToken) => {
+const refresh = async () => {
     try {
-        const response = await axios.post(`${API_URL}/token/refresh`, {
-            refresh: refreshToken,
-        });
-        if (response.data.access) {
-            localStorage.setItem('accessToken', response.data.access);
-        }
-        return response.data.access;
+        const response = await axios.post(
+            `${API_URL}/token/refresh`,
+            {},
+            { withCredentials: true }
+        );
+        return response.data;
     } catch (err) {
         throw new Error(handleApiError(err, 'Error al refrescar la sesión'));
     }
 };
 
-/**
- * Obtiene los detalles del usuario autenticado
- * @returns {Promise<Object|null>} Datos del usuario o null si hay error
- */
 const getUserDetails = async () => {
     try {
-        const token = getAccessToken();
-        const response = await axios.get(`${API_URL}/user`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const response = await axios.get(`${API_URL}/user`, { withCredentials: true });
         return response.data;
-    } catch (err) {
-        // Silently ignore aborted/canceled requests to avoid noisy logs during redirects
-        if (err?.code === 'ECONNABORTED' || err?.message === 'Request aborted') {
-            return null;
-        }
+    } catch {
         return null;
     }
 };
 
-/**
- * Cierra la sesión del usuario
- */
 const logout = async () => {
     try {
-        const refresh = localStorage.getItem('refreshToken');
-        if (refresh) {
-            await axios.post(`${API_URL}/logout`, { refresh });
-        }
-    } catch (e) {
-        // Ignore server-side logout errors; proceed to clear local state
+        await axios.post(`${API_URL}/logout`, {}, { withCredentials: true });
+    } catch {
+        // ignorar errores del servidor
     } finally {
+        sessionStorage.removeItem(SESSION_KEY);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
     }
 };
 
-/**
- * Obtiene el token de acceso almacenado
- * @returns {string|null} Token de acceso
- */
-const getAccessToken = () => {
-    return localStorage.getItem('accessToken');
-};
+const isLoggedIn = () => sessionStorage.getItem(SESSION_KEY) === '1';
 
-/**
- * Obtiene el token de refresco almacenado
- * @returns {string|null} Token de refresco
- */
-const getRefreshToken = () => {
-    return localStorage.getItem('refreshToken');
-};
+const getAccessToken = () => null;
+const getRefreshToken = () => null;
 
 const authService = {
     login,
     refresh,
     getUserDetails,
     logout,
+    isLoggedIn,
     getAccessToken,
     getRefreshToken,
 };
