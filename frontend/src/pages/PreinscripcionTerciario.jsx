@@ -7,13 +7,47 @@ import { apiClientV2 } from "../api/client";
 
 const STORAGE_KEY = "preinscripcion_terciario_v1";
 
+const PROVINCIAS_AR = [
+  "Buenos Aires", "Catamarca", "Chaco", "Chubut", "Ciudad Autónoma de Buenos Aires",
+  "Córdoba", "Corrientes", "Entre Ríos", "Formosa", "Jujuy", "La Pampa", "La Rioja",
+  "Mendoza", "Misiones", "Neuquén", "Río Negro", "Salta", "San Juan", "San Luis",
+  "Santa Cruz", "Santa Fe", "Santiago del Estero",
+  "Tierra del Fuego, Antártida e Islas del Atlántico Sur", "Tucumán",
+];
+
+const CIUDADES_POR_PROVINCIA = {
+  "Buenos Aires": ["La Plata", "Mar del Plata", "Bahía Blanca", "Quilmes", "Lanús", "Lomas de Zamora", "General Roca", "Tandil", "Pergamino", "San Nicolás", "Otra"],
+  "Catamarca": ["San Fernando del Valle de Catamarca", "San Isidro", "Belén", "Santa María", "Andalgalá", "Otra"],
+  "Chaco": ["Resistencia", "Presidencia Roque Sáenz Peña", "Villa Ángela", "Charata", "Otra"],
+  "Chubut": ["Rawson", "Comodoro Rivadavia", "Trelew", "Puerto Madryn", "Esquel", "Otra"],
+  "Ciudad Autónoma de Buenos Aires": ["CABA", "Otra"],
+  "Córdoba": ["Córdoba", "Villa María", "Río Cuarto", "San Francisco", "Villa Carlos Paz", "Alta Gracia", "Otra"],
+  "Corrientes": ["Corrientes", "Goya", "Mercedes", "Paso de los Libres", "Otra"],
+  "Entre Ríos": ["Paraná", "Concordia", "Gualeguaychú", "Concepción del Uruguay", "Otra"],
+  "Formosa": ["Formosa", "Clorinda", "Pirané", "Otra"],
+  "Jujuy": ["San Salvador de Jujuy", "San Pedro de Jujuy", "Palpalá", "Libertador General San Martín", "Otra"],
+  "La Pampa": ["Santa Rosa", "General Pico", "Otra"],
+  "La Rioja": ["La Rioja", "Chilecito", "Otra"],
+  "Mendoza": ["Mendoza", "San Rafael", "Godoy Cruz", "Luján de Cuyo", "Maipú", "Otra"],
+  "Misiones": ["Posadas", "Oberá", "Eldorado", "Puerto Iguazú", "Otra"],
+  "Neuquén": ["Neuquén", "San Martín de los Andes", "Zapala", "Cutral Có", "Otra"],
+  "Río Negro": ["Viedma", "Bariloche", "General Roca", "Cipolletti", "Otra"],
+  "Salta": ["Salta", "San Ramón de la Nueva Orán", "Tartagal", "Metán", "Otra"],
+  "San Juan": ["San Juan", "Rawson", "Rivadavia", "Otra"],
+  "San Luis": ["San Luis", "Villa Mercedes", "Otra"],
+  "Santa Cruz": ["Río Gallegos", "Caleta Olivia", "Pico Truncado", "Puerto Deseado", "Otra"],
+  "Santa Fe": ["Santa Fe", "Rosario", "Rafaela", "Santo Tomé", "Venado Tuerto", "Otra"],
+  "Santiago del Estero": ["Santiago del Estero", "La Banda", "Otra"],
+  "Tierra del Fuego, Antártida e Islas del Atlántico Sur": ["Ushuaia", "Río Grande - Margen Sur", "Río Grande - Margen Norte", "Tolhuin", "Zona Rural (Ej: Estancia Cullen)", "Otra"],
+  "Tucumán": ["San Miguel de Tucumán", "Concepción", "Banda del Río Salí", "Otra"],
+};
+
 const LOCALIDADES = [
   { value: "ushuaia", label: "Ushuaia" },
   { value: "rg_sur", label: "Río Grande - Margen Sur" },
   { value: "rg_norte", label: "Río Grande - Margen Norte" },
   { value: "tolhuin", label: "Tolhuin" },
   { value: "zona_rural", label: "Zona Rural (Ej: Estancia Cullen)" },
-  { value: "otras", label: "Otras Ciudades (fuera de TDF)" },
 ];
 
 const STEPS = [
@@ -129,10 +163,10 @@ function ProgressBar({ step }) {
 }
 
 const INIT_FORM = {
-  email: "", apellido_nombre: "", dni: "", cuil: "", sexo: "",
-  celular: "", fecha_nacimiento: "", localidad_nacimiento: "",
+  email: "", apellido: "", nombre: "", dni: "", cuil: "", sexo: "",
+  celular: "", fecha_nacimiento: "", localidad_nacimiento: "", localidad_nacimiento_otra: "",
   provincia_nacimiento: "", nacionalidad: "Argentina", domicilio: "",
-  localidad: "", finalizo_secundaria: "", posee_estudios_superiores: "",
+  provincia_residencia: "", localidad: "", finalizo_secundaria: "", posee_estudios_superiores: "",
   estudios_superiores_finalizado: "", estudios_superiores_carrera: "",
   posee_pc: "", posee_internet: "", pueblo_originario: "",
   posee_discapacidad: "", tipo_discapacidad: "", posee_cud: "",
@@ -148,6 +182,58 @@ const getEmailPorLocalidad = (localidad) => {
   }
   return "Tutoria.cetns.rg@gmail.com";
 };
+
+function ProvinciaSelect({ value, onChange, className }) {
+  const [query, setQuery] = useState(value || "");
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const filtered = query.length === 0
+    ? PROVINCIAS_AR
+    : PROVINCIAS_AR.filter(p => p.toLowerCase().includes(query.toLowerCase()));
+
+  useEffect(() => {
+    setQuery(value || "");
+  }, [value]);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const select = (prov) => {
+    setQuery(prov);
+    setOpen(false);
+    onChange(prov);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        type="text"
+        value={query}
+        placeholder="Escribí o seleccioná tu provincia..."
+        className={className}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); onChange(""); }}
+        autoComplete="off"
+      />
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 w-full mt-1 rounded-xl border border-white/20 shadow-xl max-h-52 overflow-y-auto"
+          style={{ background: "#1a1f4e" }}>
+          {filtered.map(p => (
+            <li key={p}
+              onMouseDown={() => select(p)}
+              className="px-4 py-2 cursor-pointer text-sm text-white hover:bg-white/10">
+              {p}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function loadSaved() {
   try {
@@ -206,16 +292,18 @@ export default function PreinscripcionTerciario() {
     setError("");
     if (s === 1) {
       if (!form.email.trim()) return setError("El email es obligatorio."), false;
-      if (!form.apellido_nombre.trim()) return setError("Apellido y nombre son obligatorios."), false;
+      if (!form.apellido.trim()) return setError("El apellido es obligatorio."), false;
+      if (!form.nombre.trim()) return setError("El nombre es obligatorio."), false;
       if (!form.dni.trim()) return setError("El DNI es obligatorio."), false;
       if (!form.sexo) return setError("El sexo es obligatorio."), false;
       if (!form.celular.trim()) return setError("El celular es obligatorio."), false;
       if (!form.fecha_nacimiento) return setError("La fecha de nacimiento es obligatoria."), false;
-      if (!form.localidad_nacimiento.trim()) return setError("La localidad de nacimiento es obligatoria."), false;
-      if (!form.provincia_nacimiento.trim()) return setError("La provincia de nacimiento es obligatoria."), false;
+      if (!form.provincia_nacimiento) return setError("La provincia de nacimiento es obligatoria."), false;
+      if (!form.localidad_nacimiento) return setError("La localidad de nacimiento es obligatoria."), false;
+      if (form.localidad_nacimiento === "Otra" && !form.localidad_nacimiento_otra.trim()) return setError("Especificá tu localidad de nacimiento."), false;
       if (!form.domicilio.trim()) return setError("El domicilio es obligatorio."), false;
+      if (!form.provincia_residencia) return setError("La provincia de residencia es obligatoria."), false;
       if (!form.localidad) return setError("La localidad de residencia es obligatoria."), false;
-      if (form.localidad === "otras") { setRechazado(true); return false; }
     }
     if (s === 2) {
       if (!form.finalizo_secundaria) return setError("Indicá si finalizaste el secundario."), false;
@@ -309,7 +397,7 @@ export default function PreinscripcionTerciario() {
             </p>
           </div>
           <button
-            onClick={() => { setRechazado(false); setForm((p) => ({ ...p, localidad: "" })); }}
+            onClick={() => { setRechazado(false); setForm((p) => ({ ...p, provincia_residencia: "", localidad: "" })); }}
             className="px-8 py-4 rounded-2xl font-bold text-base transition-opacity hover:opacity-90"
             style={{ background: "#f5c518", color: "#1a1f4e" }}
           >
@@ -421,11 +509,12 @@ export default function PreinscripcionTerciario() {
                         <input type="email" name="email" value={form.email} onChange={onChange} className={inputCls} placeholder="usuario@ejemplo.com" />
                       </Field>
                     </div>
-                    <div className="md:col-span-2">
-                      <Field label="Apellido y Nombre (tal cual DNI)" required>
-                        <input name="apellido_nombre" value={form.apellido_nombre} onChange={onChange} className={inputCls} placeholder="PÉREZ JUAN CARLOS" />
-                      </Field>
-                    </div>
+                    <Field label="Apellido (tal cual DNI)" required>
+                      <input name="apellido" value={form.apellido} onChange={onChange} className={inputCls} placeholder="PÉREZ LÓPEZ" />
+                    </Field>
+                    <Field label="Nombre (tal cual DNI)" required>
+                      <input name="nombre" value={form.nombre} onChange={onChange} className={inputCls} placeholder="JUAN CARLOS" />
+                    </Field>
                     <Field label="DNI" required>
                       <input name="dni" value={form.dni} onChange={onChange} className={inputCls} placeholder="Sin puntos ni espacios" />
                     </Field>
@@ -447,11 +536,36 @@ export default function PreinscripcionTerciario() {
                     <Field label="Fecha de Nacimiento" required>
                       <input type="date" name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange} className={inputCls} />
                     </Field>
-                    <Field label="Localidad de Nacimiento" required>
-                      <input name="localidad_nacimiento" value={form.localidad_nacimiento} onChange={onChange} className={inputCls} placeholder="Ej: Ushuaia" />
-                    </Field>
                     <Field label="Provincia de Nacimiento" required>
-                      <input name="provincia_nacimiento" value={form.provincia_nacimiento} onChange={onChange} className={inputCls} placeholder="Ej: Tierra del Fuego" />
+                      <select name="provincia_nacimiento" value={form.provincia_nacimiento}
+                        onChange={(e) => { onChange(e); setForm((p) => ({ ...p, localidad_nacimiento: "", localidad_nacimiento_otra: "" })); }}
+                        className={inputCls}>
+                        <option value="">Seleccioná una provincia...</option>
+                        {PROVINCIAS_AR.map((p) => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Localidad de Nacimiento" required>
+                      {form.provincia_nacimiento ? (
+                        <>
+                          <select name="localidad_nacimiento" value={form.localidad_nacimiento} onChange={onChange} className={inputCls}>
+                            <option value="">Seleccioná una localidad...</option>
+                            {(CIUDADES_POR_PROVINCIA[form.provincia_nacimiento] || ["Otra"]).map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                          {form.localidad_nacimiento === "Otra" && (
+                            <input
+                              name="localidad_nacimiento_otra"
+                              value={form.localidad_nacimiento_otra}
+                              onChange={onChange}
+                              className={`${inputCls} mt-2`}
+                              placeholder="Escribí tu localidad..."
+                            />
+                          )}
+                        </>
+                      ) : (
+                        <input disabled className={inputCls} placeholder="Primero seleccioná una provincia" />
+                      )}
                     </Field>
                     <Field label="Nacionalidad">
                       <input name="nacionalidad" value={form.nacionalidad} onChange={onChange} className={inputCls} />
@@ -462,18 +576,34 @@ export default function PreinscripcionTerciario() {
                       </Field>
                     </div>
                     <div className="md:col-span-2">
-                      <Field label="Localidad de Residencia" required>
-                        <select name="localidad" value={form.localidad} onChange={(e) => { onChange(e); if (e.target.value === "otras") setRechazado(true); }} className={inputCls}>
-                          <option value="">Seleccioná tu localidad...</option>
-                          {LOCALIDADES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+                      <Field label="Provincia de Residencia" required>
+                        <select
+                          name="provincia_residencia"
+                          value={form.provincia_residencia}
+                          className={inputCls}
+                          onChange={(e) => {
+                            const prov = e.target.value;
+                            setForm((p) => ({ ...p, provincia_residencia: prov, localidad: "" }));
+                            if (prov && prov !== "Tierra del Fuego, Antártida e Islas del Atlántico Sur") {
+                              setRechazado(true);
+                            }
+                          }}
+                        >
+                          <option value="">Seleccioná una provincia...</option>
+                          {PROVINCIAS_AR.map((p) => <option key={p} value={p}>{p}</option>)}
                         </select>
-                        {form.localidad === "otras" && (
-                          <p className="mt-2 text-xs text-red-500 font-semibold flex items-center gap-1">
-                            <AlertTriangle size={12} /> La Tecnicatura es solo para residentes de Tierra del Fuego.
-                          </p>
-                        )}
                       </Field>
                     </div>
+                    {form.provincia_residencia === "Tierra del Fuego, Antártida e Islas del Atlántico Sur" && (
+                      <div className="md:col-span-2">
+                        <Field label="Localidad de Residencia" required>
+                          <select name="localidad" value={form.localidad} onChange={onChange} className={inputCls}>
+                            <option value="">Seleccioná tu localidad...</option>
+                            {LOCALIDADES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+                          </select>
+                        </Field>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

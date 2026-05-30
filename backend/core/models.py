@@ -666,7 +666,8 @@ class PreinscripcionTerciario(TimeStamped):
 
     # Datos personales
     email = models.EmailField()
-    apellido_nombre = models.CharField(max_length=200, help_text="Tal cual figura en DNI")
+    apellido = models.CharField(max_length=120, default="")
+    nombre = models.CharField(max_length=120, default="")
     dni = models.CharField(max_length=15)
     cuil = models.CharField(max_length=15)
     sexo = models.CharField(max_length=1, choices=SEXO_CHOICES)
@@ -719,7 +720,7 @@ class PreinscripcionTerciario(TimeStamped):
         ]
 
     def __str__(self):
-        return f"{self.apellido_nombre} - {self.dni} ({self.get_estado_display()})"
+        return f"{self.apellido}, {self.nombre} - {self.dni} ({self.get_estado_display()})"
 
 
 class ConfiguracionPreinscripcionTerciario(models.Model):

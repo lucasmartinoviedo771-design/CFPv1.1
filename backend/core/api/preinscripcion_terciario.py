@@ -80,13 +80,10 @@ def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
             or Estudiante.objects.filter(email=preinscripcion.email).first()
         )
         if not estudiante:
-            partes = preinscripcion.apellido_nombre.split(" ", 1)
-            apellido = partes[0] if partes else preinscripcion.apellido_nombre
-            nombre = partes[1] if len(partes) > 1 else ""
             estudiante = Estudiante.objects.create(
                 dni=preinscripcion.dni,
-                apellido=apellido,
-                nombre=nombre,
+                apellido=preinscripcion.apellido,
+                nombre=preinscripcion.nombre,
                 email=preinscripcion.email,
                 telefono=preinscripcion.celular,
                 domicilio=preinscripcion.domicilio,
@@ -146,7 +143,7 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
                     <h2>Tecnicatura Superior en Ciencia de Datos e Inteligencia Artificial</h2>
                 </div>
                 <div class="content">
-                    <p style="font-size: 17px; margin-top: 0;">Estimado/a <strong>{preinscripcion.apellido_nombre}</strong>,</p>
+                    <p style="font-size: 17px; margin-top: 0;">Estimado/a <strong>{preinscripcion.apellido}, {preinscripcion.nombre}</strong>,</p>
                     <p>¡Bienvenidos/as a esta nueva etapa! Tu preinscripción fue recibida correctamente. Están a punto de comenzar un camino apasionante en el mundo de los datos y la inteligencia artificial, y queremos acompañarlos/as desde el primer paso.</p>
                     
                     <p>A continuación les compartimos información importante sobre el curso introductorio y el inicio de la cursada:</p>
@@ -188,7 +185,7 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
                     </div>
                     
                     <p style="margin-top: 30px; font-size: 14px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                        <em>Datos registrados: Nombre: {preinscripcion.apellido_nombre} | DNI: {preinscripcion.dni}</em>
+                        <em>Datos registrados: Apellido: {preinscripcion.apellido} | Nombre: {preinscripcion.nombre} | DNI: {preinscripcion.dni}</em>
                     </p>
                 </div>
                 <div class="footer">
@@ -329,7 +326,8 @@ def crear_preinscripcion_terciario(request):
     try:
         preinscripcion = PreinscripcionTerciario.objects.create(
             email=data.get("email", "").strip(),
-            apellido_nombre=data.get("apellido_nombre", "").strip(),
+            apellido=data.get("apellido", "").strip(),
+            nombre=data.get("nombre", "").strip(),
             dni=dni,
             cuil=data.get("cuil", "").strip(),
             sexo=data.get("sexo", ""),
@@ -367,7 +365,8 @@ def crear_preinscripcion_terciario(request):
 class PreinscripcionTerciarioListOut(Schema):
     id: int
     email: str
-    apellido_nombre: str
+    apellido: str
+    nombre: str
     dni: str
     cuil: str
     sexo: str
