@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import html
 import json
 from typing import List, Optional
 import unicodedata
@@ -293,7 +294,7 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
         if es_menor:
             subject = "Preinscripcion Programador de Nivel III para menor de edad"
         
-        trayectos_html = "".join([f"<li><strong>{c.programa.nombre}</strong> ({c.bloque.nombre})</li>" for c in cohortes])
+        trayectos_html = "".join([f"<li><strong>{html.escape(c.programa.nombre)}</strong> ({html.escape(c.bloque.nombre)})</li>" for c in cohortes])
 
         info_pdf_html = ""
         if es_menor:
@@ -302,7 +303,7 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
                 <h3 style="color: #c2410c;">⚠️ ACCIÓN REQUERIDA PARA MENORES</h3>
                 <p style="margin-top: 0;">Al ser menor de edad, para completar tu inscripción es <strong>obligatorio</strong> contar con la autorización digital de tu Padre/Madre o Tutor responsable.</p>
                 <p style="margin-top: 10px; font-weight: bold; color: #9a3412;">
-                    En la brevedad, nos comunicaremos por WhatsApp al número de {estudiante.tutor_nombre} (Padre/Madre o Tutor) para enviar un enlace seguro donde podrá firmar y autorizar tu inscripción digitalmente.
+                    En la brevedad, nos comunicaremos por WhatsApp al número de {html.escape(estudiante.tutor_nombre)} (Padre/Madre o Tutor) para enviar un enlace seguro donde podrá firmar y autorizar tu inscripción digitalmente.
                 </p>
                 <p style="margin-top: 10px; font-size: 13.5px; color: #c2410c;">
                     <i>En caso de preferir realizar el trámite de forma presencial, el Padre/Madre o Tutor responsable puede acercarse a nuestra oficina del CFP.</i>
@@ -356,7 +357,7 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
                     <h2>Formación Profesional - Malvinas Argentinas</h2>
                 </div>
                 <div class="content">
-                    <p style="font-size: 17px; margin-top: 0;">Hola <strong>{estudiante.nombre}</strong>,</p>
+                    <p style="font-size: 17px; margin-top: 0;">Hola <strong>{html.escape(estudiante.nombre)}</strong>,</p>
                     <p>¡Gracias por elegirnos! Hemos recibido correctamente tu preinscripción para los siguientes trayectos de capacitación:</p>
                     
                     <div class="trayectos">
