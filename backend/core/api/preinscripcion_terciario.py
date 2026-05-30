@@ -12,7 +12,22 @@ from django.conf import settings
 router = Router(tags=["preinscripcion-terciario"])
 
 MODULO_HD2_ID = 19       # Módulo 2 Habilidades Digitales
-PROGRAMA_TERCIARIO_ID = 7  # Tecnicatura Superior en Ciencia de Datos e IA
+
+def _get_prog_id() -> int:
+    try:
+        cfg = ConfiguracionPreinscripcionTerciario.get()
+        if cfg.programa_terciario_id:
+            return cfg.programa_terciario_id
+    except Exception:
+        pass
+    try:
+        from ..models import Programa
+        p = Programa.objects.filter(nombre__icontains="Tecnicatura Superior").order_by("-id").first()
+        if p:
+            return p.id
+    except Exception:
+        pass
+    return 7
 
 # Grupos con acceso al panel Terciario
 GRUPOS_TERCIARIO = ["Admin", "Terciario", "Rector"]
@@ -35,14 +50,14 @@ def _get_cohorte_hd_activa():
     from django.utils.timezone import now
     hoy = now().date()
     cohorte = (
-        Cohorte.objects.filter(programa_id=PROGRAMA_TERCIARIO_ID, fecha_inicio__lte=hoy, fecha_fin__gte=hoy)
+        Cohorte.objects.filter(programa_id=_get_prog_id(), fecha_inicio__lte=hoy, fecha_fin__gte=hoy)
         .order_by("fecha_inicio")
         .first()
     )
     if cohorte:
         return cohorte
     cohorte = (
-        Cohorte.objects.filter(programa_id=PROGRAMA_TERCIARIO_ID, fecha_inicio__gt=hoy)
+        Cohorte.objects.filter(programa_id=_get_prog_id(), fecha_inicio__gt=hoy)
         .order_by("fecha_inicio")
         .first()
     )
@@ -51,7 +66,10 @@ def _get_cohorte_hd_activa():
 
 def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
     try:
-        cohorte = _get_cohorte_hd_activa()
+        cfg = ConfiguracionPreinscripcionTerciario.get()
+        cohorte = cfg.hd_cohorte
+        if not cohorte:
+            cohorte = _get_cohorte_hd_activa()
         if not cohorte:
             return  # No hay cohorte activa ni próxima
         mod2 = Modulo.objects.get(id=MODULO_HD2_ID)
@@ -229,7 +247,7 @@ def listar_cohortes_hd(request):
     if not _tiene_acceso_terciario(request.user):
         raise HttpError(403, "Sin permisos.")
     cohortes = (
-        Cohorte.objects.filter(programa_id=PROGRAMA_TERCIARIO_ID)
+        Cohorte.objects.filter(programa_id=_get_prog_id())
         .order_by("-id")
         .values("id", "nombre", "fecha_inicio", "fecha_fin")[:30]
     )
@@ -476,9 +494,10 @@ def get_cohorte_terciario(request, cohorte_id: Optional[int] = None):
         raise HttpError(403, "Sin permisos.")
     try:
         if cohorte_id:
-            cohorte = Cohorte.objects.get(id=cohorte_id, programa_id=PROGRAMA_TERCIARIO_ID)
+            cohorte = Cohorte.objects.get(id=cohorte_id, programa_id=_get_prog_id())
         else:
-            cohorte = _get_cohorte_hd_activa()
+            cfg = ConfiguracionPreinscripcionTerciario.get()
+            cohorte = cfg.hd_cohorte or _get_cohorte_hd_activa()
         if not cohorte:
             raise Cohorte.DoesNotExist()
         inscripciones = (
@@ -593,7 +612,7 @@ def listar_alumnos_terciario(
 
     qs = (
         Inscripcion.objects
-        .filter(cohorte__programa_id=PROGRAMA_TERCIARIO_ID, modulo_id=MODULO_HD2_ID)
+        .filter(cohorte__programa_id=_get_prog_id(), modulo_id=MODULO_HD2_ID)
         .select_related("estudiante", "cohorte")
         .order_by("estudiante__apellido", "estudiante__nombre")
     )
@@ -665,7 +684,7 @@ def exportar_cohorte_terciario(request, cohorte_id: Optional[int] = None):
 
     qs = (
         Inscripcion.objects
-        .filter(cohorte__programa_id=PROGRAMA_TERCIARIO_ID, modulo_id=MODULO_HD2_ID)
+        .filter(cohorte__programa_id=_get_prog_id(), modulo_id=MODULO_HD2_ID)
         .select_related("estudiante", "cohorte")
         .order_by("estudiante__apellido", "estudiante__nombre")
     )
