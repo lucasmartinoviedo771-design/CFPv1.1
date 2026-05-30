@@ -4,10 +4,30 @@ from django.utils import timezone
 from django.db import transaction
 from typing import Optional, List, Any
 from datetime import date
+import html
+import re
 from ..models import PreinscripcionTerciario, Inscripcion, Modulo, Cohorte, Estudiante, ConfiguracionPreinscripcionTerciario
 import threading
 from django.core.mail import send_mail
 from django.conf import settings
+
+MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024  # 3MB
+ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_CONTENT_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
+
+
+def _validar_archivo(file_obj, field_label: str):
+    if not file_obj:
+        return
+    if file_obj.size > MAX_FILE_SIZE_BYTES:
+        raise HttpError(400, f"{field_label}: tamaño máximo permitido 3MB.")
+    name = (file_obj.name or "").lower()
+    ext = "." + name.split(".")[-1] if "." in name else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HttpError(400, f"{field_label}: formato no permitido. Usá PDF o imagen.")
+    content_type = (getattr(file_obj, "content_type", "") or "").lower()
+    if content_type and content_type not in ALLOWED_CONTENT_TYPES:
+        raise HttpError(400, f"{field_label}: tipo de archivo no permitido.")
 
 router = Router(tags=["preinscripcion-terciario"])
 
@@ -111,7 +131,11 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
     try:
         from django.core.mail import EmailMessage
         subject = "Bienvenidos/as a la Tecnicatura — Todo lo que necesitás saber para comenzar"
-        
+        apellido_safe = html.escape(preinscripcion.apellido)
+        nombre_safe = html.escape(preinscripcion.nombre)
+        dni_safe = html.escape(preinscripcion.dni)
+        email_safe = html.escape(preinscripcion.email)
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -143,7 +167,7 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
                     <h2>Tecnicatura Superior en Ciencia de Datos e Inteligencia Artificial</h2>
                 </div>
                 <div class="content">
-                    <p style="font-size: 17px; margin-top: 0;">Estimado/a <strong>{preinscripcion.apellido}, {preinscripcion.nombre}</strong>,</p>
+                    <p style="font-size: 17px; margin-top: 0;">Estimado/a <strong>{apellido_safe}, {nombre_safe}</strong>,</p>
                     <p>¡Bienvenidos/as a esta nueva etapa! Tu preinscripción fue recibida correctamente. Están a punto de comenzar un camino apasionante en el mundo de los datos y la inteligencia artificial, y queremos acompañarlos/as desde el primer paso.</p>
                     
                     <p>A continuación les compartimos información importante sobre el curso introductorio y el inicio de la cursada:</p>
@@ -185,7 +209,7 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
                     </div>
                     
                     <p style="margin-top: 30px; font-size: 14px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                        <em>Datos registrados: Apellido: {preinscripcion.apellido} | Nombre: {preinscripcion.nombre} | DNI: {preinscripcion.dni}</em>
+                        <em>Datos registrados: Apellido: {apellido_safe} | Nombre: {nombre_safe} | DNI: {dni_safe}</em>
                     </p>
                 </div>
                 <div class="footer">
@@ -322,9 +346,11 @@ def crear_preinscripcion_terciario(request):
     if localidad == "otras":
         raise HttpError(400, "La Tecnicatura es solo para residentes de Tierra del Fuego.")
 
-    dni = data.get("dni", "").strip()
+    dni = re.sub(r"\D", "", data.get("dni", "").strip())
     if not dni:
         raise HttpError(400, "El DNI es obligatorio.")
+    if len(dni) != 8:
+        raise HttpError(400, "El DNI debe tener 8 dígitos.")
 
     if PreinscripcionTerciario.objects.filter(dni=dni).exists():
         raise HttpError(400, "Ya existe una preinscripción registrada con ese DNI.")
@@ -338,6 +364,9 @@ def crear_preinscripcion_terciario(request):
         if val in (None, "", "null", "undefined"):
             return None
         return to_bool(val)
+
+    _validar_archivo(files.get("dni_digitalizado"), "DNI")
+    _validar_archivo(files.get("titulo_digitalizado"), "Título secundario")
 
     try:
         preinscripcion = PreinscripcionTerciario.objects.create(
@@ -370,8 +399,10 @@ def crear_preinscripcion_terciario(request):
             dni_digitalizado=files.get("dni_digitalizado") or None,
             titulo_digitalizado=files.get("titulo_digitalizado") or None,
         )
-    except Exception as e:
-        raise HttpError(400, f"Error al guardar: {str(e)}")
+    except HttpError:
+        raise
+    except Exception:
+        raise HttpError(400, "Error al guardar la preinscripción. Revisá los datos e intentá nuevamente.")
 
     threading.Thread(target=_enviar_confirmacion, args=(preinscripcion,)).start()
 
