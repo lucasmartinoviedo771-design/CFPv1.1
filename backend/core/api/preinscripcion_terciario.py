@@ -25,9 +25,16 @@ def _validar_archivo(file_obj, field_label: str):
     ext = "." + name.split(".")[-1] if "." in name else ""
     if ext not in ALLOWED_EXTENSIONS:
         raise HttpError(400, f"{field_label}: formato no permitido. Usá PDF o imagen.")
-    content_type = (getattr(file_obj, "content_type", "") or "").lower()
-    if content_type and content_type not in ALLOWED_CONTENT_TYPES:
-        raise HttpError(400, f"{field_label}: tipo de archivo no permitido.")
+    try:
+        import magic
+        mime = magic.from_buffer(file_obj.read(2048), mime=True)
+        file_obj.seek(0)
+        if mime not in ALLOWED_CONTENT_TYPES:
+            raise HttpError(400, f"{field_label}: el contenido del archivo no coincide con su extensión.")
+    except ImportError:
+        content_type = (getattr(file_obj, "content_type", "") or "").lower()
+        if content_type and content_type not in ALLOWED_CONTENT_TYPES:
+            raise HttpError(400, f"{field_label}: tipo de archivo no permitido.")
 
 router = Router(tags=["preinscripcion-terciario"])
 

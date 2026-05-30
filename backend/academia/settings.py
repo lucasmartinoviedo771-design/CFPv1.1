@@ -221,10 +221,17 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
     ],
     'DEFAULT_PAGINATION_CLASS': 'academia.pagination.DefaultPagination',
-    'PAGE_SIZE': 50,  # Tamaño de página por defecto
+    'PAGE_SIZE': 50,
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'login': '10/minute',
+    },
 }
 
 # Add BrowsableAPIRenderer only in DEBUG mode

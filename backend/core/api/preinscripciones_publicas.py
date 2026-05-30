@@ -218,15 +218,20 @@ def _validar_archivo_documento(file_obj, field_label: str):
         return
     if file_obj.size > MAX_FILE_SIZE_BYTES:
         raise HttpError(400, f"{field_label}: tamaño máximo permitido 3MB.")
-
     name = (file_obj.name or "").lower()
     ext = "." + name.split(".")[-1] if "." in name else ""
     if ext not in ALLOWED_EXTENSIONS:
         raise HttpError(400, f"{field_label}: formato no permitido. Use PDF o imagen.")
-
-    content_type = (getattr(file_obj, "content_type", "") or "").lower()
-    if content_type and content_type not in ALLOWED_CONTENT_TYPES:
-        raise HttpError(400, f"{field_label}: tipo de archivo no permitido.")
+    try:
+        import magic
+        mime = magic.from_buffer(file_obj.read(2048), mime=True)
+        file_obj.seek(0)
+        if mime not in ALLOWED_CONTENT_TYPES:
+            raise HttpError(400, f"{field_label}: el contenido del archivo no coincide con su extensión.")
+    except ImportError:
+        content_type = (getattr(file_obj, "content_type", "") or "").lower()
+        if content_type and content_type not in ALLOWED_CONTENT_TYPES:
+            raise HttpError(400, f"{field_label}: tipo de archivo no permitido.")
 
 
 def _validar_correlativas(estudiante_id: int, cohortes: List[Cohorte]):

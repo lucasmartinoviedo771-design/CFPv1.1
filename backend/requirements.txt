@@ -27,6 +27,7 @@ PyYAML==6.0.2
 tzdata==2025.2
 
 # Validation
+python-magic==0.4.27
 pydantic==2.11.9
 pydantic-core==2.33.2
 typing_extensions==4.15.0

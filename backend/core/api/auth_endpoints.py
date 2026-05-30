@@ -1,15 +1,21 @@
 from ninja import Router
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.throttling import AnonRateThrottle
 from ninja.errors import HttpError
-
-# Usamos las vistas de DRF internamente, pero las exponemos bajo /api/v2/.
 
 router = Router(tags=["auth"])
 
 
+class LoginRateThrottle(AnonRateThrottle):
+    scope = "login"
+
+
 @router.post("/token", auth=None)
 def obtain_token(request):
+    throttle = LoginRateThrottle()
+    if not throttle.allow_request(request, None):
+        raise HttpError(429, "Demasiados intentos de login. Esperá un momento e intentá nuevamente.")
     view = TokenObtainPairView.as_view()
     return view(request)
 
