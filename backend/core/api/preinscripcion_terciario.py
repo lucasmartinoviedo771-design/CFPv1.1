@@ -205,7 +205,7 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
                             <li>✅ Equivalencias.</li>
                             <li>✅ Entrega de documentación.</li>
                         </ul>
-                        <a href="https://view.genially.com/6a10ecab5a7c072980bbb3a2" target="_blank" style="display: inline-block; margin-top: 10px; font-weight: bold; color: #166534; text-decoration: underline;">👉 Abrir Hoja de Ruta</a>
+                        <a href="https://view.genially.com/69fe7b75e3792921111bbaac" target="_blank" style="display: inline-block; margin-top: 10px; font-weight: bold; color: #166534; text-decoration: underline;">👉 Abrir Hoja de Ruta</a>
                     </div>
 
                     <div class="contacto-box">
