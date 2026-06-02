@@ -251,8 +251,8 @@ def _validar_correlativas(estudiante_id: int, cohortes: List[Cohorte]):
 @router.get("/oferta", response=PreinscripcionOfertaOut, auth=None)
 def listar_oferta_preinscripcion(request, programa_id: Optional[int] = None):
     qs = _cohortes_habilitadas()
-    # Filtro temporal para excluir 'Sistemas de Representación'
-    qs = [c for c in qs if _normalize_text(c.programa.nombre) != "sistemas de representacion"]
+    # Filtro temporal para excluir 'Sistemas de Representación' y carreras terciarias (Tecnicaturas)
+    qs = [c for c in qs if _normalize_text(c.programa.nombre) != "sistemas de representacion" and "tecnicatura" not in _normalize_text(c.programa.nombre)]
     if programa_id:
         qs = [c for c in qs if c.programa_id == programa_id]
     items_map: dict[int, dict] = {}

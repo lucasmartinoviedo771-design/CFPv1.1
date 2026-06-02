@@ -31,9 +31,33 @@ def protected_media_view(request, path):
             except (InvalidToken, TokenError):
                 pass
 
+    # Check 4: SimpleJWT Token in HttpOnly Cookie (access_token)
+    if not user:
+        cookie_token = request.COOKIES.get("access_token")
+        if cookie_token:
+            try:
+                validated_token = JWTAuthentication().get_validated_token(cookie_token)
+                user = JWTAuthentication().get_user(validated_token)
+            except (InvalidToken, TokenError):
+                pass
+
     # Deny access if user is not authenticated
     if not user or not user.is_authenticated:
         return HttpResponseForbidden("Acceso denegado: Se requiere autenticación válida.")
+
+    # Enforce role/group-based authorization for media access
+    allowed_groups = {
+        "Admin", "Rector", "Rectorado", "Regencia", "Secretaría", 
+        "Preceptor", "Bedel"
+    }
+    user_groups = set(user.groups.values_list('name', flat=True))
+    is_authorized = (
+        user.is_superuser or
+        user.is_staff or
+        bool(user_groups & allowed_groups)
+    )
+    if not is_authorized:
+        return HttpResponseForbidden("Acceso denegado: No posee los permisos requeridos para ver este archivo.")
 
     # Prevent Directory Traversal / Path Traversal
     normalized_path = posixpath.normpath(path)

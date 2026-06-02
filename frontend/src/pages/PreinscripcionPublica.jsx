@@ -261,7 +261,7 @@ export default function PreinscripcionPublica() {
 
   const ofertaView = useMemo(() =>
     oferta
-      .filter((p) => normalizeText(p.programa_nombre) !== "sistemas de representacion")
+      .filter((p) => normalizeText(p.programa_nombre) !== "sistemas de representacion" && !normalizeText(p.programa_nombre).includes("tecnicatura"))
       .map((p) => ({
         ...p,
         bloquesOrdenados: [...(p.bloques || [])].sort((a, b) => (isProgramacionII(a.bloque_nombre) ? 1 : 0) - (isProgramacionII(b.bloque_nombre) ? 1 : 0)),
