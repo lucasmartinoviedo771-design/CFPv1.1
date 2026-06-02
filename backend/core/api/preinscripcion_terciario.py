@@ -458,9 +458,16 @@ class PreinscripcionTerciarioListOut(Schema):
     observaciones: str
     created_at: str
     hd_estado: Optional[str]
+    apellido_nombre: str
+
+    @staticmethod
+    def resolve_apellido_nombre(obj):
+        # Concatenate last name and first name cleanly
+        return f"{obj.apellido}, {obj.nombre}".strip(", ")
 
     @staticmethod
     def resolve_created_at(obj):
+
         return obj.created_at.strftime("%Y-%m-%d %H:%M") if obj.created_at else ""
 
     @staticmethod

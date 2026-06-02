@@ -719,8 +719,13 @@ class PreinscripcionTerciario(TimeStamped):
             models.UniqueConstraint(fields=['email'], name='uniq_preinscripcion_email'),
         ]
 
+    @property
+    def apellido_nombre(self):
+        return f"{self.apellido}, {self.nombre}".strip(", ")
+
     def __str__(self):
         return f"{self.apellido}, {self.nombre} - {self.dni} ({self.get_estado_display()})"
+
 
 
 class ConfiguracionPreinscripcionTerciario(models.Model):
