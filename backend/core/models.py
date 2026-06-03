@@ -705,6 +705,8 @@ class PreinscripcionTerciario(TimeStamped):
     # Gestión
     estado = models.CharField(max_length=15, choices=ESTADO_CHOICES, default='pendiente')
     observaciones = models.TextField(blank=True)
+    correo_bienvenida_at = models.DateTimeField(null=True, blank=True, help_text="Fecha/hora en que se envió el correo de bienvenida")
+    correo_correccion_at = models.DateTimeField(null=True, blank=True, help_text="Fecha/hora en que se envió el correo de corrección de Hoja de Ruta")
     hd_inscripcion = models.ForeignKey(
         'Inscripcion', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='preinscripcion_terciario'
