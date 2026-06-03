@@ -235,6 +235,9 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
         )
         email.content_subtype = "html"
         email.send(fail_silently=True)
+        from django.utils import timezone
+        preinscripcion.correo_bienvenida_at = timezone.now()
+        preinscripcion.save(update_fields=['correo_bienvenida_at'])
     except Exception:
         pass
 
