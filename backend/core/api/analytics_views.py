@@ -429,7 +429,7 @@ class AnalyticsDropoutView(APIView):
 
         if rule == 'B':
             # Inactividad: sin asistencias en las últimas N semanas
-            threshold = (timezone.now() - timedelta(weeks=lookback_weeks)).date()
+            threshold = timezone.localdate() - timedelta(weeks=lookback_weeks)
             active_student_ids = Asistencia.objects.filter(
                 fecha__gte=threshold,
                 estudiante_id__in=insc_qs.values_list('estudiante_id', flat=True)

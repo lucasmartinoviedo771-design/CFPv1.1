@@ -5,6 +5,7 @@ from typing import List, Optional
 import unicodedata
 
 from django.db import transaction
+from django.utils import timezone
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
@@ -114,7 +115,7 @@ def _esta_en_periodo_examenes(cohorte: Cohorte, hoy: date) -> bool:
 
 
 def _cohortes_habilitadas() -> List[Cohorte]:
-    hoy = date.today()
+    hoy = timezone.localdate()
     base_qs = (
         Cohorte.objects.select_related("programa", "bloque")
         .prefetch_related("bloque__correlativas", "bloque__modulos")
@@ -290,7 +291,7 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
     Envía un email de confirmación con archivos adjuntos basados en los trayectos seleccionados.
     """
     try:
-        hoy = date.today()
+        hoy = timezone.localdate()
         nac = estudiante.fecha_nacimiento
         edad = hoy.year - nac.year - ((hoy.month, hoy.day) < (nac.month, nac.day)) if nac else 18
         es_menor = edad < 18
@@ -469,7 +470,7 @@ def crear_preinscripcion_publica(request):
     if not fecha_nac:
         raise HttpError(400, "Debe ingresar fecha de nacimiento.")
     
-    hoy = date.today()
+    hoy = timezone.localdate()
     edad = hoy.year - fecha_nac.year - ((hoy.month, hoy.day) < (fecha_nac.month, fecha_nac.day))
     es_menor = edad < 18
 

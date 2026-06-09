@@ -7,7 +7,7 @@ from django.utils import timezone
 from ninja import Router, Schema, File, UploadedFile
 from django.http import HttpResponse
 from core.api.permissions import require_authenticated_group
-from core.models import Estudiante, Inscripcion, Nota
+from core.models import Estudiante, Inscripcion, Nota, PreinscripcionTerciario
 from core.serializers import EstudianteSerializer
 from core.services.email_service import enviar_correo_bienvenida
 from core.services.export_service import ExportService
@@ -47,10 +47,14 @@ def listar_estudiantes(
     telefono: Optional[str] = None,
     archived: Optional[bool] = False,
     rango_edad: Optional[str] = None, # "menores", "mayores"
+    excluir_terciario: Optional[bool] = False,
 ):
     qs = Estudiante.objects.filter(is_active=not archived).prefetch_related(
         "inscripciones__cohorte__programa", "inscripciones__cohorte__bloque"
     ).order_by("apellido", "nombre")
+    if excluir_terciario:
+        dni_terciarios = PreinscripcionTerciario.objects.values_list('dni', flat=True)
+        qs = qs.exclude(dni__in=dni_terciarios)
     if dni:
         qs = qs.filter(dni__iexact=dni)
     if telefono:
@@ -77,7 +81,7 @@ def listar_estudiantes(
         qs = qs.filter(inscripciones__modulo_id=modulo_id).distinct()
     
     if rango_edad:
-        today = timezone.now().date()
+        today = timezone.localdate()
         date_18 = today.replace(year=today.year - 18)
         if rango_edad == "menores":
             qs = qs.filter(fecha_nacimiento__gt=date_18)
@@ -120,7 +124,7 @@ def export_estudiantes(request, payload: ExportIn):
         qs = qs.filter(inscripciones__modulo_id=payload.modulo_id).distinct()
     
     if payload.rango_edad:
-        today = timezone.now().date()
+        today = timezone.localdate()
         date_18 = today.replace(year=today.year - 18)
         if payload.rango_edad == "menores":
             qs = qs.filter(fecha_nacimiento__gt=date_18)

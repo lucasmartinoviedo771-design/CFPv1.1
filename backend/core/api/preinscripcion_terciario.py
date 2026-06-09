@@ -74,8 +74,8 @@ def _check_terciario(user):
 
 def _get_cohorte_hd_activa():
     """Devuelve la cohorte de la Tecnicatura activa hoy, o la próxima a comenzar."""
-    from django.utils.timezone import now
-    hoy = now().date()
+    from django.utils import timezone
+    hoy = timezone.localdate()
     cohorte = (
         Cohorte.objects.filter(programa_id=_get_prog_id(), fecha_inicio__lte=hoy, fecha_fin__gte=hoy)
         .order_by("fecha_inicio")
@@ -130,7 +130,24 @@ def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
 
         preinscripcion.hd_inscripcion = inscripcion
         preinscripcion.save(update_fields=["hd_inscripcion"])
+
+        # Enviar correo de bienvenida a Moodle / Habilidades Digitales
+        try:
+            from core.services.email_service import enviar_correo_bienvenida_terciario
+            enviar_correo_bienvenida_terciario(preinscripcion)
+        except Exception:
+            pass
     except Exception as e:
+        pass
+
+
+def _inscribir_hd_con_retraso(preinscripcion: PreinscripcionTerciario):
+    import time
+    try:
+        # Esperar 30 segundos antes de procesar la inscripción y el segundo correo
+        time.sleep(30)
+        _inscribir_hd(preinscripcion)
+    except Exception:
         pass
 
 
@@ -244,8 +261,9 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
 
 def _esta_abierta(cfg):
     """Si hay fechas configuradas, el período manda. Si no, usa el toggle manual."""
-    from datetime import date, datetime
-    hoy = date.today()
+    from datetime import datetime
+    from django.utils import timezone
+    hoy = timezone.localdate()
     
     fecha_ini = cfg.fecha_inicio
     fecha_fi = cfg.fecha_fin
@@ -414,13 +432,18 @@ def crear_preinscripcion_terciario(request):
             descripcion_apoyo=data.get("descripcion_apoyo", ""),
             dni_digitalizado=files.get("dni_digitalizado") or None,
             titulo_digitalizado=files.get("titulo_digitalizado") or None,
+            estado="aprobada",  # Se auto-aprueba
         )
     except HttpError:
         raise
     except Exception:
         raise HttpError(400, "Error al guardar la preinscripción. Revisá los datos e intentá nuevamente.")
 
+    # 1. Enviar el correo de confirmación de preinscripción inmediatamente
     threading.Thread(target=_enviar_confirmacion, args=(preinscripcion,)).start()
+    
+    # 2. Inscribir en Habilidades Digitales y enviar el segundo correo con 30 segundos de retraso
+    threading.Thread(target=_inscribir_hd_con_retraso, args=(preinscripcion,)).start()
 
     return {"id": preinscripcion.id, "mensaje": "Preinscripción registrada correctamente."}
 
@@ -470,8 +493,11 @@ class PreinscripcionTerciarioListOut(Schema):
 
     @staticmethod
     def resolve_created_at(obj):
-
-        return obj.created_at.strftime("%Y-%m-%d %H:%M") if obj.created_at else ""
+        from django.utils import timezone
+        if not obj.created_at:
+            return ""
+        local_dt = timezone.localtime(obj.created_at)
+        return local_dt.strftime("%Y-%m-%d %H:%M")
 
     @staticmethod
     def resolve_fecha_nacimiento(obj):

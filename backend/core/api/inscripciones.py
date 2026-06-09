@@ -144,7 +144,7 @@ def detalle_cohorte(request, cohorte_id: int):
 @require_authenticated_group
 def crear_cohorte(request, payload: CohorteIn):
     _validar_bloque_programa(request, payload.programa_id, payload.bloque_id)
-    fecha_inicio = payload.fecha_inicio or timezone.now().date()
+    fecha_inicio = payload.fecha_inicio or timezone.localdate()
     fecha_fin = payload.fecha_fin or _calcular_fecha_fin(payload.bloque_fechas_id, fecha_inicio)
     cohorte = Cohorte.objects.create(
         nombre=payload.nombre,
@@ -175,7 +175,7 @@ def actualizar_cohorte(request, cohorte_id: int, payload: CohorteIn):
     cohorte.programa_id = payload.programa_id
     cohorte.bloque_id = payload.bloque_id
     cohorte.bloque_fechas_id = payload.bloque_fechas_id
-    cohorte.fecha_inicio = payload.fecha_inicio or cohorte.fecha_inicio or timezone.now().date()
+    cohorte.fecha_inicio = payload.fecha_inicio or cohorte.fecha_inicio or timezone.localdate()
     cohorte.fecha_fin = payload.fecha_fin or _calcular_fecha_fin(cohorte.bloque_fechas_id, cohorte.fecha_inicio)
     cohorte.save(update_fields=["nombre", "programa_id", "bloque_id", "bloque_fechas_id", "fecha_inicio", "fecha_fin"])
     return CohorteOut(

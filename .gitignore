@@ -97,3 +97,6 @@ backend/generate_gmail_token.py
 send_test_email.py
 ssh_pass.py
 Temporal/
+id_rsa_temp
+institutional_web/
+

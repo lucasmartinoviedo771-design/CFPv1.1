@@ -46,7 +46,8 @@ export default function GestionPreinscripciones() {
     // Fetch only students with status 'Preinscripto'
     const { data: preinscriptos = [], isLoading, refetch } = useEstudiantes({
         estatus: 'Preinscripto',
-        archived: viewArchived
+        archived: viewArchived,
+        excluir_terciario: true
     });
 
     const handleSort = (field) => {

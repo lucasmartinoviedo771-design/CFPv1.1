@@ -242,7 +242,7 @@ def analytics_dropout(request, programa_id: int = None, cohorte_id: int = None, 
         threshold = (parse_date(date_to) or None)
         if threshold is None:
             from django.utils import timezone
-            threshold = timezone.now().date()
+            threshold = timezone.localdate()
         threshold = threshold - timedelta(weeks=lookback_weeks)
         active_student_ids = (
             Asistencia.objects.filter(fecha__gte=threshold, estudiante_id__in=qs.values_list("estudiante_id", flat=True))

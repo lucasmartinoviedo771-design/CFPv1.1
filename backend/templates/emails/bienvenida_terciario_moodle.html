@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso al Campus Virtual - Habilidades Digitales</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f5;
+            color: #333333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .wrapper {
+            width: 100%;
+            background-color: #f4f4f5;
+            padding: 40px 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .header {
+            background-color: #1a1f4e;
+            color: #ffffff;
+            padding: 35px 30px;
+            text-align: center;
+            border-bottom: 5px solid #f5c518;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .header h2 {
+            margin: 8px 0 0 0;
+            font-size: 15px;
+            font-weight: normal;
+            color: #b8ccd8;
+        }
+        .content {
+            padding: 40px 35px;
+        }
+        .welcome-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a1f4e;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .intro-text {
+            font-size: 15px;
+            margin-bottom: 30px;
+            color: #4b5563;
+        }
+        .step-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 25px;
+        }
+        .step-num {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #f5c518;
+            background-color: #1a1f4e;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .step-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1a1f4e;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .step-desc {
+            font-size: 14px;
+            color: #4b5563;
+            margin-bottom: 20px;
+        }
+        .btn-container {
+            text-align: left;
+            margin: 15px 0;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #1a1f4e;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #0f1230;
+        }
+        .btn-secondary {
+            background-color: #f5c518;
+            color: #1a1f4e !important;
+        }
+        .btn-secondary:hover {
+            background-color: #e0b30d;
+        }
+        .info-box {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px 20px;
+            border-radius: 0 6px 6px 0;
+            font-size: 14px;
+            color: #1e3a8a;
+            margin: 15px 0;
+        }
+        .footer {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            text-align: center;
+            padding: 30px 20px;
+            font-size: 13px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .footer a {
+            color: #f5c518;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <!-- Encabezado con marca del Terciario -->
+            <div class="header">
+                <h1>Centro Politécnico Superior</h1>
+                <h2>Tecnicatura Superior en Ciencia de Datos e Inteligencia Artificial</h2>
+            </div>
+            
+            <div class="content">
+                <p class="welcome-text">¡Hola, {{ nombre }}!</p>
+                <p class="intro-text">
+                    ¡Te damos la bienvenida al Centro Politécnico Superior! A continuación, te compartimos toda la información necesaria para ingresar y cursar el taller de **Habilidades Digitales**.
+                </p>
+                
+                <!-- Banner de Habilidades Digitales -->
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <img src="https://politecnico.ar/cfp/banner_habilidades_digitales.png" alt="Módulo Habilidades Digitales" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                </div>
+
+                <!-- Caja de Detalles del Módulo -->
+                <div class="info-box" style="background-color: #f8fafc; border-left: 4px solid #f5c518; color: #1a1f4e; padding: 18px; margin-bottom: 25px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 15px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #1a1f4e;">
+                        📋 Información Clave del Módulo
+                    </h4>
+                    <table style="width: 100%; font-size: 14px; border-collapse: collapse; color: #4b5563;">
+                        <tr>
+                            <td style="padding: 4px 0; font-weight: bold; width: 150px; color: #1a1f4e;">Modalidad:</td>
+                            <td style="padding: 4px 0;">Virtual</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0; font-weight: bold; color: #1a1f4e;">Encuentros Sincrónicos:</td>
+                            <td style="padding: 4px 0;">Lunes y Viernes de 19:00 hs a 20:20 hs</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0; font-weight: bold; color: #1a1f4e;">Examen Final / Parcial:</td>
+                            <td style="padding: 4px 0;">Se rinde de manera virtual y estará habilitado a partir del <b>11-06-2026</b>.</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0; font-weight: bold; color: #1a1f4e;">Examen:</td>
+                            <td style="padding: 4px 0; font-style: italic; color: #16a34a;">Recordá que si bien no hay un plazo fijo para rendir, la finalización de esta capacitación te brindará un certificado que puede ser beneficioso en tu futuro personal y laboral.</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- PASO 1: Creación de Usuario -->
+                <div class="step-card">
+                    <span class="step-num">Paso 1</span>
+                    <h3 class="step-title">Crear tu usuario en el Campus Virtual</h3>
+                    <p class="step-desc">
+                        Para poder cursar, primero necesitás tener una cuenta en nuestra plataforma Moodle. Si ya tenés una cuenta del CFP, podés usarla. Si no, seguí los pasos detallados en el siguiente videotutorial para registrarte.
+                    </p>
+                    
+                    <div class="btn-container">
+                        <a href="https://drive.google.com/file/d/1yeBuJ3bHig6-pLYmiqZ0UW1mx9r81Mpe/view" class="btn btn-secondary" target="_blank">🎥 Ver Video Tutorial de Registro</a>
+                    </div>
+                </div>
+
+                <!-- PASO 2: Acceso y Matriculación -->
+                <div class="step-card">
+                    <span class="step-num">Paso 2</span>
+                    <h3 class="step-title">Ingresar al Aula y Comenzar</h3>
+                    <p class="step-desc">
+                        Una vez que tengas tu usuario creado y hayas iniciado sesión en el campus, ingresá al enlace de la materia de Habilidades Digitales correspondiente a la Tecnicatura e inscribite en el curso:
+                    </p>
+                    
+                    <div class="btn-container">
+                        <a href="https://politecnico.ar/campus/course/view.php?id=122" class="btn" target="_blank">💻 Acceder al Aula Virtual (ID 122)</a>
+                    </div>
+                    
+                    <div class="info-box">
+                        💡 <b>Nota de Acceso:</b> El aula está configurada para acceso directo de estudiantes del Terciario.
+                    </div>
+                </div>
+                
+                <p style="font-size: 14px; color: #64748b; font-style: italic; margin-top: 30px;">
+                    Te recomendamos realizar estos pasos con anticipación para familiarizarte con el campus virtual antes del inicio de las clases sincrónicas.
+                </p>
+            </div>
+            
+            <!-- Pie de página -->
+            <div class="footer">
+                <p><strong>Centro Politécnico Superior "Malvinas Argentinas"</strong></p>
+                <p>Río Grande - Ushuaia - Tolhuin, Tierra del Fuego</p>
+                
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #334155; text-align: left; font-size: 12px; color: #94a3b8;">
+                    <p style="margin: 0 0 8px 0; font-weight: bold; color: #e2e8f0; text-align: center;">📬 Contactos de Tutoría por localidad (ante dudas o inconvenientes):</p>
+                    <div style="margin-bottom: 5px;">📍 <b>Río Grande:</b> <a href="mailto:Tutoria.cetns.rg@gmail.com" style="color: #f5c518; text-decoration: none;">Tutoria.cetns.rg@gmail.com</a></div>
+                    <div style="margin-bottom: 5px;">📍 <b>Ushuaia:</b> <a href="mailto:Tutoria.cetns.ush@tdf.edu.ar" style="color: #f5c518; text-decoration: none;">Tutoria.cetns.ush@tdf.edu.ar</a></div>
+                    <div style="margin-bottom: 5px;">📍 <b>Tolhuin:</b> <a href="mailto:Tutoria.cetns.tol@tdf.edu.ar" style="color: #f5c518; text-decoration: none;">Tutoria.cetns.tol@tdf.edu.ar</a></div>
+                </div>
+
+                <p style="margin-top: 20px; font-size: 11px; color: #64748b; font-style: italic; font-weight: normal; line-height: 1.4;">
+                    Este es un mensaje automático generado por el sistema de gestión del CFP. Por favor, no respondas a este correo.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

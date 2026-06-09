@@ -268,3 +268,37 @@ def enviar_correo_nivelacion(estudiante_id: int):
     except Exception as e:
         logger.error(f"Error enviando correo de nivelación: {str(e)}")
         return False
+
+
+def enviar_correo_bienvenida_terciario(preinscripcion) -> bool:
+    """
+    Envía el correo de bienvenida del Terciario (Habilidades Digitales en Moodle).
+    """
+    try:
+        from django.core.mail import EmailMessage
+        from django.template.loader import render_to_string
+        from django.utils import timezone
+        
+        nombre_completo = f"{preinscripcion.nombre} {preinscripcion.apellido}".strip()
+        html_content = render_to_string('emails/bienvenida_terciario_moodle.html', {
+            'nombre': nombre_completo
+        })
+        
+        email = EmailMessage(
+            subject='Acceso al Campus Virtual - Habilidades Digitales',
+            body=html_content,
+            from_email=settings.TERCIARIO_FROM_EMAIL,
+            to=[preinscripcion.email],
+        )
+        email.content_subtype = "html"
+        email.send(fail_silently=False)
+        
+        # Registrar fecha de envío
+        preinscripcion.correo_bienvenida_at = timezone.now()
+        preinscripcion.save(update_fields=['correo_bienvenida_at'])
+        
+        logger.info(f"Correo de bienvenida Terciario enviado exitosamente a {preinscripcion.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Error enviando correo de bienvenida Terciario a {preinscripcion.email}: {str(e)}")
+        return False
