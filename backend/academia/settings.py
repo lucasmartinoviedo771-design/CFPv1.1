@@ -117,6 +117,9 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True  # Habilitado para HTTPS (Cloudflare)
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 año
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
     X_FRAME_OPTIONS = 'SAMEORIGIN'  # Evita clickjacking pero permite embebido dentro del mismo dominio
     # Detrás de Cloudflare/nginx (terminan TLS), Django recibe la request por HTTP.
     # Esta cabecera le indica que el origen fue HTTPS, para que request.is_secure()
