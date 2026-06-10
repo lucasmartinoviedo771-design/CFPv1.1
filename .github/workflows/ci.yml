@@ -1,0 +1,55 @@
+name: Django CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: cfp_test_db
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc default-libmysqlclient-dev pkg-config libmagic1
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements-dev.txt
+
+    - name: Run tests
+      env:
+        SECRET_KEY: 'django-insecure-test-secret-key-for-ci-pipeline-execution'
+        DJANGO_SECRET_KEY: 'django-insecure-test-secret-key-for-ci-pipeline-execution'
+        DJANGO_DEBUG: 'True'
+        DB_ENGINE: 'django.db.backends.mysql'
+        DB_NAME: 'cfp_test_db'
+        DB_USER: 'root'
+        DB_PASSWORD: ''
+        DB_HOST: '127.0.0.1'
+        DB_PORT: '3306'
+      run: |
+        cd backend
+        python manage.py test

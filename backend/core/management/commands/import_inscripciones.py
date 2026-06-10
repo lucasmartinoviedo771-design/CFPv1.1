@@ -15,25 +15,23 @@ COLS = {
     "Barrio y ciudad": "barrio",
     "Fecha de Nacimiento": "fecha_nacimiento",
     "Sexo": "sexo",
-    "CUIL": "cuil",
+    "CUIL": "cuit",
     "País de Nacimiento": "pais_nacimiento",
     "Nacionalidad": "nacionalidad",
     "Lugar de Nacimiento": "lugar_nacimiento",
     "Estudios de nivel alcanzado": "nivel_educativo",
     "¿Posee pc en su domicilio?": "posee_pc",
     "¿Posee conectividad a internet?": "posee_conectividad",
-    "¿Puede asistir a clase con su computadora personal?": "asistir_con_pc",
+    "¿Puede asistir a clase con su computadora personal?": "puede_traer_pc",
     "¿Trabaja?": "trabaja",
     "Lugar de trabajo": "lugar_trabajo",
-    "DNI Digitalizado": "dni_digitalizado",
 }
 
 BOOL_COLS = [
     "posee_pc",
     "posee_conectividad",
-    "asistir_con_pc",
+    "puede_traer_pc",
     "trabaja",
-    "dni_digitalizado",
 ]
 
 class Command(BaseCommand):
@@ -61,10 +59,13 @@ class Command(BaseCommand):
             defaults = {}
             for src, dst in COLS.items():
                 val = str(r.get(src, "")).strip()
-                if dst == "fecha_nacimiento" and val:
-                    try:
-                        val = pd.to_datetime(val, dayfirst=True, errors="coerce").date()
-                    except Exception:
+                if dst == "fecha_nacimiento":
+                    if val:
+                        try:
+                            val = pd.to_datetime(val, dayfirst=True, errors="coerce").date()
+                        except Exception:
+                            val = None
+                    else:
                         val = None
                 if dst in BOOL_COLS:
                     val = val.lower() == "si"
