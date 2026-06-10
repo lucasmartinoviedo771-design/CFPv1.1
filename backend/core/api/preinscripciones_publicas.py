@@ -1,5 +1,8 @@
+import logging
 from datetime import date, timedelta
 import html
+
+logger = logging.getLogger(__name__)
 import json
 from typing import List, Optional
 import unicodedata
@@ -448,7 +451,7 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
             enviar_correo_nivelacion(estudiante.id)
 
     except Exception as e:
-        print(f"Error enviando email de confirmación: {e}")
+        logger.error(f"Error enviando email de confirmación: {e}")
 
 
 from core.utils.rate_limit import ip_rate_limit

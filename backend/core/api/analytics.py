@@ -5,6 +5,7 @@ from django.utils.dateparse import parse_date
 from ninja import Router
 from ninja.errors import HttpError
 from core.api.permissions import require_authenticated_group
+from core.utils.cache_analytics import cache_analytics
 
 from core.models import Inscripcion, Asistencia, Nota, Estudiante, Cohorte, Bloque, Examen, Programa
 
@@ -13,6 +14,7 @@ router = Router(tags=["analytics"])
 
 @router.get("/inscriptos", response=list)
 @require_authenticated_group
+@cache_analytics()
 def inscriptos(request):
     qs = Inscripcion.objects.values("cohorte__programa__codigo", "cohorte__nombre").annotate(inscriptos=Count("id"))
     return list(qs)
@@ -20,6 +22,7 @@ def inscriptos(request):
 
 @router.get("/asistencia-promedio", response=list)
 @require_authenticated_group
+@cache_analytics()
 def asistencia_promedio(request):
     qs = (
         Asistencia.objects.values("modulo__id", "modulo__nombre")
@@ -31,6 +34,7 @@ def asistencia_promedio(request):
 
 @router.get("/aprobacion-por-examen", response=list)
 @require_authenticated_group
+@cache_analytics()
 def aprobacion_por_examen(request):
     qs = (
         Nota.objects.values("examen__modulo__id", "examen__tipo_examen")
@@ -42,6 +46,7 @@ def aprobacion_por_examen(request):
 
 @router.get("/equivalencias", response=list)
 @require_authenticated_group
+@cache_analytics()
 def equivalencias(request):
     qs = Nota.objects.filter(es_equivalencia=True).values("examen__modulo__id").annotate(count=Count("id"))
     return list(qs)
@@ -49,6 +54,7 @@ def equivalencias(request):
 
 @router.get("/enrollments", response=dict)
 @require_authenticated_group
+@cache_analytics()
 def analytics_enrollments(
     request,
     programa_id: int = None,
@@ -90,6 +96,7 @@ def analytics_enrollments(
 
 @router.get("/attendance", response=dict)
 @require_authenticated_group
+@cache_analytics()
 def analytics_attendance(
     request,
     programa_id: int = None,
@@ -166,6 +173,7 @@ def analytics_attendance(
 
 @router.get("/grades", response=dict)
 @require_authenticated_group
+@cache_analytics()
 def analytics_grades(
     request,
     programa_id: int = None,
@@ -221,6 +229,7 @@ def analytics_grades(
 
 @router.get("/dropout", response=dict)
 @require_authenticated_group
+@cache_analytics()
 def analytics_dropout(request, programa_id: int = None, cohorte_id: int = None, date_from: str = None, date_to: str = None, rule: str = "A", lookback_weeks: int = 3):
     rule = (rule or "A").upper()
     qs = Inscripcion.objects.select_related("estudiante", "cohorte__programa")
@@ -296,6 +305,7 @@ def analytics_dropout(request, programa_id: int = None, cohorte_id: int = None, 
 
 @router.get("/graduates", response=dict)
 @require_authenticated_group
+@cache_analytics()
 def analytics_graduates(request, programa_id: int = None, bloque_id: int = None, cohorte_id: int = None):
     programa = None
     if cohorte_id and not programa_id:
@@ -385,6 +395,7 @@ def analytics_graduates(request, programa_id: int = None, bloque_id: int = None,
 
 @router.get("/courses-graph", response=dict)
 @require_authenticated_group
+@cache_analytics()
 def courses_graph(
     request,
     programa_id: int,

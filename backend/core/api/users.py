@@ -1,5 +1,8 @@
+import logging
 from typing import List
 from django.contrib.auth.models import User, Group
+
+logger = logging.getLogger(__name__)
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from django.conf import settings
@@ -129,10 +132,10 @@ Por favor, ingresa y cambia tu contraseña lo antes posible.
             # Marcar como enviado
             profile.credentials_sent_at = timezone.now()
             profile.save()
-            print(f"✅ Email de credenciales enviado exitosamente a {user.email}")
+            logger.info(f"Email de credenciales enviado a {user.email}")
             
         except Exception as e:
-            print(f"Error enviando email a {user.email}: {e}")
+            logger.error(f"Error enviando email a {user.email}: {e}")
 
     return user
 
@@ -341,7 +344,7 @@ Link: {getattr(settings, 'FRONTEND_URL', 'https://cfp.lucasoviedodev.org')}/logi
         
         profile.credentials_sent_at = timezone.now()
         profile.save()
-        print(f"✅ Email de regeneración enviado a {user.email}")
+        logger.info(f"Email de regeneración enviado a {user.email}")
         return {
             "success": True,
             "email_sent": True,
@@ -350,7 +353,7 @@ Link: {getattr(settings, 'FRONTEND_URL', 'https://cfp.lucasoviedodev.org')}/logi
             "sent_at": profile.credentials_sent_at.isoformat(),
         }
     except Exception as e:
-        print(f"Error enviando email regeración a {user.email}: {e}")
+        logger.error(f"Error enviando email de regeneración a {user.email}: {e}")
         return {
             "success": True,
             "email_sent": False,

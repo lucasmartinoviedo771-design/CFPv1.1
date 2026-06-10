@@ -1,4 +1,7 @@
+import logging
 from core.models import Estudiante, NivelacionDigital
+
+logger = logging.getLogger(__name__)
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Router, Schema
@@ -204,7 +207,7 @@ def submit_test(request, token: str, payload: SubmitSchema):
                 nivelacion.modulo_asignado = target_module
 
     except Exception as e:
-        print(f"Error en auto-inscripcion: {e}")
+        logger.error(f"Error en auto-inscripción: {e}")
 
     nivelacion.save()
     
