@@ -61,7 +61,8 @@ ENV/
 
 # Database volumes
 data/
-backups/
+backups/*
+!backups/README.md
 *.sql
 *.dump
 
