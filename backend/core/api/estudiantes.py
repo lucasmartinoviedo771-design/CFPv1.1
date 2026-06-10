@@ -11,7 +11,7 @@ from core.models import Estudiante, PreinscripcionTerciario
 from core.serializers import EstudianteSerializer
 from core.services.email_service import enviar_correo_bienvenida
 from core.services.export_service import ExportService
-from .schemas import EstudianteDetailOut, EstudianteIn
+from .schemas import EstudianteDetailOut, EstudianteIn, EstudianteListOut
 
 class BulkIdsIn(Schema):
     ids: List[int]
@@ -32,7 +32,7 @@ class ExportIn(Schema):
 router = Router(tags=["estudiantes"])
 
 
-@router.get("", response=List[EstudianteDetailOut])
+@router.get("", response=List[EstudianteListOut])
 @require_authenticated_group
 def listar_estudiantes(
     request, 
