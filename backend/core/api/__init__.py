@@ -10,7 +10,6 @@ from .analytics import router as analytics_router
 from .bloques_fechas import router as bloques_fechas_router
 from .users import router as users_router
 from .dashboard import router as dashboard_router
-from .imports import router as imports_router
 from .historicos import router as historicos_router
 from .auth_endpoints import router as auth_endpoints_router
 from .user_info import router as user_info_router
@@ -35,7 +34,6 @@ __all__ = [
     "bloques_fechas_router",
     "users_router",
     "dashboard_router",
-    "imports_router",
     "historicos_router",
     "auth_endpoints_router",
     "user_info_router",

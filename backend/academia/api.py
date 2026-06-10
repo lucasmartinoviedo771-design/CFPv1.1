@@ -13,7 +13,6 @@ from core.api import (
     bloques_fechas_router,
     users_router,
     dashboard_router,
-    imports_router,
     historicos_router,
     auth_endpoints_router,
     user_info_router,
@@ -68,7 +67,6 @@ api.add_router("/horarios-cursada", horarios_cursada_router)
 api.add_router("/preinscripcion", preinscripciones_publicas_router, auth=None)
 api.add_router("", users_router)  # users/groups paths
 api.add_router("", dashboard_router)
-api.add_router("", imports_router)
 api.add_router("", historicos_router)
 api.add_router("", auth_endpoints_router, auth=None)  # login/refresh/logout
 api.add_router("", user_info_router)
