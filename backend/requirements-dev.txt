@@ -1,0 +1,11 @@
+# =============================================================
+#  requirements-dev.txt — dependencias de desarrollo/testing
+#  NO se instalan en la imagen de producción (ver Dockerfile).
+#  Uso local:  pip install -r requirements-dev.txt
+# =============================================================
+
+-r requirements.txt
+
+# Testing
+pytest==9.0.3
+pytest-django==4.9.0

@@ -32,9 +32,7 @@ pydantic==2.11.9
 pydantic-core==2.33.2
 typing_extensions==4.15.0
 
-# Testing (Standardization)
-pytest==8.3.4
-pytest-django==4.9.0
+# Image processing
 Pillow==12.2.0
 
 # Google API
