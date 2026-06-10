@@ -1,5 +1,5 @@
 # Django & Frameworks
-Django==5.2.6
+Django==5.2.15
 djangorestframework==3.16.1
 django-ninja==1.4.3
 django-cors-headers==4.8.0
@@ -14,7 +14,7 @@ drf-spectacular==0.29.0
 drf-spectacular-sidecar==2025.12.1
 
 # Server
-gunicorn==23.0.0
+gunicorn==26.0.0
 
 # Database
 mysqlclient==2.2.7
@@ -35,7 +35,7 @@ typing_extensions==4.15.0
 # Testing (Standardization)
 pytest==8.3.4
 pytest-django==4.9.0
-Pillow>=10.0.0
+Pillow==12.2.0
 
 # Google API
 google-api-python-client>=2.162.0
