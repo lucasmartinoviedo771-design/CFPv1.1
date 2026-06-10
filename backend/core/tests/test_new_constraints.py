@@ -1,7 +1,6 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from core.models import Programa, Bloque, Modulo, Cohorte, HorarioCursada, Examen, Estudiante, Nota, BloqueDeFechas
-from django.contrib.auth.models import User
 
 class NewConstraintsTests(TestCase):
     def setUp(self):

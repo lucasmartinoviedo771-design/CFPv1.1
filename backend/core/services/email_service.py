@@ -1,16 +1,11 @@
 import os.path
-import base64
 import logging
-from email.mime.text import MIMEText
 from django.conf import settings
 from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 
 from core.models import Estudiante, Inscripcion
 

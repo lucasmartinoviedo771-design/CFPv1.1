@@ -6,7 +6,7 @@ from django.conf import settings
 from django.utils import timezone
 from ninja import Router
 
-from core.serializers import UserSerializer, GroupSerializer
+from core.serializers import GroupSerializer
 from core.api.permissions import require_admin
 from core.api.schemas import UserIn, UserOut, ChangePasswordIn
 from core.models import UserProfile

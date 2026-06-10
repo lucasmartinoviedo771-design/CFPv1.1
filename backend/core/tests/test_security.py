@@ -2,7 +2,6 @@ from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-import json
 
 class SecurityTests(TestCase):
     def setUp(self):

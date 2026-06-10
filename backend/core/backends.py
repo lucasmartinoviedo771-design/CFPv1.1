@@ -1,6 +1,5 @@
 import base64
 import logging
-import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -8,7 +7,7 @@ from email import encoders
 
 from django.conf import settings
 from django.core.mail.backends.base import BaseEmailBackend
-from django.core.mail.message import EmailMessage, EmailMultiAlternatives
+from django.core.mail.message import EmailMultiAlternatives
 from .services.email_service import get_gmail_service
 
 logger = logging.getLogger(__name__)

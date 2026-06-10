@@ -39,6 +39,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r backend/requirements-dev.txt
 
+    - name: Lint - detectar imports/código muerto
+      run: |
+        pip install ruff
+        ruff check --select F401 backend/core backend/academia
+
     - name: Run tests
       env:
         SECRET_KEY: 'django-insecure-test-secret-key-for-ci-pipeline-execution'

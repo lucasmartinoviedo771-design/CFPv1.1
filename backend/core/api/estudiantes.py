@@ -7,11 +7,11 @@ from django.utils import timezone
 from ninja import Router, Schema, File, UploadedFile
 from django.http import HttpResponse
 from core.api.permissions import require_authenticated_group
-from core.models import Estudiante, Inscripcion, Nota, PreinscripcionTerciario
+from core.models import Estudiante, PreinscripcionTerciario
 from core.serializers import EstudianteSerializer
 from core.services.email_service import enviar_correo_bienvenida
 from core.services.export_service import ExportService
-from .schemas import EstudianteOut, EstudianteDetailOut, EstudianteIn
+from .schemas import EstudianteDetailOut, EstudianteIn
 
 class BulkIdsIn(Schema):
     ids: List[int]

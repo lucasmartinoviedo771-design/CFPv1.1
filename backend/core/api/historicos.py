@@ -1,9 +1,8 @@
-from typing import Dict, List
+from typing import List
 from ninja import Router, Schema
-from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
-from core.models import Cohorte, Nota, Asistencia, Inscripcion, Examen, Modulo, Bloque
+from core.models import Nota, Asistencia, Inscripcion
 from core.api.permissions import require_authenticated_group
 from core.serializers import NotaSerializer
 

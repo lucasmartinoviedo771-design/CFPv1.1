@@ -1,7 +1,5 @@
 from ninja import Router
-from django.contrib.auth import get_user_model
 from core.api.permissions import require_authenticated_group
-from core.models import UserProfile
 
 router = Router(tags=["user"])
 

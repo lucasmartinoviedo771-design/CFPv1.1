@@ -1,5 +1,5 @@
 from datetime import timedelta
-from django.db.models import Avg, Count, Exists, OuterRef, Q
+from django.db.models import Avg, Count, Q
 from django.db.models.functions import TruncMonth, TruncWeek
 from django.utils.dateparse import parse_date
 from ninja import Router

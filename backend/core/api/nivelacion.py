@@ -1,11 +1,10 @@
-from core.models import Estudiante, NivelacionDigital, Modulo
+from core.models import Estudiante, NivelacionDigital
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Router, Schema
 from core.api.permissions import require_admin
 from core.utils.rate_limit import ip_rate_limit
 
-import uuid
 from typing import Dict, Any
 
 class SubmitSchema(Schema):

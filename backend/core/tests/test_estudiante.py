@@ -2,8 +2,7 @@
 Tests para el modelo Estudiante
 """
 from django.test import TestCase
-from django.core.exceptions import ValidationError
-from core.models import Estudiante, Bloque, Programa, Modulo, Examen, Nota
+from core.models import Estudiante, Bloque, Programa, Examen, Nota
 
 
 class EstudianteModelTest(TestCase):

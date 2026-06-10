@@ -1,5 +1,4 @@
 from ninja import Router
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.throttling import AnonRateThrottle
 from ninja.errors import HttpError

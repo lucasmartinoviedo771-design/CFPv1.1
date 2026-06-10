@@ -1,14 +1,10 @@
 from ninja import Router, Schema
 from ninja.errors import HttpError
-from django.utils import timezone
-from django.db import transaction
 from typing import Optional, List, Any
-from datetime import date
 import html
 import re
 from ..models import PreinscripcionTerciario, Inscripcion, Modulo, Cohorte, Estudiante, ConfiguracionPreinscripcionTerciario
 import threading
-from django.core.mail import send_mail
 from django.conf import settings
 
 MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024  # 3MB

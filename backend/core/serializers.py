@@ -1,7 +1,6 @@
 # backend/core/serializers.py
 import re
 from rest_framework import serializers
-from django.db.models import Q, Avg, Count
 from .models import (
     Resolucion, Estudiante, Programa, Bloque, Modulo, Examen, Nota, Asistencia, 
     Inscripcion, BloqueDeFechas, SemanaConfig, Cohorte
@@ -10,7 +9,6 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import User, Group
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
-from django.conf import settings
 from .roles import list_roles
 from .utils.estudiante_normalization import (
     normalize_dni_digits,

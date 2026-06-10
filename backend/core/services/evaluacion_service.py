@@ -12,7 +12,7 @@ Implementa las reglas de negocio para:
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
-from core.models import Nota, Examen, Estudiante, Bloque, Modulo, Cohorte, Inscripcion
+from core.models import Nota, Examen, Bloque, Modulo, Cohorte, Inscripcion
 
 
 class EvaluacionService:
