@@ -253,7 +253,7 @@ class EstudianteDetailOut(EstudianteOut):
     @staticmethod
     def resolve_trayectos(obj):
         trayectos = set()
-        for i in obj.inscripciones.select_related("cohorte__programa", "modulo__bloque", "cohorte__bloque").all():
+        for i in obj.inscripciones.all():
             prog = (i.cohorte.programa.nombre or "S/P").strip()
             # Priorizamos el bloque del módulo, luego el de la cohorte
             bloque_obj = i.modulo.bloque if (i.modulo and i.modulo.bloque) else (i.cohorte.bloque if i.cohorte else None)
