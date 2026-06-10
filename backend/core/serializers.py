@@ -80,7 +80,35 @@ class EstudianteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Estudiante
-        fields = "__all__"
+        # Lista explícita en vez de "__all__": defensa en profundidad. Este serializer
+        # se instancia desde varios callers (estudiantes.py vía EstudianteIn, y
+        # preinscripciones_publicas.py vía dict propio). Con "__all__" la garantía de
+        # no escribir campos sensibles dependía de que CADA caller filtrara su input;
+        # con lista explícita + read_only_fields la garantía vive en el serializer y
+        # no se reabre si mañana aparece otro caller.
+        fields = [
+            "id",
+            "email", "apellido", "nombre", "dni", "cuit", "sexo", "fecha_nacimiento",
+            "pais_nacimiento", "pais_nacimiento_otro", "nacionalidad", "nacionalidad_otra",
+            "lugar_nacimiento",
+            "domicilio", "barrio", "ciudad", "telefono",
+            "nivel_educativo", "estatus",
+            "posee_pc", "posee_conectividad", "puede_traer_pc", "trabaja", "lugar_trabajo",
+            "dni_digitalizado", "titulo_secundario_digitalizado",
+            "tutor_nombre", "tutor_dni", "tutor_telefono", "dni_tutor_digitalizado",
+            "nota_parental_firmada",
+            "autorizacion_status", "autorizacion_token", "autorizacion_selfie", "autorizacion_fecha",
+            "is_active", "archived_at",
+            "created_at", "updated_at",
+            "trayectos",
+        ]
+        # Campos controlados por flujos dedicados (soft-delete, flujo de autorización)
+        # o automáticos: legibles pero NUNCA escribibles por el serializer.
+        read_only_fields = [
+            "is_active", "archived_at",
+            "autorizacion_token", "autorizacion_selfie", "autorizacion_fecha",
+            "created_at", "updated_at",
+        ]
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
