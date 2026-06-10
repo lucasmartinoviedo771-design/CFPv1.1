@@ -49,8 +49,12 @@ def listar_estudiantes(
     rango_edad: Optional[str] = None, # "menores", "mayores"
     excluir_terciario: Optional[bool] = False,
 ):
-    qs = Estudiante.objects.filter(is_active=not archived).prefetch_related(
-        "inscripciones__cohorte__programa", "inscripciones__cohorte__bloque"
+    qs = Estudiante.objects.filter(is_active=not archived).select_related(
+        "nivelacion_digital"
+    ).prefetch_related(
+        "inscripciones__cohorte__programa",
+        "inscripciones__cohorte__bloque",
+        "inscripciones__modulo__bloque",
     ).order_by("apellido", "nombre")
     if excluir_terciario:
         dni_terciarios = PreinscripcionTerciario.objects.values_list('dni', flat=True)
