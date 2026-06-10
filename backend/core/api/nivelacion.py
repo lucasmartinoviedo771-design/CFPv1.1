@@ -2,6 +2,8 @@ from core.models import Estudiante, NivelacionDigital, Modulo
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Router, Schema
+from core.api.permissions import require_admin
+from core.utils.rate_limit import ip_rate_limit
 
 import uuid
 from typing import Dict, Any
@@ -13,7 +15,8 @@ class SubmitSchema(Schema):
 
 router = Router()
 
-@router.post("/generate/{student_id}", auth=None) # Normally needs auth, but let's see current pattern
+@router.post("/generate/{student_id}") # Inherits global JWT authentication
+@require_admin
 def generate_token(request, student_id: int):
     estudiante = get_object_or_404(Estudiante, id=student_id)
     from core.services.email_service import enviar_correo_nivelacion
@@ -84,11 +87,17 @@ QUESTIONS = [
     }
 ]
 
-@router.get("/questions")
+QUESTIONS_PUBLIC = [
+    {k: v for k, v in q.items() if k != "correct"}
+    for q in QUESTIONS
+]
+
+@router.get("/questions", auth=None)
 def get_questions(request):
-    return {"questions": QUESTIONS}
+    return {"questions": QUESTIONS_PUBLIC}
 
 @router.get("/test/{token}", auth=None)
+@ip_rate_limit(limit=10, period=3600)
 def get_test(request, token: str):
     nivelacion = get_object_or_404(NivelacionDigital, token=token)
     if nivelacion.completado:
@@ -96,11 +105,12 @@ def get_test(request, token: str):
     
     return {
         "student_name": f"{nivelacion.estudiante.nombre} {nivelacion.estudiante.apellido}",
-        "questions": QUESTIONS
+        "questions": QUESTIONS_PUBLIC
     }
 
 
 @router.post("/submit/{token}", auth=None)
+@ip_rate_limit(limit=10, period=3600)
 def submit_test(request, token: str, payload: SubmitSchema):
     nivelacion = get_object_or_404(NivelacionDigital, token=token)
 
@@ -110,14 +120,9 @@ def submit_test(request, token: str, payload: SubmitSchema):
     answers = payload.answers
     wants_module1 = payload.wants_module1 # Estudiante desea Módulo 1 incluso si aprobó (porque es presencial)
 
-    
-    # Logic to grade
-    questions_data = get_test(request, token)
-    if "error" in questions_data: return questions_data
-    questions = questions_data["questions"]
-    
+    # Logic to grade (uses the server-side list with correct answers)
     score = 0
-    for q in questions:
+    for q in QUESTIONS:
         if str(q["id"]) in answers:
             if int(answers[str(q["id"])]) == q["correct"]:
                 score += 1

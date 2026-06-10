@@ -451,7 +451,10 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
         print(f"Error enviando email de confirmación: {e}")
 
 
+from core.utils.rate_limit import ip_rate_limit
+
 @router.post("", response=PreinscripcionOut, auth=None)
+@ip_rate_limit(limit=10, period=3600)
 def crear_preinscripcion_publica(request):
     post = request.POST
     files = request.FILES

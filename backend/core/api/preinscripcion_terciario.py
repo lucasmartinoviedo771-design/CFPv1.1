@@ -360,7 +360,10 @@ def set_config_preinscripcion(
     return _cfg_to_dict(cfg)
 
 
+from core.utils.rate_limit import ip_rate_limit
+
 @router.post("/preinscripcion-terciario", auth=None)
+@ip_rate_limit(limit=10, period=3600)
 def crear_preinscripcion_terciario(request):
     """Acepta multipart/form-data con archivos opcionales."""
     cfg = ConfiguracionPreinscripcionTerciario.get()

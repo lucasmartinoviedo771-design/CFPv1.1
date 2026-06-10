@@ -76,6 +76,19 @@ def refresh_token(request):
         raise HttpError(401, "No hay sesión activa.")
     try:
         token = RefreshToken(refresh)
+        
+        # SimpleJWT token rotation
+        from rest_framework_simplejwt.settings import api_settings
+        if api_settings.ROTATE_REFRESH_TOKENS:
+            if api_settings.BLACKLIST_AFTER_ROTATION:
+                try:
+                    token.blacklist()
+                except AttributeError:
+                    pass
+            token.set_jti()
+            token.set_exp()
+            token.set_iat()
+            
         new_access = str(token.access_token)
         new_refresh = str(token)
         response = JsonResponse({"detail": "Token renovado."})
