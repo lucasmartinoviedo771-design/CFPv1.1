@@ -224,6 +224,34 @@ class EstudianteOut(Schema):
     barrio: Optional[str] = None
 
 
+class EstudianteListOut(Schema):
+    """Schema liviano para el LISTADO de estudiantes (solo campos de la tabla).
+    El detalle completo se sirve con EstudianteDetailOut en /estudiantes/{id}."""
+    id: int
+    apellido: str
+    nombre: str
+    email: str
+    dni: str
+    estatus: str
+    ciudad: Optional[str] = None
+    telefono: Optional[str] = None
+    fecha_nacimiento: Optional[date] = None
+    trayectos: List[str] = []
+
+    @staticmethod
+    def resolve_trayectos(obj):
+        trayectos = set()
+        for i in obj.inscripciones.all():   # usa el prefetch del endpoint (sin select_related interno)
+            prog = (i.cohorte.programa.nombre or "S/P").strip()
+            bloque_obj = i.modulo.bloque if (i.modulo and i.modulo.bloque) else (i.cohorte.bloque if i.cohorte else None)
+            bloque_nombre = bloque_obj.nombre.strip() if bloque_obj else None
+            if bloque_nombre:
+                trayectos.add(f"{prog} ({bloque_nombre})")
+            else:
+                trayectos.add(prog)
+        return sorted(list(trayectos))
+
+
 class EstudianteDetailOut(EstudianteOut):
     sexo: Optional[str] = None
     pais_nacimiento: Optional[str] = None
