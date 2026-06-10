@@ -71,6 +71,10 @@ MIDDLEWARE = [
 ]
 
 # CORS Configuration
+# ⚠️ SEGURIDAD: NO activar CORS_ALLOW_ALL_ORIGINS=True junto con
+# CORS_ALLOW_CREDENTIALS=True (más abajo). Esa combinación permitiría que
+# CUALQUIER origen haga requests autenticadas con credenciales → fuga de datos.
+# Mantener siempre la allowlist explícita en CORS_ALLOWED_ORIGINS.
 CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS",
@@ -114,6 +118,12 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'SAMEORIGIN'  # Evita clickjacking pero permite embebido dentro del mismo dominio
+    # Detrás de Cloudflare/nginx (terminan TLS), Django recibe la request por HTTP.
+    # Esta cabecera le indica que el origen fue HTTPS, para que request.is_secure()
+    # devuelva True (necesario para cookies Secure y validación CSRF correctas).
+    # Seguro porque el proxy SIEMPRE fija X-Forwarded-Proto y Django nunca queda
+    # expuesto directo; nunca poner esto si el backend fuera accesible sin proxy.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 ROOT_URLCONF = "academia.urls"
 

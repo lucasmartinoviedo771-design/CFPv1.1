@@ -9,6 +9,7 @@ from .models import (
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import User, Group
 from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
 from django.conf import settings
 from .roles import list_roles
 from .utils.estudiante_normalization import (
@@ -443,7 +444,13 @@ class UserSerializer(serializers.ModelSerializer):
         # Generate password if not provided
         generated_password = None
         if not password:
-            password = User.objects.make_random_password()
+            # Django 5.1 removió User.objects.make_random_password() (era un wrapper
+            # de get_random_string). Reemplazo equivalente y cripto-seguro
+            # (get_random_string usa secrets.choice). Alfabeto sin caracteres
+            # ambiguos (0/O/1/l/I) porque la contraseña se envía por email y se tipea.
+            password = get_random_string(
+                12, "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+            )
             generated_password = password
 
         # Create user instance safely
