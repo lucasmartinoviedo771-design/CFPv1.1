@@ -140,3 +140,72 @@ class PreinscripcionesPublicasTests(TestCase):
         resp = self.client.post("/api/v2/preinscripcion", post_data, format="multipart")
         self.assertEqual(resp.status_code, 400)
         self.assertIn("reCAPTCHA", resp.json()["detail"])
+
+
+class RecaptchaVerifyTests(TestCase):
+    @patch('urllib.request.urlopen')
+    def test_recaptcha_success(self, mock_urlopen):
+        from django.test import override_settings
+        from core.utils.recaptcha import verify_recaptcha
+        import json
+        
+        # Mock successful response
+        mock_response = io.BytesIO(json.dumps({'success': True, 'score': 0.9}).encode('utf-8'))
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        
+        with override_settings(RECAPTCHA_SECRET_KEY='test_secret', DEBUG=False):
+            self.assertTrue(verify_recaptcha('some_token'))
+
+    @patch('urllib.request.urlopen')
+    def test_recaptcha_low_score(self, mock_urlopen):
+        from django.test import override_settings
+        from core.utils.recaptcha import verify_recaptcha
+        import json
+        
+        # Mock low score
+        mock_response = io.BytesIO(json.dumps({'success': True, 'score': 0.1}).encode('utf-8'))
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+        
+        with override_settings(RECAPTCHA_SECRET_KEY='test_secret', DEBUG=False):
+            self.assertFalse(verify_recaptcha('some_token'))
+
+    @patch('urllib.request.urlopen')
+    def test_recaptcha_fail_closed_in_production(self, mock_urlopen):
+        from django.test import override_settings
+        from core.utils.recaptcha import verify_recaptcha
+        
+        # Mock exception
+        mock_urlopen.side_effect = Exception("Connection timed out")
+        
+        # In production (DEBUG=False), it should fail closed (return False)
+        with override_settings(RECAPTCHA_SECRET_KEY='test_secret', DEBUG=False):
+            self.assertFalse(verify_recaptcha('some_token'))
+
+    @patch('urllib.request.urlopen')
+    def test_recaptcha_fail_open_in_debug(self, mock_urlopen):
+        from django.test import override_settings
+        from core.utils.recaptcha import verify_recaptcha
+        
+        # Mock exception
+        mock_urlopen.side_effect = Exception("Connection timed out")
+        
+        # In development (DEBUG=True), it should fail open (return True)
+        with override_settings(RECAPTCHA_SECRET_KEY='test_secret', DEBUG=True):
+            self.assertTrue(verify_recaptcha('some_token'))
+
+    def test_recaptcha_missing_key_production(self):
+        from django.test import override_settings
+        from core.utils.recaptcha import verify_recaptcha
+        
+        # In production (DEBUG=False), missing key should fail closed
+        with override_settings(RECAPTCHA_SECRET_KEY='', DEBUG=False):
+            self.assertFalse(verify_recaptcha('some_token'))
+
+    def test_recaptcha_missing_key_debug(self):
+        from django.test import override_settings
+        from core.utils.recaptcha import verify_recaptcha
+        
+        # In development (DEBUG=True), missing key should fail open
+        with override_settings(RECAPTCHA_SECRET_KEY='', DEBUG=True):
+            self.assertTrue(verify_recaptcha('some_token'))
+

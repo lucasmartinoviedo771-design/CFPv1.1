@@ -13,8 +13,12 @@ def verify_recaptcha(token: str, action: str = "preinscripcion") -> bool:
     """
     secret_key = getattr(settings, 'RECAPTCHA_SECRET_KEY', None)
     if not secret_key:
-        logger.warning("RECAPTCHA_SECRET_KEY no está configurado en settings. Omitiendo validación.")
-        return True
+        if settings.DEBUG:
+            logger.warning("RECAPTCHA_SECRET_KEY no está configurado en settings. Omitiendo validación en DEBUG.")
+            return True
+        else:
+            logger.error("RECAPTCHA_SECRET_KEY no está configurado en settings. Denegando acceso en producción.")
+            return False
         
     if settings.DEBUG and not token:
         logger.info("Modo DEBUG activo y token de reCAPTCHA ausente. Omitiendo validación.")
@@ -35,18 +39,27 @@ def verify_recaptcha(token: str, action: str = "preinscripcion") -> bool:
         with urllib.request.urlopen(req, timeout=5) as response:
             result = json.loads(response.read().decode('utf-8'))
             
+        error_codes = result.get('error-codes', [])
+        score = result.get('score', 0.0)
+        
         if not result.get('success'):
-            logger.error(f"Validación de reCAPTCHA falló: {result.get('error-codes')}")
+            logger.error(f"Validación de reCAPTCHA falló. Error codes: {error_codes}. Score: {score}")
             return False
             
+        # Registrar score de reCAPTCHA v3 para monitoreo
+        logger.info(f"reCAPTCHA validación exitosa. Score: {score} para la acción: {action}")
+        
         # Validar el score de reCAPTCHA v3 (umbral recomendado es 0.5)
-        score = result.get('score', 0.0)
         if score < 0.5:
-            logger.error(f"Score de reCAPTCHA bajo ({score}) para la acción {action}.")
+            logger.error(f"Score de reCAPTCHA bajo ({score}) para la acción {action}. Error codes: {error_codes}")
             return False
             
         return True
     except Exception as e:
         logger.error(f"Error al conectar con la API de reCAPTCHA: {e}")
-        # En caso de error de conexión/API caída, fallamos abierto para no bloquear a alumnos legítimos.
-        return True
+        if settings.DEBUG:
+            logger.info("Error de reCAPTCHA ignorado por estar en modo DEBUG (fail open).")
+            return True
+        else:
+            logger.error("Fallo de conexión de reCAPTCHA en producción. Fallando cerrado (fail closed).")
+            return False
