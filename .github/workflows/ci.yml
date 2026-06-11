@@ -46,8 +46,8 @@ jobs:
 
     - name: Run tests
       env:
-        SECRET_KEY: 'django-insecure-test-secret-key-for-ci-pipeline-execution'
-        DJANGO_SECRET_KEY: 'django-insecure-test-secret-key-for-ci-pipeline-execution'
+        SECRET_KEY: 'test-secret-key-for-ci-pipeline-execution-without-insecure-prefix'
+        DJANGO_SECRET_KEY: 'test-secret-key-for-ci-pipeline-execution-without-insecure-prefix'
         DJANGO_DEBUG: 'True'
         DB_ENGINE: 'django.db.backends.mysql'
         DB_NAME: 'cfp_test_db'
