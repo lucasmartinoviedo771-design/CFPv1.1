@@ -161,7 +161,7 @@ def validate_telefono(value):
 
 class Estudiante(TimeStamped):
     # --- Datos Personales Básicos ---
-    email = models.EmailField(help_text="Correo Electrónico")
+    email = models.EmailField(unique=True, help_text="Correo Electrónico")
     apellido = models.CharField(max_length=120)
     nombre = models.CharField(max_length=120, verbose_name="Nombres")
     dni = models.CharField(max_length=20, unique=True, db_index=True)
@@ -718,6 +718,7 @@ class PreinscripcionTerciario(TimeStamped):
         ordering = ['-created_at']
         constraints = [
             models.UniqueConstraint(fields=['dni'], name='uniq_preinscripcion_dni'),
+            models.UniqueConstraint(fields=['email'], name='uniq_preinscripcion_email'),
         ]
 
     @property

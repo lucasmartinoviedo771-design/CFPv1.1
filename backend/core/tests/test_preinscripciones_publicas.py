@@ -225,7 +225,7 @@ class PreinscripcionesPublicasTests(TestCase):
         
         resp2 = self.client.post("/api/v2/preinscripcion", post_data2, format="multipart")
         self.assertEqual(resp2.status_code, 400)
-        self.assertIn("correo electrónico", resp2.json().get("detail", ""))
+        self.assertIn("email", resp2.json().get("detail", "").lower())
 
 
 
