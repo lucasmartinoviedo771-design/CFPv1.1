@@ -191,30 +191,62 @@ const ProgressBar = ({ currentStep, totalSteps }) => {
   );
 };
 
+const STORAGE_KEY = "preinscripcion_videojuegos_v1";
+
+const INIT_FORM = {
+  apellido: "", nombre: "", email: "", DNI: "", cuit: "", sexo: "",
+  fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
+  nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
+  domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
+  posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
+  tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
+};
+
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { form: INIT_FORM, step: 1, bloquesSeleccionados: [] };
+    const parsed = JSON.parse(raw);
+    if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+      localStorage.removeItem(STORAGE_KEY);
+      return { form: INIT_FORM, step: 1, bloquesSeleccionados: [] };
+    }
+    return {
+      form: { ...INIT_FORM, ...parsed.form },
+      step: parsed.step || 1,
+      bloquesSeleccionados: parsed.bloquesSeleccionados || [],
+    };
+  } catch {
+    return { form: INIT_FORM, step: 1, bloquesSeleccionados: [] };
+  }
+}
+
 export default function PreinscripcionVideojuegos() {
+  const saved = useMemo(() => loadSaved(), []);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(saved.step);
   const [ofertaPrograma, setOfertaPrograma] = useState(null);
   const [config, setConfig] = useState({ abierta: true, fecha_inicio: null, fecha_fin: null });
 
   // Selección de bloques del estudiante (contendrá optativos elegidos + obligatorios bloqueados)
-  const [bloquesSeleccionados, setBloquesSeleccionados] = useState([]);
+  const [bloquesSeleccionados, setBloquesSeleccionados] = useState(saved.bloquesSeleccionados);
 
   const [dniFile, setDniFile] = useState(null);
   const [tituloFile, setTituloFile] = useState(null);
   const [dniTutorFile, setDniTutorFile] = useState(null);
 
-  const [form, setForm] = useState({
-    apellido: "", nombre: "", email: "", DNI: "", cuit: "", sexo: "",
-    fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
-    nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
-    domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
-    posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
-    tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
-  });
+  const [form, setForm] = useState(saved.form);
+
+  useEffect(() => {
+    const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ form, step, bloquesSeleccionados, expiresAt })
+    );
+  }, [form, step, bloquesSeleccionados]);
 
   useEffect(() => {
     const load = async () => {
@@ -241,7 +273,10 @@ export default function PreinscripcionVideojuegos() {
           const obligatoriosIds = (prog.bloques || [])
             .filter(b => !isOptativo(b.bloque_nombre))
             .map(b => b.bloque_id);
-          setBloquesSeleccionados(obligatoriosIds);
+          setBloquesSeleccionados(prev => {
+            const combined = new Set([...obligatoriosIds, ...prev]);
+            return Array.from(combined);
+          });
         }
       } catch (err) {
         setError("No se pudo cargar la oferta del programa de Videojuegos.");
@@ -425,15 +460,9 @@ export default function PreinscripcionVideojuegos() {
       });
 
       setOk(`¡Postulación registrada! Hemos recibido tus datos correctamente. Se ha enviado un correo a ${form.email} confirmando el registro.`);
+      localStorage.removeItem(STORAGE_KEY);
       setStep(1);
-      setForm({
-        apellido: "", nombre: "", email: "", DNI: "", cuit: "", sexo: "",
-        fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
-        nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
-        domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
-        posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
-        tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
-      });
+      setForm(INIT_FORM);
       setDniFile(null);
       setTituloFile(null);
       setDniTutorFile(null);

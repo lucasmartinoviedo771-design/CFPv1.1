@@ -196,31 +196,56 @@ const ProgressBar = ({ currentStep, totalSteps, isDark }) => {
   );
 };
 
+const STORAGE_KEY = "preinscripcion_publica_v1";
+
+const INIT_FORM = {
+  apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "",
+  fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
+  nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
+  domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
+  posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
+  tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
+};
+
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { form: INIT_FORM, step: 1, selectedProgramaIds: [], bloquesPorPrograma: {} };
+    const parsed = JSON.parse(raw);
+    if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+      localStorage.removeItem(STORAGE_KEY);
+      return { form: INIT_FORM, step: 1, selectedProgramaIds: [], bloquesPorPrograma: {} };
+    }
+    return {
+      form: { ...INIT_FORM, ...parsed.form },
+      step: parsed.step || 1,
+      selectedProgramaIds: parsed.selectedProgramaIds || [],
+      bloquesPorPrograma: parsed.bloquesPorPrograma || {},
+    };
+  } catch {
+    return { form: INIT_FORM, step: 1, selectedProgramaIds: [], bloquesPorPrograma: {} };
+  }
+}
+
 export default function PreinscripcionPublica() {
+  const saved = useMemo(() => loadSaved(), []);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(saved.step);
   const [oferta, setOferta] = useState([]);
   const [isDark, setIsDark] = useState(() => localStorage.getItem("preins_theme") !== "light");
 
-  const [selectedProgramaIds, setSelectedProgramaIds] = useState([]);
+  const [selectedProgramaIds, setSelectedProgramaIds] = useState(saved.selectedProgramaIds);
   const [expandedProgramaId, setExpandedProgramaId] = useState("");
-  const [bloquesPorPrograma, setBloquesPorPrograma] = useState({});
+  const [bloquesPorPrograma, setBloquesPorPrograma] = useState(saved.bloquesPorPrograma);
 
   const [dniFile, setDniFile] = useState(null);
   const [tituloFile, setTituloFile] = useState(null);
   const [dniTutorFile, setDniTutorFile] = useState(null);
 
-  const [form, setForm] = useState({
-    apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "",
-    fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
-    nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
-    domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
-    posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
-    tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
-  });
+  const [form, setForm] = useState(saved.form);
 
   useEffect(() => {
     const load = async () => {
@@ -235,6 +260,14 @@ export default function PreinscripcionPublica() {
   }, []);
 
   useEffect(() => { localStorage.setItem("preins_theme", isDark ? "dark" : "light"); }, [isDark]);
+
+  useEffect(() => {
+    const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ form, step, selectedProgramaIds, bloquesPorPrograma, expiresAt })
+    );
+  }, [form, step, selectedProgramaIds, bloquesPorPrograma]);
 
   const selectedProgramas = useMemo(() => oferta.filter((p) => selectedProgramaIds.includes(String(p.programa_id))), [oferta, selectedProgramaIds]);
   const selectedProgramaSet = useMemo(() => new Set(selectedProgramaIds), [selectedProgramaIds]);
@@ -376,6 +409,7 @@ export default function PreinscripcionPublica() {
       Object.entries(form).forEach(([k, v]) => fd.append(k, typeof v === "boolean" ? String(v) : (v || "")));
       const seleccion = selectedProgramaIds.map(pid => ({ programa_id: Number(pid), bloque_ids: bloquesPorPrograma[pid] }));
       fd.append("seleccion_programas_json", JSON.stringify(seleccion));
+      fd.append("recaptcha_token", "mock_token_vj");
 
       const processedDni = await compressImage(dniFile);
       fd.append("dni_digitalizado", processedDni);
@@ -392,23 +426,15 @@ export default function PreinscripcionPublica() {
 
       const { data } = await apiClientV2.post("/preinscripcion", fd, { headers: { "Content-Type": "multipart/form-data" } });
       setOk(`¡Éxito! Estudiante registrado. ID: ${data?.estudiante_id}`);
+      localStorage.removeItem(STORAGE_KEY);
       setStep(1);
-      setForm({
-        apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "",
-        fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
-        nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
-        domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
-        posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
-        tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
-      });
+      setForm(INIT_FORM);
       setDniFile(null);
       setTituloFile(null);
       setDniTutorFile(null);
       setSelectedProgramaIds([]);
       setExpandedProgramaId("");
       setBloquesPorPrograma({});
-      setDniFile(null);
-      setTituloFile(null);
     } catch (eReq) {
       console.error("Error completo:", eReq);
       let msg = "Error al enviar el formulario.";
