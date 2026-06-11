@@ -28,7 +28,7 @@ export const FooterVideojuegos = () => {
               </li>
               <li className="flex items-center text-gray-300 text-sm">
                 <Mail size={18} className="mr-2 text-[#00ccff] shrink-0" />
-                <span>videojuegos@politecnico.ar</span>
+                <span>estudiante.cfp@malvinastdf.edu.ar</span>
               </li>
             </ul>
           </div>

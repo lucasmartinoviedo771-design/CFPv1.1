@@ -83,7 +83,7 @@ function isOptativo(bloqueNombre) {
   return norm.includes("arte") || norm.includes("entornos virtuales") || norm.includes("animacion");
 }
 
-function DropFileField({ label, required, file, onFileChange }) {
+function DropFileField({ label, required, file, onFileChange, description }) {
   const [dragOver, setDragOver] = useState(false);
 
   const handleDrop = (e) => {
@@ -95,18 +95,25 @@ function DropFileField({ label, required, file, onFileChange }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <label className="block text-sm font-semibold text-indigo-200">
-          {label} {required && <span className="text-brand-accent">*</span>}
-        </label>
-        {file && (
-          <button
-            type="button"
-            onClick={() => onFileChange(null)}
-            className="text-xs flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
-          >
-            <X size={12} /> Limpiar
-          </button>
+      <div className="flex flex-col">
+        <div className="flex justify-between items-center">
+          <label className="block text-sm font-semibold text-indigo-200">
+            {label} {required && <span className="text-brand-accent">*</span>}
+          </label>
+          {file && (
+            <button
+              type="button"
+              onClick={() => onFileChange(null)}
+              className="text-xs flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
+            >
+              <X size={12} /> Limpiar
+            </button>
+          )}
+        </div>
+        {description && (
+          <p className="text-xs mt-1 text-indigo-300 leading-relaxed">
+            {description}
+          </p>
         )}
       </div>
       <label
@@ -728,7 +735,13 @@ export default function PreinscripcionVideojuegos() {
                       <DropFileField label="Copia DNI del Padre/Madre o Tutor (Obligatorio)" required file={dniTutorFile} onFileChange={setDniTutorFile} />
                     ) : (
                       Boolean(ofertaPrograma?.requiere_titulo_secundario) && (
-                        <DropFileField label="Copia de Título Secundario / Analítico" required file={tituloFile} onFileChange={setTituloFile} />
+                        <DropFileField
+                          label="Copia de Título Secundario / Analítico"
+                          required
+                          file={tituloFile}
+                          onFileChange={setTituloFile}
+                          description="Formatos permitidos: PDF o foto/imagen. Deben incluirse todas sus hojas, tanto el anverso como el reverso."
+                        />
                       )
                     )}
                   </div>

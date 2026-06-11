@@ -86,7 +86,7 @@ function isProgramadorNivelIII(programaNombre) {
   return norm.includes("programador de nivel iii") || norm.includes("programacion de nivel iii") || norm.includes("programacion (nivel iii)");
 }
 
-function DropFileField({ label, required, file, onFileChange, isDark }) {
+function DropFileField({ label, required, file, onFileChange, isDark, description }) {
   const [dragOver, setDragOver] = useState(false);
 
   const handleDrop = (e) => {
@@ -98,18 +98,25 @@ function DropFileField({ label, required, file, onFileChange, isDark }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <label className={`block text-sm font-semibold ${isDark ? "text-indigo-200" : "text-slate-700"}`}>
-          {label} {required && <span className="text-brand-accent">*</span>}
-        </label>
-        {file && (
-          <button
-            type="button"
-            onClick={() => onFileChange(null)}
-            className="text-xs flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
-          >
-            <X size={12} /> Limpiar
-          </button>
+      <div className="flex flex-col">
+        <div className="flex justify-between items-center">
+          <label className={`block text-sm font-semibold ${isDark ? "text-indigo-200" : "text-slate-700"}`}>
+            {label} {required && <span className="text-brand-accent">*</span>}
+          </label>
+          {file && (
+            <button
+              type="button"
+              onClick={() => onFileChange(null)}
+              className="text-xs flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
+            >
+              <X size={12} /> Limpiar
+            </button>
+          )}
+        </div>
+        {description && (
+          <p className={`text-xs mt-1 leading-relaxed ${isDark ? "text-indigo-300" : "text-slate-500"}`}>
+            {description}
+          </p>
         )}
       </div>
       <label
@@ -651,7 +658,14 @@ export default function PreinscripcionPublica() {
                       <DropFileField label="DNI del Padre/Madre o Tutor (Obligatorio)" required file={dniTutorFile} onFileChange={setDniTutorFile} isDark={isDark} />
                     ) : (
                       requiresTitle && (
-                        <DropFileField label="Digitalización de Título Secundario" required file={tituloFile} onFileChange={setTituloFile} isDark={isDark} />
+                        <DropFileField
+                          label="Digitalización de Título Secundario"
+                          required
+                          file={tituloFile}
+                          onFileChange={setTituloFile}
+                          isDark={isDark}
+                          description="Formatos permitidos: PDF o foto/imagen. Recordá incluir todas sus hojas (anverso y reverso)."
+                        />
                       )
                     )}
                   </div>
