@@ -7,7 +7,7 @@ from django.db.models import Q
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
-from core.models import Estudiante, Inscripcion, Cohorte, ConfiguracionPreinscripcionVideojuegos
+from core.models import Estudiante, Inscripcion, ConfiguracionPreinscripcionVideojuegos
 from core.api.schemas import EstudianteDetailOut, EstudianteListOut, EstudianteIn
 from functools import wraps
 

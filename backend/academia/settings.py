@@ -334,8 +334,8 @@ CFP_EMAIL_HOST = env('CFP_EMAIL_HOST', default='smtp.gmail.com')
 CFP_EMAIL_PORT = env.int('CFP_EMAIL_PORT', default=587)
 CFP_EMAIL_USE_TLS = env.bool('CFP_EMAIL_USE_TLS', default=True)
 CFP_EMAIL_USE_SSL = env.bool('CFP_EMAIL_USE_SSL', default=False)
-CFP_EMAIL_HOST_USER = env('CFP_EMAIL_HOST_USER', default='')
-CFP_EMAIL_HOST_PASSWORD = env('CFP_EMAIL_HOST_PASSWORD', default='')
+CFP_EMAIL_HOST_USER = env('CFP_EMAIL_HOST_USER', default=EMAIL_HOST_USER)
+CFP_EMAIL_HOST_PASSWORD = env('CFP_EMAIL_HOST_PASSWORD', default=EMAIL_HOST_PASSWORD)
 
 # URL del frontend para enlaces en emails
 FRONTEND_URL = env('FRONTEND_URL', default='https://cfp.lucasoviedodev.org')
