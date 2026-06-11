@@ -11,8 +11,8 @@ def verify_recaptcha(token: str, action: str = "preinscripcion") -> bool:
     Verifica un token de reCAPTCHA v3 contra la API de Google.
     Retorna True si es válido (o si reCAPTCHA está deshabilitado/en desarrollo).
     """
-    # Permitir token de prueba/mockup específico
-    if token == "mock_token_vj":
+    # Permitir token de prueba/mockup específico únicamente en modo DEBUG (desarrollo)
+    if settings.DEBUG and token == "mock_token_vj":
         logger.info("Token de prueba/mockup detectado (mock_token_vj). Omitiendo validación de reCAPTCHA.")
         return True
 
