@@ -98,10 +98,7 @@ def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
         mod2 = Modulo.objects.get(id=MODULO_HD2_ID)
 
         # Buscar o crear estudiante por DNI o email
-        estudiante = (
-            Estudiante.objects.filter(dni=preinscripcion.dni).first()
-            or Estudiante.objects.filter(email=preinscripcion.email).first()
-        )
+        estudiante = Estudiante.objects.filter(dni=preinscripcion.dni).first()
         if not estudiante:
             estudiante = Estudiante.objects.create(
                 dni=preinscripcion.dni,

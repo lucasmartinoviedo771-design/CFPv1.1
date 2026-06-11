@@ -30,15 +30,16 @@ class EstudianteModelTest(TestCase):
         expected = "Pérez, Juan (12345678)"
         self.assertEqual(str(self.estudiante), expected)
 
-    def test_estudiante_unique_email(self):
-        """Test que el email debe ser único."""
-        with self.assertRaises(Exception):  # IntegrityError
-            Estudiante.objects.create(
-                email="test@example.com",  # Email duplicado
-                apellido="González",
-                nombre="María",
-                dni="87654321"
-            )
+    def test_estudiante_duplicate_email_allowed(self):
+        """Test que dos estudiantes pueden tener el mismo email."""
+        est2 = Estudiante.objects.create(
+            email="test@example.com",  # Email duplicado
+            apellido="González",
+            nombre="María",
+            dni="87654321"
+        )
+        self.assertEqual(est2.email, "test@example.com")
+        self.assertEqual(Estudiante.objects.filter(email="test@example.com").count(), 2)
 
     def test_estudiante_unique_dni(self):
         """Test que el DNI debe ser único."""
