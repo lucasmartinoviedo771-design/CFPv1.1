@@ -14,7 +14,13 @@ export default function Topbar({ title }) {
 
   const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
   const tieneTerciario = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_TERCIARIO.includes(g)));
-  const tieneAmbos = tieneCFP && tieneTerciario;
+  const tieneVJ = user && (user.is_superuser || user.is_staff || user.groups?.includes("Videojuegos"));
+
+  let areas = 0;
+  if (tieneCFP) areas++;
+  if (tieneTerciario) areas++;
+  if (tieneVJ) areas++;
+  const mostrarSelector = areas > 1;
 
   const handleLogout = () => {
     authService.logout();
@@ -28,19 +34,31 @@ export default function Topbar({ title }) {
       </h2>
 
       <div className="flex items-center gap-4">
-        {tieneAmbos && (
+        {mostrarSelector && (
           <div className="flex items-center bg-indigo-950/60 p-0.5 rounded-xl border border-indigo-500/20 mr-2 shadow-inner">
-            <button
-              className="px-4 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all cursor-default"
-            >
-              CFP
-            </button>
-            <button
-              onClick={() => navigate('/admin-terciario')}
-              className="px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
-            >
-              Terciario
-            </button>
+            {tieneCFP && (
+              <button
+                className="px-4 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all cursor-default"
+              >
+                CFP
+              </button>
+            )}
+            {tieneTerciario && (
+              <button
+                onClick={() => navigate('/admin-terciario')}
+                className="px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
+              >
+                Terciario
+              </button>
+            )}
+            {tieneVJ && (
+              <button
+                onClick={() => navigate('/admin-videojuegos')}
+                className="px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
+              >
+                VJ
+              </button>
+            )}
           </div>
         )}
         {/* User Info */}

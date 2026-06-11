@@ -61,7 +61,13 @@ export default function AdminTerciario() {
 
   const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
   const tieneTerciario = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_TERCIARIO.includes(g)));
-  const tieneAmbos = tieneCFP && tieneTerciario;
+  const tieneVJ = user && (user.is_superuser || user.is_staff || user.groups?.includes("Videojuegos"));
+
+  let areas = 0;
+  if (tieneCFP) areas++;
+  if (tieneTerciario) areas++;
+  if (tieneVJ) areas++;
+  const mostrarSelector = areas > 1;
 
   const fetchStats = useCallback(async () => {
     try {
@@ -161,19 +167,31 @@ export default function AdminTerciario() {
           </div>
 
           <div className="flex items-center gap-6">
-            {tieneAmbos && (
+            {mostrarSelector && (
               <div className="flex items-center bg-[#1a1f4e]/5 p-0.5 rounded-xl border border-[#1a1f4e]/10 mr-2 shadow-inner">
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="px-4 py-1.5 rounded-lg text-xs font-bold text-[#1a1f4e]/60 hover:text-[#1a1f4e] transition-all hover:bg-[#1a1f4e]/5 active:scale-95"
-                >
-                  CFP
-                </button>
-                <button
-                  className="px-4 py-1.5 rounded-lg text-xs font-black bg-[#1a1f4e] text-[#f5c518] shadow-lg shadow-[#1a1f4e]/20 transition-all cursor-default"
-                >
-                  Terciario
-                </button>
+                {tieneCFP && (
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold text-[#1a1f4e]/60 hover:text-[#1a1f4e] transition-all hover:bg-[#1a1f4e]/5 active:scale-95"
+                  >
+                    CFP
+                  </button>
+                )}
+                {tieneTerciario && (
+                  <button
+                    className="px-4 py-1.5 rounded-lg text-xs font-black bg-[#1a1f4e] text-[#f5c518] shadow-lg shadow-[#1a1f4e]/20 transition-all cursor-default"
+                  >
+                    Terciario
+                  </button>
+                )}
+                {tieneVJ && (
+                  <button
+                    onClick={() => navigate('/admin-videojuegos')}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold text-[#1a1f4e]/60 hover:text-[#1a1f4e] transition-all hover:bg-[#1a1f4e]/5 active:scale-95"
+                  >
+                    VJ
+                  </button>
+                )}
               </div>
             )}
 

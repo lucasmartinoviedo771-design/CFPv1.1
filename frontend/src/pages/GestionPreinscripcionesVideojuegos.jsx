@@ -436,6 +436,15 @@ export default function GestionPreinscripcionesVideojuegos() {
   const esAdmin = user && (user.is_superuser || user.is_staff || user.groups?.includes("Admin"));
   const GRUPOS_CFP = ["Admin", "Secretaría", "Regencia", "Coordinación Docente", "Docente", "Preceptor", "Bedel", "Rector"];
   const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
+  const GRUPOS_TERCIARIO = ["Admin", "Terciario", "Rector"];
+  const tieneTerciario = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_TERCIARIO.includes(g)));
+  const tieneVJ = user && (user.is_superuser || user.is_staff || user.groups?.includes("Videojuegos"));
+
+  let areas = 0;
+  if (tieneCFP) areas++;
+  if (tieneTerciario) areas++;
+  if (tieneVJ) areas++;
+  const mostrarSelector = areas > 1;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -676,6 +685,34 @@ export default function GestionPreinscripcionesVideojuegos() {
           </h2>
 
           <div className="flex items-center gap-6">
+            {mostrarSelector && (
+              <div className="flex items-center bg-indigo-950/60 p-0.5 rounded-xl border border-indigo-500/20 mr-2 shadow-inner">
+                {tieneCFP && (
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
+                  >
+                    CFP
+                  </button>
+                )}
+                {tieneTerciario && (
+                  <button
+                    onClick={() => navigate('/admin-terciario')}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
+                  >
+                    Terciario
+                  </button>
+                )}
+                {tieneVJ && (
+                  <button
+                    className="px-4 py-1.5 rounded-lg text-xs font-black bg-[#00ccff]/25 text-[#00ccff] border border-[#00ccff]/30 shadow-lg shadow-[#00ccff]/10 transition-all cursor-default"
+                  >
+                    VJ
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center gap-4">
               {/* User details */}
               <div className="hidden md:flex flex-col items-end">
