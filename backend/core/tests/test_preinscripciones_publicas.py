@@ -7,6 +7,8 @@ from core.models import Cohorte, Programa, Bloque, BloqueDeFechas, Estudiante, M
 
 class PreinscripcionesPublicasTests(TestCase):
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         self.client = APIClient()
         
         # Setup test academic structure

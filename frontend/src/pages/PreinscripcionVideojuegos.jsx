@@ -311,9 +311,7 @@ export default function PreinscripcionVideojuegos() {
     if (s === 4) {
       if (!dniFile) return setError("Debés adjuntar la digitalización del DNI."), false;
       if (esMenor && !dniTutorFile) return setError("Debés adjuntar la digitalización del DNI del Padre/Madre o Tutor."), false;
-      // VJ requiere título secundario de manera opcional para mayores, pero validamos si es obligatorio por programa
-      const requiresTitle = Boolean(ofertaPrograma?.requiere_titulo_secundario);
-      if (requiresTitle && !esMenor && !tituloFile) {
+      if (!esMenor && !tituloFile) {
         return setError("Esta oferta requiere adjuntar el título secundario."), false;
       }
     }
@@ -359,7 +357,7 @@ export default function PreinscripcionVideojuegos() {
     const dniErr = validateFile(dniFile, "DNI");
     if (dniErr) return setError(dniErr), setStep(4);
     
-    if (ofertaPrograma?.requiere_titulo_secundario && !esMenor) {
+    if (!esMenor) {
       const tErr = validateFile(tituloFile, "Título secundario");
       if (tErr) return setError(tErr), setStep(4);
     }
@@ -734,15 +732,13 @@ export default function PreinscripcionVideojuegos() {
                     {esMenor ? (
                       <DropFileField label="Copia DNI del Padre/Madre o Tutor (Obligatorio)" required file={dniTutorFile} onFileChange={setDniTutorFile} />
                     ) : (
-                      Boolean(ofertaPrograma?.requiere_titulo_secundario) && (
-                        <DropFileField
-                          label="Copia de Título Secundario / Analítico"
-                          required
-                          file={tituloFile}
-                          onFileChange={setTituloFile}
-                          description="Formatos permitidos: PDF o foto/imagen. Deben incluirse todas sus hojas, tanto el anverso como el reverso."
-                        />
-                      )
+                      <DropFileField
+                        label="Copia de Título Secundario / Analítico"
+                        required
+                        file={tituloFile}
+                        onFileChange={setTituloFile}
+                        description="Formatos permitidos: PDF o foto/imagen. Deben incluirse todas sus hojas, tanto el anverso como el reverso."
+                      />
                     )}
                   </div>
                   <div className="p-6 rounded-3xl bg-emerald-500/5 border border-emerald-500/20">

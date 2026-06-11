@@ -8,6 +8,9 @@ from core.models import BloqueDeFechas, Programa, Bloque, Modulo, Cohorte, Estud
 
 class VideojuegosTests(TestCase):
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
         # 1. Create BloqueDeFechas required by VJ seed
         self.bloque_fechas, _ = BloqueDeFechas.objects.get_or_create(nombre="Test Bloque Fechas")
         
@@ -103,8 +106,10 @@ class VideojuegosTests(TestCase):
         # Now select one optative block (e.g. Arte y Animación)
         optative_block = Bloque.objects.get(programa=vj_prog, nombre="Arte y Animación")
         dni_file_2 = SimpleUploadedFile("dni2.pdf", pdf_content, content_type="application/pdf")
+        titulo_file = SimpleUploadedFile("titulo.pdf", pdf_content, content_type="application/pdf")
         payload["bloque_ids"] = f"{optative_block.id}"
         payload["dni_digitalizado"] = dni_file_2
+        payload["titulo_secundario_digitalizado"] = titulo_file
         
         resp = self.client.post("/api/v2/preinscripcion", payload, format="multipart")
         self.assertEqual(resp.status_code, 200, resp.content)

@@ -15,11 +15,12 @@ class Command(BaseCommand):
         if not programa:
             programa, created = Programa.objects.get_or_create(
                 codigo="VJ",
-                defaults={"nombre": "Certificación Profesional en Desarrollo de Videojuegos", "activo": True}
+                defaults={"nombre": "Certificación Profesional en Desarrollo de Videojuegos", "activo": True, "requiere_titulo_secundario": True}
             )
         else:
             programa.codigo = "VJ"
             programa.nombre = "Certificación Profesional en Desarrollo de Videojuegos"
+            programa.requiere_titulo_secundario = True
             programa.save()
             self.stdout.write(f"Programa actualizado: {programa}")
 
