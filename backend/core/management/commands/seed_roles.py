@@ -50,6 +50,7 @@ class Command(BaseCommand):
             "Docente": coordinacion_perms, # Mismos permisos que Coordinación
             "Preceptor": preceptor_perms,
             "Estudiante": estudiante_perms,
+            "Videojuegos": view_all_perms + perms("estudiante", ["change"]) + perms("inscripcion", ["change"]),
         }
 
         # --- 3. APLICACIÓN DE PERMISOS ---

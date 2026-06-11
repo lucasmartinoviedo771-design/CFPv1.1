@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -17,9 +17,11 @@ import {
   ChevronRight,
   Database,
   FileCheck,
-  ExternalLink
+  ExternalLink,
+  Gamepad2
 } from 'lucide-react';
-import { cn } from './UI'; // Asumimos que podemos usar cn de UI o directamente
+import { cn } from './UI';
+import { UserContext } from '../App';
 
 const dataItems = [
   { label: 'Dashboard', icon: <LayoutDashboard size={20} />, href: '/dashboard' },
@@ -100,7 +102,16 @@ const MenuSection = ({ title, icon, items, isOpen, onToggle, currentPath }) => {
 
 export default function Sidebar() {
   const location = useLocation();
+  const { user } = useContext(UserContext);
   const [openSection, setOpenSection] = useState(null);
+
+  const userGroups = user?.groups || [];
+  const isSuper = user?.is_superuser || user?.is_staff;
+  
+  const hasVideojuegos = isSuper || userGroups.includes("Videojuegos") || userGroups.some(g => ['Admin', 'Secretaría', 'Regencia', 'Rector'].includes(g));
+  
+  // Isolation: User exclusively belongs to the "Videojuegos" group
+  const isOnlyVideojuegos = !isSuper && userGroups.includes("Videojuegos") && !userGroups.some(g => ['Admin', 'Secretaría', 'Regencia', 'Rector', 'Terciario', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel'].includes(g));
 
   useEffect(() => {
     const currentPath = location.pathname;
@@ -130,61 +141,101 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-2 scrollbar-thin scrollbar-thumb-indigo-900">
-        <Link
-          to="/preinscripcion"
-          className={cn(
-            "flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors",
-            location.pathname === '/preinscripcion'
-              ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
-              : "bg-indigo-900/30 text-indigo-100 hover:bg-indigo-900/45"
-          )}
-        >
-          <span className="inline-flex items-center gap-2">
-            <FileCheck size={18} />
-            Página de Preinscripción
-          </span>
-          <ExternalLink size={14} />
-        </Link>
-        <MenuSection
-          title="Datos"
-          icon={<Database size={20} />}
-          items={dataItems}
-          isOpen={openSection === 'datos'}
-          onToggle={() => toggleSection('datos')}
-          currentPath={location.pathname}
-        />
-        <MenuSection
-          title="Carga de Datos"
-          icon={<FileText size={20} />}
-          items={cargaDatosItems}
-          isOpen={openSection === 'carga'}
-          onToggle={() => toggleSection('carga')}
-          currentPath={location.pathname}
-        />
-        <MenuSection
-          title="Calificaciones"
-          icon={<ClipboardList size={20} />}
-          items={calificacionesItems}
-          isOpen={openSection === 'calificaciones'}
-          onToggle={() => toggleSection('calificaciones')}
-          currentPath={location.pathname}
-        />
-        <MenuSection
-          title="Administración"
-          icon={<UserCog size={20} />}
-          items={adminCursosItems}
-          isOpen={openSection === 'admin'}
-          onToggle={() => toggleSection('admin')}
-          currentPath={location.pathname}
-        />
-        <MenuSection
-          title="Secretaría"
-          icon={<Users size={20} />}
-          items={secretariaItems}
-          isOpen={openSection === 'secretaria'}
-          onToggle={() => toggleSection('secretaria')}
-          currentPath={location.pathname}
-        />
+        {!isOnlyVideojuegos && (
+          <Link
+            to="/preinscripcion"
+            className={cn(
+              "flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors",
+              location.pathname === '/preinscripcion'
+                ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
+                : "bg-indigo-900/30 text-indigo-100 hover:bg-indigo-900/45"
+            )}
+          >
+            <span className="inline-flex items-center gap-2">
+              <FileCheck size={18} />
+              Página de Preinscripción
+            </span>
+            <ExternalLink size={14} />
+          </Link>
+        )}
+
+        {hasVideojuegos && (
+          <Link
+            to="/preinscripcion-videojuegos"
+            className={cn(
+              "flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors",
+              location.pathname === '/preinscripcion-videojuegos'
+                ? "bg-brand-cyan text-[#050814] shadow-[0_0_10px_rgba(0,255,255,0.3)] font-semibold"
+                : "bg-indigo-900/30 text-indigo-100 hover:bg-indigo-900/45"
+            )}
+          >
+            <span className="inline-flex items-center gap-2">
+              <Gamepad2 size={18} />
+              Preinscripción Videojuegos
+            </span>
+            <ExternalLink size={14} />
+          </Link>
+        )}
+
+        {hasVideojuegos && (
+          <Link
+            to="/panel-videojuegos"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all border border-[#00ccff]/25 hover:border-[#00ccff]/50",
+              location.pathname === '/panel-videojuegos'
+                ? "bg-gradient-to-r from-brand-cyan/20 to-brand-accent/20 text-brand-cyan shadow-[0_0_15px_rgba(0,255,255,0.15)] border-brand-cyan/40"
+                : "text-indigo-200 hover:text-white hover:bg-[#00ccff]/5"
+            )}
+          >
+            <Gamepad2 size={20} className={location.pathname === '/panel-videojuegos' ? "text-brand-cyan" : "text-indigo-300"} />
+            <span>Panel Videojuegos</span>
+          </Link>
+        )}
+
+        {!isOnlyVideojuegos && (
+          <>
+            <MenuSection
+              title="Datos"
+              icon={<Database size={20} />}
+              items={dataItems}
+              isOpen={openSection === 'datos'}
+              onToggle={() => toggleSection('datos')}
+              currentPath={location.pathname}
+            />
+            <MenuSection
+              title="Carga de Datos"
+              icon={<FileText size={20} />}
+              items={cargaDatosItems}
+              isOpen={openSection === 'carga'}
+              onToggle={() => toggleSection('carga')}
+              currentPath={location.pathname}
+            />
+            <MenuSection
+              title="Calificaciones"
+              icon={<ClipboardList size={20} />}
+              items={calificacionesItems}
+              isOpen={openSection === 'calificaciones'}
+              onToggle={() => toggleSection('calificaciones')}
+              currentPath={location.pathname}
+            />
+            <MenuSection
+              title="Administración"
+              icon={<UserCog size={20} />}
+              items={adminCursosItems}
+              isOpen={openSection === 'admin'}
+              onToggle={() => toggleSection('admin')}
+              currentPath={location.pathname}
+            />
+            <MenuSection
+              title="Secretaría"
+              icon={<Users size={20} />}
+              items={secretariaItems}
+              isOpen={openSection === 'secretaria'}
+              onToggle={() => toggleSection('secretaria')}
+              currentPath={location.pathname}
+            />
+          </>
+        )}
       </nav>
 
       <div className="p-4 border-t border-indigo-500/20">

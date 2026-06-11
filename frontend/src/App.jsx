@@ -27,8 +27,10 @@ import Usuarios from './pages/Usuarios.jsx';
 import Resoluciones from './pages/Resoluciones.jsx';
 import PreinscripcionPublica from './pages/PreinscripcionPublica.jsx';
 import PreinscripcionTerciario from './pages/PreinscripcionTerciario.jsx';
+import PreinscripcionVideojuegos from './pages/PreinscripcionVideojuegos.jsx';
 import GestionPreinscripciones from './pages/GestionPreinscripciones.jsx';
 import GestionPreinscripcionesTerciario from './pages/GestionPreinscripcionesTerciario.jsx';
+import GestionPreinscripcionesVideojuegos from './pages/GestionPreinscripcionesVideojuegos.jsx';
 import AdminTerciario from './pages/AdminTerciario.jsx';
 import AutorizacionParental from './pages/AutorizacionParental.jsx';
 import NivelacionDigital from './pages/NivelacionDigital.jsx';
@@ -113,6 +115,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/preinscripcion" element={<PreinscripcionPublica />} />
             <Route path="/preinscripcion-terciario" element={<PreinscripcionTerciario />} />
+            <Route path="/preinscripcion-videojuegos" element={<PreinscripcionVideojuegos />} />
             <Route path="/autorizar/:token" element={<AutorizacionParental />} />
             <Route path="/nivelacion/:token" element={<NivelacionDigital />} />
 
@@ -124,6 +127,7 @@ export default function App() {
             <Route path="/estudiantes" element={<PrivateRoute><WithLayout title="Estudiantes"><Estudiantes /></WithLayout></PrivateRoute>} />
             <Route path="/gestion-preinscripciones" element={<PrivateRoute><WithLayout title="Preinscripciones CFP"><GestionPreinscripciones /></WithLayout></PrivateRoute>} />
             <Route path="/preinscripciones-terciario" element={<PrivateRoute><WithLayout title="Preinscripciones Terciario"><GestionPreinscripcionesTerciario /></WithLayout></PrivateRoute>} />
+            <Route path="/panel-videojuegos" element={<PrivateRoute><WithLayout title="Panel Videojuegos"><GestionPreinscripcionesVideojuegos /></WithLayout></PrivateRoute>} />
             <Route path="/asistencia" element={<PrivateRoute><WithLayout title="Asistencia"><Asistencia /></WithLayout></PrivateRoute>} />
             <Route path="/notas" element={<PrivateRoute><WithLayout title="Notas / Equivalencias"><Notas /></WithLayout></PrivateRoute>} />
             <Route path="/cursos/:id" element={<PrivateRoute><WithLayout title="Detalle del Curso"><CursoDetail /></WithLayout></PrivateRoute>} />

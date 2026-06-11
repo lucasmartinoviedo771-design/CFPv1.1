@@ -20,6 +20,8 @@ from .preinscripciones_publicas import router as preinscripciones_publicas_route
 from .autorizaciones import router as autorizaciones_router
 from .nivelacion import router as nivelacion_router
 from .preinscripcion_terciario import router as preinscripcion_terciario_router
+from .videojuegos import router as videojuegos_router
+
 
 
 __all__ = [
@@ -44,4 +46,5 @@ __all__ = [
     "autorizaciones_router",
     "nivelacion_router",
     "preinscripcion_terciario_router",
+    "videojuegos_router",
 ]

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de Preinscripción - Desarrollo de Videojuegos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .wrapper {
+            width: 100%;
+            background-color: #05070c;
+            padding: 40px 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #0b0f19;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            border: 1px solid #1f2937;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e1b4b 0%, #311042 100%);
+            color: #ffffff;
+            padding: 40px 30px;
+            text-align: center;
+            border-bottom: 4px solid #10b981;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+        .header h2 {
+            margin: 10px 0 0 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: #10b981;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .content {
+            padding: 40px 35px;
+            background-color: #0b0f19;
+        }
+        .welcome-text {
+            font-size: 20px;
+            font-weight: 800;
+            color: #10b981;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .intro-text {
+            font-size: 15px;
+            margin-bottom: 30px;
+            color: #9ca3af;
+        }
+        .info-card {
+            background: linear-gradient(145deg, #111827 0%, #1f2937 100%);
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 25px;
+        }
+        .info-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-top: 0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info-list {
+            margin: 0;
+            padding-left: 20px;
+            color: #9ca3af;
+            font-size: 14.5px;
+        }
+        .info-list li {
+            margin-bottom: 8px;
+        }
+        .badge {
+            display: inline-block;
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            margin-top: 5px;
+        }
+        .logos-section {
+            text-align: center;
+            padding: 25px 20px;
+            background-color: #070a12;
+            border-top: 1px solid #1f2937;
+        }
+        .logos-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #4b5563;
+            margin-bottom: 15px;
+        }
+        .logos-container {
+            display: inline-block;
+            color: #9ca3af;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .footer {
+            background-color: #05070c;
+            color: #6b7280;
+            text-align: center;
+            padding: 30px 20px;
+            font-size: 12px;
+            border-top: 1px solid #111827;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        a {
+            color: #10b981;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <!-- Encabezado con marca del Trayecto -->
+            <div class="header">
+                <h2>Certificación Profesional</h2>
+                <h1>Desarrollo de Videojuegos</h1>
+            </div>
+            
+            <div class="content">
+                <p class="welcome-text">¡Hola, {{ nombre }}!</p>
+                <p class="intro-text">
+                    Te confirmamos que hemos recibido correctamente tu postulación para formar parte de la <b>Certificación Profesional en Desarrollo de Videojuegos</b> dictada en el Centro Politécnico Superior.
+                </p>
+                
+                <div class="info-card">
+                    <h4 class="info-title">🎮 Estado de tu Solicitud</h4>
+                    <p style="font-size: 14.5px; color: #d1d5db; margin-top: 0; margin-bottom: 10px;">
+                        Tu preinscripción ha ingresado a nuestro sistema bajo revisión.
+                    </p>
+                    <span class="badge">ESTADO: PENDIENTE DE REVISIÓN</span>
+                    <p style="font-size: 13.5px; color: #9ca3af; margin-top: 15px; margin-bottom: 0; line-height: 1.5;">
+                        Nuestro equipo de admisión validará la documentación digital adjuntada (DNI y estudios previos). Una vez aprobada tu postulación, recibirás un correo de confirmación de acceso al campus para matricularte en los cursos y comenzar las actividades.
+                    </p>
+                </div>
+
+                <div class="info-card" style="border-left: 4px solid #8b5cf6;">
+                    <h4 class="info-title" style="color: #a78bfa;">📚 Estructura de la Cursada</h4>
+                    <p style="font-size: 14px; color: #9ca3af; margin-top: 0;">
+                        La certificación consta de asignaturas obligatorias comunes y trayectos optativos a elección del alumno:
+                    </p>
+                    <ul class="info-list">
+                        <li><b>Materias Obligatorias (Comunes)</b>: Producción de Videojuegos, Inteligencia Artificial y Diseño de Videojuegos.</li>
+                        <li><b>Módulos de Especialidad (Optativos)</b>: Arte y Animación y/o Programación de Entornos Virtuales.</li>
+                    </ul>
+                </div>
+                
+                <p style="font-size: 13.5px; color: #6b7280; font-style: italic; margin-top: 30px; text-align: center;">
+                    Ante cualquier inquietud sobre tu inscripción, puedes comunicarte por WhatsApp al canal de atención a estudiantes.
+                </p>
+            </div>
+            
+            <!-- Sección de Marcas e Instituciones Aliadas -->
+            <div class="logos-section">
+                <div class="logos-title">Instituciones Convocantes</div>
+                <div style="font-size: 13px; font-weight: bold; color: #9ca3af; line-height: 1.8;">
+                    ADVA <span style="color: #4b5563; margin: 0 8px;">•</span> 
+                    Agencia de Innovación de TDF <span style="color: #4b5563; margin: 0 8px;">•</span> 
+                    CFI <span style="color: #4b5563; margin: 0 8px;">•</span> 
+                    Politécnico
+                </div>
+            </div>
+
+            <!-- Pie de página -->
+            <div class="footer">
+                <p><strong>Centro Politécnico Superior "Malvinas Argentinas"</strong></p>
+                <p>Monte Independencia 261, Margen Sur, Río Grande, Tierra del Fuego</p>
+                <p>WhatsApp: <a href="https://wa.me/5492964355801">+54 9 2964 35-5801</a></p>
+                
+                <p style="margin-top: 25px; font-size: 11px; color: #4b5563; font-style: italic; line-height: 1.4;">
+                    Este es un mensaje automático generado por el sistema de gestión. Por favor, no respondas a este correo.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

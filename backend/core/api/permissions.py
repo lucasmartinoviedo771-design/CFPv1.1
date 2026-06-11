@@ -12,6 +12,12 @@ def require_authenticated_group(func):
         # Superusuarios tienen acceso automático
         if request.user.is_superuser:
             return func(request, *args, **kwargs)
+        
+        # Excluir usuarios que SOLO pertenecen al grupo "Videojuegos" (no tienen acceso a CFP normal)
+        user_groups = list(request.user.groups.values_list('name', flat=True))
+        if "Videojuegos" in user_groups and len(user_groups) == 1:
+            raise HttpError(403, "You do not have permission to perform this action.")
+
         if not IsInAGroup().has_permission(request, None):
             raise HttpError(403, "You do not have permission to perform this action.")
         return func(request, *args, **kwargs)

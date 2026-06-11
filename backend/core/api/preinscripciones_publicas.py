@@ -253,12 +253,23 @@ def _validar_correlativas(estudiante_id: int, cohortes: List[Cohorte]):
 
 
 @router.get("/oferta", response=PreinscripcionOfertaOut, auth=None)
-def listar_oferta_preinscripcion(request, programa_id: Optional[int] = None):
+def listar_oferta_preinscripcion(
+    request,
+    programa_id: Optional[int] = None,
+    programa_codigo: Optional[str] = None
+):
     qs = _cohortes_habilitadas()
     # Filtro temporal para excluir 'Sistemas de Representación' y carreras terciarias (Tecnicaturas)
     qs = [c for c in qs if _normalize_text(c.programa.nombre) != "sistemas de representacion" and "tecnicatura" not in _normalize_text(c.programa.nombre)]
+    
+    # Exclude VJ from standard list if not explicitly requested
+    if not programa_id and not programa_codigo:
+        qs = [c for c in qs if c.programa.codigo != "VJ"]
+
     if programa_id:
         qs = [c for c in qs if c.programa_id == programa_id]
+    elif programa_codigo:
+        qs = [c for c in qs if c.programa.codigo == programa_codigo]
     items_map: dict[int, dict] = {}
     for c in qs:
         if c.programa_id not in items_map:
@@ -294,6 +305,16 @@ def _enviar_confirmacion_preinscripcion(estudiante: Estudiante, cohortes: List[C
     Envía un email de confirmación con archivos adjuntos basados en los trayectos seleccionados.
     """
     try:
+        # Si es del programa Videojuegos, desviar al correo específico de Videojuegos
+        tiene_vj = any(c.programa.codigo == "VJ" for c in cohortes)
+        if tiene_vj:
+            try:
+                from core.services.email_service import enviar_correo_confirmacion_videojuegos
+                enviar_correo_confirmacion_videojuegos(estudiante.id)
+            except Exception as e:
+                logger.error(f"Error al enviar correo de confirmacion de Videojuegos: {e}")
+            return
+
         hoy = timezone.localdate()
         nac = estudiante.fecha_nacimiento
         edad = hoy.year - nac.year - ((hoy.month, hoy.day) < (nac.month, nac.day)) if nac else 18
@@ -560,6 +581,29 @@ def crear_preinscripcion_publica(request):
             msg = f"{first_field}: {first_msg[0]}" if isinstance(first_msg, list) else str(first_msg)
             raise HttpError(400, msg)
         estudiante = serializer.save()
+
+        # Interceptar y validar selecciones del programa Videojuegos (VJ)
+        from core.models import Programa
+        vj_prog = Programa.objects.filter(codigo="VJ").first()
+        if vj_prog:
+            for seleccion in seleccion_programas:
+                if seleccion["programa_id"] == vj_prog.id:
+                    vj_blocks = list(vj_prog.bloques.all())
+                    optative_blocks = [b for b in vj_blocks if _normalize_text(b.nombre) in ["arte y animacion", "programacion de entornos virtuales"]]
+                    obligatory_blocks = [b for b in vj_blocks if _normalize_text(b.nombre) not in ["arte y animacion", "programacion de entornos virtuales"]]
+                    
+                    optative_ids = {b.id for b in optative_blocks}
+                    obligatory_ids = {b.id for b in obligatory_blocks}
+                    
+                    selected_ids = set(seleccion["bloque_ids"] or [])
+                    
+                    # Validar: al menos un bloque optativo
+                    if not (selected_ids & optative_ids):
+                        raise HttpError(400, "Debe seleccionar al menos un bloque optativo (Arte y Animación o Programación de Entornos Virtuales).")
+                    
+                    # Auto-agregar los bloques obligatorios/transversales
+                    new_selected_ids = selected_ids | obligatory_ids
+                    seleccion["bloque_ids"] = list(new_selected_ids)
 
         todas_habilitadas = _cohortes_habilitadas()
         cohortes: List[Cohorte] = []

@@ -297,3 +297,42 @@ def enviar_correo_bienvenida_terciario(preinscripcion) -> bool:
     except Exception as e:
         logger.error(f"Error enviando correo de bienvenida Terciario a {preinscripcion.email}: {str(e)}")
         return False
+
+
+def enviar_correo_confirmacion_videojuegos(estudiante_id: int) -> bool:
+    """
+    Envía el correo de confirmación de preinscripción de Videojuegos usando SMTP.
+    """
+    try:
+        from django.core.mail import EmailMessage
+        from django.core.mail.backends.smtp import EmailBackend
+        
+        estudiante = Estudiante.objects.get(id=estudiante_id)
+        html_content = render_to_string('emails/confirmacion_videojuegos.html', {
+            'nombre': estudiante.nombre
+        })
+        
+        connection = EmailBackend(
+            host=settings.CFP_EMAIL_HOST,
+            port=settings.CFP_EMAIL_PORT,
+            username=settings.CFP_EMAIL_HOST_USER,
+            password=settings.CFP_EMAIL_HOST_PASSWORD,
+            use_tls=settings.CFP_EMAIL_USE_TLS,
+            use_ssl=settings.CFP_EMAIL_USE_SSL,
+        )
+        
+        email = EmailMessage(
+            subject='Confirmación de Preinscripción - Desarrollo de Videojuegos',
+            body=html_content,
+            from_email=settings.CFP_FROM_EMAIL,
+            to=[estudiante.email],
+            connection=connection,
+        )
+        email.content_subtype = "html"
+        email.send(fail_silently=False)
+        
+        logger.info(f"Correo de confirmación de Videojuegos enviado exitosamente a {estudiante.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Error enviando correo de confirmación de Videojuegos a estudiante {estudiante_id}: {str(e)}")
+        return False
