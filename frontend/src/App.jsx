@@ -127,7 +127,7 @@ export default function App() {
             <Route path="/estudiantes" element={<PrivateRoute><WithLayout title="Estudiantes"><Estudiantes /></WithLayout></PrivateRoute>} />
             <Route path="/gestion-preinscripciones" element={<PrivateRoute><WithLayout title="Preinscripciones CFP"><GestionPreinscripciones /></WithLayout></PrivateRoute>} />
             <Route path="/preinscripciones-terciario" element={<PrivateRoute><WithLayout title="Preinscripciones Terciario"><GestionPreinscripcionesTerciario /></WithLayout></PrivateRoute>} />
-            <Route path="/panel-videojuegos" element={<PrivateRoute><WithLayout title="Panel Videojuegos"><GestionPreinscripcionesVideojuegos /></WithLayout></PrivateRoute>} />
+            <Route path="/admin-videojuegos" element={<PrivateRoute><WithLayout title="Panel Videojuegos"><GestionPreinscripcionesVideojuegos /></WithLayout></PrivateRoute>} />
             <Route path="/asistencia" element={<PrivateRoute><WithLayout title="Asistencia"><Asistencia /></WithLayout></PrivateRoute>} />
             <Route path="/notas" element={<PrivateRoute><WithLayout title="Notas / Equivalencias"><Notas /></WithLayout></PrivateRoute>} />
             <Route path="/cursos/:id" element={<PrivateRoute><WithLayout title="Detalle del Curso"><CursoDetail /></WithLayout></PrivateRoute>} />

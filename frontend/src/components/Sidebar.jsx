@@ -179,15 +179,15 @@ export default function Sidebar() {
 
         {hasVideojuegos && (
           <Link
-            to="/panel-videojuegos"
+            to="/admin-videojuegos"
             className={cn(
               "flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all border border-[#00ccff]/25 hover:border-[#00ccff]/50",
-              location.pathname === '/panel-videojuegos'
+              location.pathname === '/admin-videojuegos'
                 ? "bg-gradient-to-r from-brand-cyan/20 to-brand-accent/20 text-brand-cyan shadow-[0_0_15px_rgba(0,255,255,0.15)] border-brand-cyan/40"
                 : "text-indigo-200 hover:text-white hover:bg-[#00ccff]/5"
             )}
           >
-            <Gamepad2 size={20} className={location.pathname === '/panel-videojuegos' ? "text-brand-cyan" : "text-indigo-300"} />
+            <Gamepad2 size={20} className={location.pathname === '/admin-videojuegos' ? "text-brand-cyan" : "text-indigo-300"} />
             <span>Panel Videojuegos</span>
           </Link>
         )}
