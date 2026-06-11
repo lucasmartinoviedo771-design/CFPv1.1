@@ -97,7 +97,7 @@ def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
             return  # No hay cohorte activa ni próxima
         mod2 = Modulo.objects.get(id=MODULO_HD2_ID)
 
-        # Buscar o crear estudiante por DNI o email
+        # Buscar o crear estudiante por DNI
         estudiante = Estudiante.objects.filter(dni=preinscripcion.dni).first()
         if not estudiante:
             estudiante = Estudiante.objects.create(
@@ -112,6 +112,12 @@ def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
                 nacionalidad=preinscripcion.nacionalidad,
                 estatus="Preinscripto",
             )
+        else:
+            # Actualizar datos de contacto con la nueva preinscripción
+            estudiante.email = preinscripcion.email
+            estudiante.telefono = preinscripcion.celular
+            estudiante.domicilio = preinscripcion.domicilio
+            estudiante.save(update_fields=["email", "telefono", "domicilio", "updated_at"])
 
         # Crear inscripción si no existe
         inscripcion, created = Inscripcion.objects.get_or_create(

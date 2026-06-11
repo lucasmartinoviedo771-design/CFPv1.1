@@ -143,6 +143,49 @@ class PreinscripcionesPublicasTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn("reCAPTCHA", resp.json()["detail"])
 
+    @patch('core.utils.recaptcha.verify_recaptcha')
+    def test_preinscripcion_updates_email_for_existing_student(self, mock_recaptcha):
+        """Test that re-registering with the same DNI updates the student's email."""
+        mock_recaptcha.return_value = True
+        
+        # 1. First registration
+        pdf_content = b"%PDF-1.4 mock content"
+        dni_file = SimpleUploadedFile("dni.pdf", pdf_content, content_type="application/pdf")
+        titulo_file = SimpleUploadedFile("titulo.pdf", pdf_content, content_type="application/pdf")
+        post_data = {
+            "email": "old_email@example.com",
+            "apellido": "Gomez",
+            "nombre": "Pedro",
+            "dni": "12345678",
+            "fecha_nacimiento": "1990-05-15",
+            "programa_id": self.programa_niii.id,
+            "bloque_ids": f"{self.bloque_niii.id}",
+            "dni_digitalizado": dni_file,
+            "titulo_secundario_digitalizado": titulo_file,
+            "recaptcha_token": "valid_token"
+        }
+        resp = self.client.post("/api/v2/preinscripcion", post_data, format="multipart")
+        self.assertEqual(resp.status_code, 200, resp.content)
+        
+        student = Estudiante.objects.get(dni="12345678")
+        self.assertEqual(student.email, "old_email@example.com")
+        
+        # 2. Second registration with new email (recreating files to avoid consumed stream issues)
+        dni_file2 = SimpleUploadedFile("dni.pdf", pdf_content, content_type="application/pdf")
+        titulo_file2 = SimpleUploadedFile("titulo.pdf", pdf_content, content_type="application/pdf")
+        post_data["email"] = "new_email@example.com"
+        post_data["dni_digitalizado"] = dni_file2
+        post_data["titulo_secundario_digitalizado"] = titulo_file2
+        
+        resp2 = self.client.post("/api/v2/preinscripcion", post_data, format="multipart")
+        self.assertEqual(resp2.status_code, 200, resp2.content)
+        
+        student.refresh_from_db()
+        self.assertEqual(student.email, "new_email@example.com")
+
+
+
+
 
 class RecaptchaVerifyTests(TestCase):
     @patch('urllib.request.urlopen')
