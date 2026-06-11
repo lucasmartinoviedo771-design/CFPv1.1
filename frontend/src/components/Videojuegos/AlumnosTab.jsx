@@ -27,7 +27,6 @@ import { getMediaUrl } from "../../utils/media";
 
 const ESTADOS_ALUMNO = [
   { value: "", label: "Todos los Estados" },
-  { value: "Preinscripto", label: "Preinscripto" },
   { value: "Regular", label: "Regular" },
   { value: "Baja", label: "Baja" },
   { value: "Egresado", label: "Egresado" },
@@ -416,6 +415,7 @@ export default function AlumnosTab() {
 
   const filtered = useMemo(() => {
     return data.filter((p) => {
+      if (p.estatus === "Preinscripto") return false;
       if (filtroEstado && p.estatus !== filtroEstado) return false;
       if (filtroCohorte) {
         const insCohortes = (p.inscripciones || []).map(i => i.cohorte_id);
