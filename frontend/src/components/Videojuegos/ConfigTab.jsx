@@ -43,9 +43,10 @@ export default function ConfigTab() {
           (program.bloques || []).forEach((b) => {
             if (b.cohorte_id && !seen.has(b.cohorte_id)) {
               seen.add(b.cohorte_id);
+              const suffix = b.bloque_nombre ? ` - ${b.bloque_nombre}` : "";
               cohList.push({
                 id: b.cohorte_id,
-                nombre: b.cohorte_nombre || `Cohorte ${b.cohorte_id}`,
+                nombre: `${b.cohorte_nombre || `Cohorte ${b.cohorte_id}`}${suffix}`,
               });
             }
           });
