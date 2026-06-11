@@ -30,13 +30,7 @@ const dataItems = [
   { label: 'Egresados', icon: <GraduationCap size={20} />, href: '/egresados' },
 ];
 
-const cargaDatosItems = [
-  { label: 'Estudiantes', icon: <Users size={20} />, href: '/estudiantes' },
-  { label: 'Preinscripciones CFP', icon: <ClipboardList size={20} />, href: '/gestion-preinscripciones' },
-  { label: 'Preinscripciones Terciario', icon: <GraduationCap size={20} />, href: '/preinscripciones-terciario' },
-  { label: 'Inscripciones', icon: <FileText size={20} />, href: '/inscripciones' },
-  { label: 'Asistencia', icon: <CheckSquare size={20} />, href: '/asistencia' },
-];
+
 
 const calificacionesItems = [
   { label: 'Notas / Equivalencias', icon: <ClipboardList size={20} />, href: '/notas' },
@@ -112,6 +106,15 @@ export default function Sidebar() {
   
   // Isolation: User exclusively belongs to the "Videojuegos" group
   const isOnlyVideojuegos = !isSuper && userGroups.includes("Videojuegos") && !userGroups.some(g => ['Admin', 'Secretaría', 'Regencia', 'Rector', 'Terciario', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel'].includes(g));
+
+  const cargaDatosItems = [
+    { label: 'Estudiantes', icon: <Users size={20} />, href: '/estudiantes' },
+    { label: 'Preinscripciones CFP', icon: <ClipboardList size={20} />, href: '/gestion-preinscripciones' },
+    { label: 'Preinscripciones Terciario', icon: <GraduationCap size={20} />, href: '/preinscripciones-terciario' },
+    ...(hasVideojuegos ? [{ label: 'Preinscripciones Video Juegos', icon: <Gamepad2 size={20} />, href: '/admin-videojuegos' }] : []),
+    { label: 'Inscripciones', icon: <FileText size={20} />, href: '/inscripciones' },
+    { label: 'Asistencia', icon: <CheckSquare size={20} />, href: '/asistencia' },
+  ];
 
   useEffect(() => {
     const currentPath = location.pathname;
