@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.core.management import call_command
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-from core.models import BloqueDeFechas, Programa, Bloque, Modulo, Cohorte, Estudiante, Inscripcion
+from core.models import BloqueDeFechas, Programa, Bloque, Modulo, Cohorte, Estudiante, Inscripcion, ConfiguracionPreinscripcionVideojuegos
 
 class VideojuegosTests(TestCase):
     def setUp(self):
@@ -13,6 +13,11 @@ class VideojuegosTests(TestCase):
         
         # 2. Run VJ seeding command
         call_command('seed_videojuegos')
+        
+        # 2.5 Initialize VJ configuration
+        self.vj_config = ConfiguracionPreinscripcionVideojuegos.get()
+        self.vj_config.preinscripcion_abierta = True
+        self.vj_config.save()
         
         # 3. Create regular CFP objects for comparison
         self.cfp_program = Programa.objects.create(codigo="CFP_REGULAR", nombre="Programa Regular CFP", activo=True)
@@ -184,3 +189,89 @@ class VideojuegosTests(TestCase):
         self.assertEqual(vj_student.estatus, "Baja")
         for ins in Inscripcion.objects.filter(estudiante=vj_student):
             self.assertEqual(ins.estado, "INACTIVO")
+
+    def test_configuracion_endpoints(self):
+        """Verify GET /videojuegos/config and PATCH /videojuegos/config endpoints."""
+        # 1. GET config (publicly accessible)
+        self.client.credentials()
+        resp = self.client.get("/api/v2/videojuegos/config")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["preinscripcion_abierta"])
+
+        # 2. PATCH config (requires Videojuegos role/access)
+        # Unauthorized (no credentials)
+        payload = {"preinscripcion_abierta": False, "mensaje_cierre": "Cerrado temporalmente"}
+        resp = self.client.patch("/api/v2/videojuegos/config", payload, format="json")
+        self.assertEqual(resp.status_code, 401)
+
+        # Authenticated as VJ Coordinator
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.vj_token}")
+        resp = self.client.patch("/api/v2/videojuegos/config", payload, format="json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.json()["preinscripcion_abierta"])
+        self.assertEqual(resp.json()["mensaje_cierre"], "Cerrado temporalmente")
+
+    def test_preinscripcion_closed_flow(self):
+        """Verify that when pre-registration is closed, public pre-registration returns 403."""
+        # Close VJ pre-registration
+        self.vj_config.preinscripcion_abierta = False
+        self.vj_config.save()
+
+        vj_prog = Programa.objects.get(codigo="VJ")
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        pdf_content = b"%PDF-1.4 mock content"
+        dni_file = SimpleUploadedFile("dni3.pdf", pdf_content, content_type="application/pdf")
+        optative_block = Bloque.objects.get(programa=vj_prog, nombre="Arte y Animación")
+        
+        payload = {
+            "apellido": "Test",
+            "nombre": "VJ Student Closed",
+            "email": "vjclosed@example.com",
+            "dni": "99999992",
+            "fecha_nacimiento": "2000-01-01",
+            "programa_id": vj_prog.id,
+            "bloque_ids": f"{optative_block.id}",
+            "dni_digitalizado": dni_file,
+            "recaptcha_token": "mock_token_vj"
+        }
+        
+        with patch('core.utils.recaptcha.verify_recaptcha', return_value=True):
+            resp = self.client.post("/api/v2/preinscripcion", payload, format="multipart")
+            self.assertEqual(resp.status_code, 403)
+
+    def test_alumnos_endpoints(self):
+        """Verify GET /videojuegos/alumnos and edit endpoints."""
+        vj_prog = Programa.objects.get(codigo="VJ")
+        vj_student = Estudiante.objects.create(
+            apellido="VJAlumno", nombre="Test", dni="66666661", email="vjalumno@example.com", estatus="Preinscripto"
+        )
+        cohorte = Cohorte.objects.filter(programa=vj_prog).first()
+        modulo = Modulo.objects.filter(bloque=cohorte.bloque).first()
+        Inscripcion.objects.create(estudiante=vj_student, cohorte=cohorte, modulo=modulo, estado="PREINSCRIPTO")
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.vj_token}")
+
+        # 1. GET /videojuegos/alumnos
+        resp = self.client.get("/api/v2/videojuegos/alumnos")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        student_ids = [s["id"] for s in data]
+        self.assertIn(vj_student.id, student_ids)
+
+        # 2. GET /videojuegos/alumnos/{id}
+        resp = self.client.get(f"/api/v2/videojuegos/alumnos/{vj_student.id}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["apellido"], "VJAlumno")
+
+        # 3. PATCH /videojuegos/alumnos/{id}
+        payload = {
+            "apellido": "VJAlumnoMod",
+            "nombre": "TestMod",
+            "dni": "66666661",
+            "email": "vjalumno@example.com",
+            "estatus": "Regular"
+        }
+        resp = self.client.patch(f"/api/v2/videojuegos/alumnos/{vj_student.id}", payload, format="json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["apellido"], "VJAlumnoMod")
+        self.assertEqual(resp.json()["estatus"], "Regular")

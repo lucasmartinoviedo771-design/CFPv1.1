@@ -30,8 +30,13 @@ import {
   Sun,
   Moon,
   KeyRound,
-  ExternalLink
+  ExternalLink,
+  Settings
 } from "lucide-react";
+
+import AlumnosTab from "../components/Videojuegos/AlumnosTab";
+import ConfigTab from "../components/Videojuegos/ConfigTab";
+import UsuariosTab from "../components/Videojuegos/UsuariosTab";
 
 // States mapping
 const ESTADOS = [
@@ -428,6 +433,7 @@ export default function GestionPreinscripcionesVideojuegos() {
   const [selected, setSelected] = useState(null);
   const [actionError, setActionError] = useState("");
 
+  const esAdmin = user && (user.is_superuser || user.is_staff || user.groups?.includes("Admin"));
   const GRUPOS_CFP = ["Admin", "Secretaría", "Regencia", "Coordinación Docente", "Docente", "Preceptor", "Bedel", "Rector"];
   const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
 
@@ -585,6 +591,47 @@ export default function GestionPreinscripcionesVideojuegos() {
             {tab === "preinscripciones" && <ChevronRight size={14} className="ml-auto text-[#00ccff]" />}
           </button>
 
+          <button
+            onClick={() => setTab("alumnos")}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+              tab === "alumnos"
+                ? "bg-gradient-to-r from-[#00ccff]/20 to-[#FF6600]/20 text-[#00ccff] border border-[#00ccff]/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]"
+                : "text-indigo-300 hover:text-white hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <Users size={16} />
+            <span>Alumnos VJ</span>
+            {tab === "alumnos" && <ChevronRight size={14} className="ml-auto text-[#00ccff]" />}
+          </button>
+
+          <button
+            onClick={() => setTab("configuracion")}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+              tab === "configuracion"
+                ? "bg-gradient-to-r from-[#00ccff]/20 to-[#FF6600]/20 text-[#00ccff] border border-[#00ccff]/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]"
+                : "text-indigo-300 hover:text-white hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <Settings size={16} />
+            <span>Configuración</span>
+            {tab === "configuracion" && <ChevronRight size={14} className="ml-auto text-[#00ccff]" />}
+          </button>
+
+          {esAdmin && (
+            <button
+              onClick={() => setTab("usuarios")}
+              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+                tab === "usuarios"
+                  ? "bg-gradient-to-r from-[#00ccff]/20 to-[#FF6600]/20 text-[#00ccff] border border-[#00ccff]/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]"
+                  : "text-indigo-300 hover:text-white hover:bg-white/5 border border-transparent"
+              }`}
+            >
+              <KeyRound size={16} />
+              <span>Usuarios VJ</span>
+              {tab === "usuarios" && <ChevronRight size={14} className="ml-auto text-[#00ccff]" />}
+            </button>
+          )}
+
           <a
             href="/preinscripcion-videojuegos"
             target="_blank"
@@ -614,8 +661,18 @@ export default function GestionPreinscripcionesVideojuegos() {
         {/* Standalone Topbar for Videojuegos Panel */}
         <header className="bg-transparent border-b border-indigo-500/10 backdrop-blur-sm h-16 flex items-center justify-between px-8 z-20 flex-shrink-0">
           <h2 className="text-lg font-black tracking-widest text-white uppercase flex items-center gap-2">
-            <span className="text-[#00ccff]">{tab === "dashboard" ? <BarChart3 size={18} /> : <Users size={18} />}</span>
-            {tab === "dashboard" ? "Estadísticas" : "Preinscripciones VJ"}
+            <span className="text-[#00ccff]">
+              {tab === "dashboard" && <BarChart3 size={18} />}
+              {tab === "preinscripciones" && <Users size={18} />}
+              {tab === "alumnos" && <Users size={18} />}
+              {tab === "configuracion" && <Settings size={18} />}
+              {tab === "usuarios" && <KeyRound size={18} />}
+            </span>
+            {tab === "dashboard" && "Estadísticas"}
+            {tab === "preinscripciones" && "Preinscripciones VJ"}
+            {tab === "alumnos" && "Alumnos VJ"}
+            {tab === "configuracion" && "Configuración VJ"}
+            {tab === "usuarios" && "Usuarios VJ"}
           </h2>
 
           <div className="flex items-center gap-6">
@@ -851,6 +908,21 @@ export default function GestionPreinscripcionesVideojuegos() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* ALUMNOS TAB CONTENT */}
+          {tab === "alumnos" && (
+            <AlumnosTab />
+          )}
+
+          {/* CONFIG TAB CONTENT */}
+          {tab === "configuracion" && (
+            <ConfigTab />
+          )}
+
+          {/* USUARIOS TAB CONTENT */}
+          {tab === "usuarios" && esAdmin && (
+            <UsuariosTab />
           )}
         </main>
       </div>

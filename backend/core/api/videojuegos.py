@@ -3,11 +3,12 @@ from typing import List, Optional
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db.models import Q
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
-from core.models import Estudiante, Inscripcion, Cohorte
-from core.api.schemas import EstudianteDetailOut
+from core.models import Estudiante, Inscripcion, Cohorte, ConfiguracionPreinscripcionVideojuegos
+from core.api.schemas import EstudianteDetailOut, EstudianteListOut, EstudianteIn
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -19,8 +20,18 @@ class VideojuegosPreinscripcionPatchIn(Schema):
 
 class VideojuegosConfigOut(Schema):
     abierta: bool
+    preinscripcion_abierta: bool
     fecha_inicio: Optional[str] = None
     fecha_fin: Optional[str] = None
+    mensaje_cierre: Optional[str] = None
+    cohorte_activa_id: Optional[int] = None
+
+class VideojuegosConfigPatchIn(Schema):
+    preinscripcion_abierta: Optional[bool] = None
+    fecha_inicio: Optional[str] = None
+    fecha_fin: Optional[str] = None
+    mensaje_cierre: Optional[str] = None
+    cohorte_activa_id: Optional[int] = None
 
 class VideojuegosEstudianteOut(EstudianteDetailOut):
     estado_vj: str  # "pendiente", "aprobado", "rechazado"
@@ -159,30 +170,177 @@ def actualizar_preinscripcion_videojuegos(
 @router.get("/config", response=VideojuegosConfigOut, auth=None)
 def get_videojuegos_config(request):
     """
-    Devuelve si el formulario de inscripción está habilitado según las fechas de cohorte.
+    Devuelve si el formulario de inscripción está habilitado según la configuración manual.
     """
+    cfg = ConfiguracionPreinscripcionVideojuegos.get()
+    abierta = cfg.preinscripcion_abierta
     hoy = timezone.localdate()
-    cohortes = Cohorte.objects.filter(programa__codigo="VJ").order_by("fecha_inicio")
-    
-    active_cohorte = None
-    for c in cohortes:
-        if c.fecha_inicio and c.fecha_fin:
-            if c.fecha_inicio <= hoy <= c.fecha_fin:
-                active_cohorte = c
-                break
-                
-    if not active_cohorte:
-        active_cohorte = cohortes.filter(fecha_inicio__gt=hoy).first() or cohortes.last()
-        
-    if not active_cohorte:
-        return VideojuegosConfigOut(abierta=False)
-        
-    abierta = False
-    if active_cohorte.fecha_inicio and active_cohorte.fecha_fin:
-        abierta = active_cohorte.fecha_inicio <= hoy <= active_cohorte.fecha_fin
+    if abierta and cfg.fecha_inicio and hoy < cfg.fecha_inicio:
+        abierta = False
+    if abierta and cfg.fecha_fin and hoy > cfg.fecha_fin:
+        abierta = False
         
     return VideojuegosConfigOut(
         abierta=abierta,
-        fecha_inicio=str(active_cohorte.fecha_inicio) if active_cohorte.fecha_inicio else None,
-        fecha_fin=str(active_cohorte.fecha_fin) if active_cohorte.fecha_fin else None
+        preinscripcion_abierta=cfg.preinscripcion_abierta,
+        fecha_inicio=str(cfg.fecha_inicio) if cfg.fecha_inicio else None,
+        fecha_fin=str(cfg.fecha_fin) if cfg.fecha_fin else None,
+        mensaje_cierre=cfg.mensaje_cierre,
+        cohorte_activa_id=cfg.cohorte_activa_id
     )
+
+@router.patch("/config", response=VideojuegosConfigOut)
+@require_videojuegos_access
+def actualizar_videojuegos_config(request, payload: VideojuegosConfigPatchIn):
+    """
+    Actualiza la configuración de preinscripción de videojuegos.
+    """
+    cfg = ConfiguracionPreinscripcionVideojuegos.get()
+    data = payload.dict(exclude_none=True)
+    
+    update_fields = []
+    if "preinscripcion_abierta" in data:
+        cfg.preinscripcion_abierta = data["preinscripcion_abierta"]
+        update_fields.append("preinscripcion_abierta")
+        
+    if "fecha_inicio" in data:
+        fi = data["fecha_inicio"]
+        cfg.fecha_inicio = timezone.datetime.strptime(fi, "%Y-%m-%d").date() if (fi and fi != "") else None
+        update_fields.append("fecha_inicio")
+        
+    if "fecha_fin" in data:
+        ff = data["fecha_fin"]
+        cfg.fecha_fin = timezone.datetime.strptime(ff, "%Y-%m-%d").date() if (ff and ff != "") else None
+        update_fields.append("fecha_fin")
+        
+    if "mensaje_cierre" in data:
+        cfg.mensaje_cierre = data["mensaje_cierre"]
+        update_fields.append("mensaje_cierre")
+        
+    if "cohorte_activa_id" in data:
+        cfg.cohorte_activa_id = data["cohorte_activa_id"] if data["cohorte_activa_id"] > 0 else None
+        update_fields.append("cohorte_activa_id")
+        
+    if update_fields:
+        cfg.save(update_fields=update_fields)
+        cfg.refresh_from_db()
+        
+    # Calcular abierta
+    abierta = cfg.preinscripcion_abierta
+    hoy = timezone.localdate()
+    if abierta and cfg.fecha_inicio and hoy < cfg.fecha_inicio:
+        abierta = False
+    if abierta and cfg.fecha_fin and hoy > cfg.fecha_fin:
+        abierta = False
+        
+    return VideojuegosConfigOut(
+        abierta=abierta,
+        preinscripcion_abierta=cfg.preinscripcion_abierta,
+        fecha_inicio=str(cfg.fecha_inicio) if cfg.fecha_inicio else None,
+        fecha_fin=str(cfg.fecha_fin) if cfg.fecha_fin else None,
+        mensaje_cierre=cfg.mensaje_cierre,
+        cohorte_activa_id=cfg.cohorte_activa_id
+    )
+
+
+# -------------------------------------------------------------
+# Endpoints de Alumnos (Estudiantes) para Videojuegos (VJ)
+# -------------------------------------------------------------
+
+@router.get("/alumnos", response=List[EstudianteListOut])
+@require_videojuegos_access
+def listar_alumnos_videojuegos(
+    request,
+    search: Optional[str] = None,
+    dni: Optional[str] = None,
+    estatus: Optional[str] = None,
+    cohorte_id: Optional[int] = None,
+    rango_edad: Optional[str] = None,
+):
+    """
+    Lista todos los estudiantes que tengan inscripciones en el programa de Videojuegos (VJ).
+    """
+    qs = Estudiante.objects.filter(
+        is_active=True,
+        inscripciones__cohorte__programa__codigo="VJ"
+    ).distinct().select_related("nivelacion_digital").prefetch_related(
+        "inscripciones__cohorte__programa",
+        "inscripciones__cohorte__bloque",
+        "inscripciones__modulo__bloque",
+    ).order_by("apellido", "nombre")
+
+    if dni:
+        qs = qs.filter(dni__iexact=dni)
+    if estatus:
+        qs = qs.filter(estatus=estatus)
+    if search:
+        qs = qs.filter(
+            Q(apellido__icontains=search)
+            | Q(nombre__icontains=search)
+            | Q(email__icontains=search)
+            | Q(dni__icontains=search)
+            | Q(telefono__icontains=search)
+        )
+    if cohorte_id:
+        qs = qs.filter(inscripciones__cohorte_id=cohorte_id).distinct()
+
+    if rango_edad:
+        today = timezone.localdate()
+        date_18 = today.replace(year=today.year - 18)
+        if rango_edad == "menores":
+            qs = qs.filter(fecha_nacimiento__gt=date_18)
+        elif rango_edad == "mayores":
+            qs = qs.filter(fecha_nacimiento__lte=date_18)
+
+    return list(qs)
+
+
+@router.get("/alumnos/{estudiante_id}", response=EstudianteDetailOut)
+@require_videojuegos_access
+def obtener_alumno_videojuegos(request, estudiante_id: int):
+    """
+    Devuelve los detalles de un estudiante de Videojuegos.
+    """
+    estudiante = get_object_or_404(
+        Estudiante,
+        pk=estudiante_id,
+        inscripciones__cohorte__programa__codigo="VJ"
+    )
+    return estudiante
+
+
+@router.patch("/alumnos/{estudiante_id}", response=EstudianteDetailOut)
+@require_videojuegos_access
+def actualizar_alumno_videojuegos(request, estudiante_id: int, payload: EstudianteIn):
+    """
+    Actualiza la información de un estudiante de Videojuegos.
+    """
+    estudiante = get_object_or_404(
+        Estudiante,
+        pk=estudiante_id,
+        inscripciones__cohorte__programa__codigo="VJ"
+    )
+    
+    data = payload.dict(exclude_none=True)
+    update_fields = []
+    
+    # Lista de campos editables en Estudiante
+    editable_fields = [
+        "apellido", "nombre", "dni", "cuit", "sexo", "fecha_nacimiento",
+        "nacionalidad", "lugar_nacimiento", "domicilio", "barrio", "ciudad",
+        "telefono", "email", "nivel_educativo", "posee_pc", "posee_conectividad",
+        "trabaja", "lugar_trabajo", "estatus"
+    ]
+    
+    for f in editable_fields:
+        if f in data:
+            setattr(estudiante, f, data[f])
+            if f not in update_fields:
+                update_fields.append(f)
+                
+    if update_fields:
+        estudiante.updated_at = timezone.now()
+        update_fields.append("updated_at")
+        estudiante.save(update_fields=update_fields)
+        
+    return estudiante

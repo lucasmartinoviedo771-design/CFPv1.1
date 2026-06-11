@@ -768,3 +768,36 @@ class ConfiguracionPreinscripcionTerciario(models.Model):
     def get(cls):
         obj, _ = cls.objects.get_or_create(id=1)
         return obj
+
+
+class ConfiguracionPreinscripcionVideojuegos(models.Model):
+    """Singleton — usar siempre id=1."""
+    preinscripcion_abierta = models.BooleanField(default=False)
+    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_fin = models.DateField(null=True, blank=True)
+    mensaje_cierre = models.CharField(
+        max_length=300,
+        default="Las preinscripciones de Videojuegos están cerradas en este momento.",
+        blank=True,
+    )
+    cohorte_activa = models.ForeignKey(
+        'Cohorte', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='config_videojuegos',
+        help_text="Cohorte activa de Videojuegos donde se inscriben los aprobados",
+    )
+
+    class Meta:
+        verbose_name = "Configuración Preinscripción Videojuegos"
+
+    def __str__(self):
+        return "Configuración preinscripción videojuegos"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj
+

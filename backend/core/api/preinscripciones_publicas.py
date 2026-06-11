@@ -583,10 +583,19 @@ def crear_preinscripcion_publica(request):
         estudiante = serializer.save()
 
         # Interceptar y validar selecciones del programa Videojuegos (VJ)
-        from core.models import Programa
+        from core.models import Programa, ConfiguracionPreinscripcionVideojuegos
         vj_prog = Programa.objects.filter(codigo="VJ").first()
         # Solo procesar si VJ existe Y fue efectivamente seleccionado
         if vj_prog and any(s["programa_id"] == vj_prog.id for s in seleccion_programas):
+            cfg = ConfiguracionPreinscripcionVideojuegos.get()
+            hoy = timezone.localdate()
+            abierta = cfg.preinscripcion_abierta
+            if abierta and cfg.fecha_inicio and hoy < cfg.fecha_inicio:
+                abierta = False
+            if abierta and cfg.fecha_fin and hoy > cfg.fecha_fin:
+                abierta = False
+            if not abierta:
+                raise HttpError(403, cfg.mensaje_cierre or "Las preinscripciones de Videojuegos están cerradas.")
             vj_blocks = list(vj_prog.bloques.all())
             optative_blocks = [b for b in vj_blocks if _normalize_text(b.nombre) in ["arte y animacion", "programacion de entornos virtuales"]]
             obligatory_blocks = [b for b in vj_blocks if _normalize_text(b.nombre) not in ["arte y animacion", "programacion de entornos virtuales"]]

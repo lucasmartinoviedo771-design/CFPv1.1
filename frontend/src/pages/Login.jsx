@@ -24,16 +24,23 @@ export default function Login() {
         const groups = userData?.groups || [];
         const isSuperuser = userData?.is_superuser || userData?.is_staff;
         
-        // Exclusively Videojuegos group members
-        if (groups.includes("Videojuegos") && !isSuperuser && !groups.some(g => [...GRUPOS_CFP, ...GRUPOS_TERCIARIO].includes(g))) {
-            return '/admin-videojuegos';
-        }
-
+        const hasVJ = isSuperuser || groups.includes("Videojuegos") || groups.includes("Admin");
         const isTerciario = isSuperuser || groups.some(g => GRUPOS_TERCIARIO.includes(g));
         const isCFP = isSuperuser || (groups.some(g => GRUPOS_CFP.includes(g)) && !groups.includes("Sin CFP"));
-        if (isTerciario && !isCFP) return '/admin-terciario';
-        if (isCFP && !isTerciario) return '/dashboard';
-        if (isTerciario && isCFP) return null; // mostrar elección
+
+        let areas = 0;
+        if (isCFP) areas++;
+        if (isTerciario) areas++;
+        if (hasVJ) areas++;
+
+        if (areas > 1) {
+            return null; // Mostrar elección
+        }
+
+        if (hasVJ) return '/admin-videojuegos';
+        if (isTerciario) return '/admin-terciario';
+        if (isCFP) return '/dashboard';
+
         return '/dashboard';
     };
 
@@ -61,21 +68,38 @@ export default function Login() {
     };
 
     if (showChoice) {
+        const groups = pendingUser?.groups || [];
+        const isSuperuser = pendingUser?.is_superuser || pendingUser?.is_staff;
+        const isCFP = isSuperuser || (groups.some(g => GRUPOS_CFP.includes(g)) && !groups.includes("Sin CFP"));
+        const isTerciario = isSuperuser || groups.some(g => GRUPOS_TERCIARIO.includes(g));
+        const hasVJ = isSuperuser || groups.includes("Videojuegos") || groups.includes("Admin");
+
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
                 <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl p-10 max-w-sm w-full text-center space-y-6">
                     <h2 className="text-2xl font-black text-white">¿Dónde querés ingresar?</h2>
-                    <p className="text-indigo-200 text-sm">Tu usuario tiene acceso a ambos paneles.</p>
+                    <p className="text-indigo-200 text-sm">Tu usuario tiene acceso a múltiples paneles.</p>
                     <div className="space-y-3">
-                        <button onClick={() => navigate('/dashboard')}
-                            className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-colors">
-                            Panel CFP Malvinas Argentinas
-                        </button>
-                        <button onClick={() => navigate('/admin-terciario')}
-                            className="w-full py-4 rounded-2xl font-bold text-sm transition-colors"
-                            style={{ background: '#1a1f4e', color: '#f5c518' }}>
-                            Panel Terciario — Politécnico
-                        </button>
+                        {isCFP && (
+                            <button onClick={() => navigate('/dashboard')}
+                                className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-colors">
+                                Panel CFP Malvinas Argentinas
+                            </button>
+                        )}
+                        {isTerciario && (
+                            <button onClick={() => navigate('/admin-terciario')}
+                                className="w-full py-4 rounded-2xl font-bold text-sm transition-colors"
+                                style={{ background: '#1a1f4e', color: '#f5c518' }}>
+                                Panel Terciario — Politécnico
+                            </button>
+                        )}
+                        {hasVJ && (
+                            <button onClick={() => navigate('/admin-videojuegos')}
+                                className="w-full py-4 rounded-2xl font-extrabold text-sm transition-all hover:scale-[1.01] uppercase tracking-wider"
+                                style={{ background: 'linear-gradient(to right, #00ccff, #FF6600)', color: '#050814' }}>
+                                Panel de Videojuegos
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
