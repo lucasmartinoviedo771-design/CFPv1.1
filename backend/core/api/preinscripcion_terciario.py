@@ -391,6 +391,14 @@ def crear_preinscripcion_terciario(request):
     if PreinscripcionTerciario.objects.filter(dni=dni).exists():
         raise HttpError(400, "Ya existe una preinscripción registrada con ese DNI.")
 
+    email = data.get("email", "").strip().lower()
+    if email:
+        from core.models import Estudiante
+        if Estudiante.objects.filter(email__iexact=email).exclude(dni=dni).exists():
+            raise HttpError(400, "El correo electrónico ya está registrado por otro estudiante.")
+        if PreinscripcionTerciario.objects.filter(email__iexact=email).exclude(dni=dni).exists():
+            raise HttpError(400, "El correo electrónico ya está siendo utilizado por otro estudiante.")
+
     def to_bool(val):
         if isinstance(val, bool):
             return val

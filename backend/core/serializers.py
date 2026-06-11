@@ -76,6 +76,29 @@ class EstudianteSerializer(serializers.ModelSerializer):
                 trayectos.add(prog)
         return sorted(list(trayectos))
 
+    def validate_email(self, value):
+        from core.models import Estudiante, PreinscripcionTerciario
+        email = value.strip().lower() if value else ""
+        if email:
+            dni = self.initial_data.get('dni') if hasattr(self, 'initial_data') else None
+            
+            qs = Estudiante.objects.filter(email__iexact=email)
+            if self.instance:
+                qs = qs.exclude(id=self.instance.id)
+            elif dni:
+                qs = qs.exclude(dni=dni)
+            if qs.exists():
+                raise serializers.ValidationError("El correo electrónico ya está siendo utilizado por otro estudiante.")
+                
+            qs_terc = PreinscripcionTerciario.objects.filter(email__iexact=email)
+            if self.instance:
+                qs_terc = qs_terc.exclude(dni=self.instance.dni)
+            elif dni:
+                qs_terc = qs_terc.exclude(dni=dni)
+            if qs_terc.exists():
+                raise serializers.ValidationError("El correo electrónico ya está siendo utilizado por otro estudiante.")
+        return value
+
     class Meta:
         model = Estudiante
         # Lista explícita en vez de "__all__": defensa en profundidad. Este serializer

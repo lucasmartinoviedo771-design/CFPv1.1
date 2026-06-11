@@ -183,6 +183,51 @@ class PreinscripcionesPublicasTests(TestCase):
         student.refresh_from_db()
         self.assertEqual(student.email, "new_email@example.com")
 
+    @patch('core.utils.recaptcha.verify_recaptcha')
+    def test_preinscripcion_duplicate_email_blocked_for_different_dni(self, mock_recaptcha):
+        """Test that registering a different DNI with an existing email is blocked."""
+        mock_recaptcha.return_value = True
+        
+        # 1. Register first student
+        pdf_content = b"%PDF-1.4 mock content"
+        dni_file = SimpleUploadedFile("dni.pdf", pdf_content, content_type="application/pdf")
+        titulo_file = SimpleUploadedFile("titulo.pdf", pdf_content, content_type="application/pdf")
+        post_data = {
+            "email": "shared_email@example.com",
+            "apellido": "Gomez",
+            "nombre": "Pedro",
+            "dni": "11111111",
+            "fecha_nacimiento": "1990-05-15",
+            "programa_id": self.programa_niii.id,
+            "bloque_ids": f"{self.bloque_niii.id}",
+            "dni_digitalizado": dni_file,
+            "titulo_secundario_digitalizado": titulo_file,
+            "recaptcha_token": "valid_token"
+        }
+        resp = self.client.post("/api/v2/preinscripcion", post_data, format="multipart")
+        self.assertEqual(resp.status_code, 200, resp.content)
+        
+        # 2. Try to register second student with the same email but different DNI
+        dni_file2 = SimpleUploadedFile("dni.pdf", pdf_content, content_type="application/pdf")
+        titulo_file2 = SimpleUploadedFile("titulo.pdf", pdf_content, content_type="application/pdf")
+        post_data2 = {
+            "email": "shared_email@example.com",
+            "apellido": "Lopez",
+            "nombre": "Juan",
+            "dni": "22222222",
+            "fecha_nacimiento": "1992-08-20",
+            "programa_id": self.programa_niii.id,
+            "bloque_ids": f"{self.bloque_niii.id}",
+            "dni_digitalizado": dni_file2,
+            "titulo_secundario_digitalizado": titulo_file2,
+            "recaptcha_token": "valid_token"
+        }
+        
+        resp2 = self.client.post("/api/v2/preinscripcion", post_data2, format="multipart")
+        self.assertEqual(resp2.status_code, 400)
+        self.assertIn("correo electrónico", resp2.json().get("detail", ""))
+
+
 
 
 
