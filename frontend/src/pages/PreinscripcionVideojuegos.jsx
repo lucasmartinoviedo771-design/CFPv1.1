@@ -18,8 +18,8 @@ import {
   Heart
 } from "lucide-react";
 import { apiClientV2 } from "../api/client";
-import { Navbar } from "../components/Navbar";
-import { Footer } from "../components/Footer";
+import { NavbarVideojuegos } from "../components/NavbarVideojuegos";
+import { FooterVideojuegos } from "../components/FooterVideojuegos";
 
 const MAX_MB = 3;
 const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
@@ -499,7 +499,7 @@ export default function PreinscripcionVideojuegos() {
         <div className="absolute bottom-10 right-1/4 w-96 h-96 rounded-full bg-brand-accent/5 blur-[120px]" />
       </div>
 
-      <Navbar />
+      <NavbarVideojuegos />
 
       <main className="relative z-10 flex-grow pt-28 pb-20 px-4 flex flex-col items-center">
         <div className="max-w-4xl w-full space-y-8">
@@ -785,7 +785,7 @@ export default function PreinscripcionVideojuegos() {
           )}
         </div>
       </main>
-      <Footer />
+      <FooterVideojuegos />
     </div>
   );
 }

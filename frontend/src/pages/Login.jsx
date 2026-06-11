@@ -23,6 +23,12 @@ export default function Login() {
     const resolveDestino = (userData) => {
         const groups = userData?.groups || [];
         const isSuperuser = userData?.is_superuser || userData?.is_staff;
+        
+        // Exclusively Videojuegos group members
+        if (groups.includes("Videojuegos") && !isSuperuser && !groups.some(g => [...GRUPOS_CFP, ...GRUPOS_TERCIARIO].includes(g))) {
+            return '/admin-videojuegos';
+        }
+
         const isTerciario = isSuperuser || groups.some(g => GRUPOS_TERCIARIO.includes(g));
         const isCFP = isSuperuser || (groups.some(g => GRUPOS_CFP.includes(g)) && !groups.includes("Sin CFP"));
         if (isTerciario && !isCFP) return '/admin-terciario';
