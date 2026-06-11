@@ -585,22 +585,22 @@ def crear_preinscripcion_publica(request):
         # Interceptar y validar selecciones del programa Videojuegos (VJ)
         from core.models import Programa
         vj_prog = Programa.objects.filter(codigo="VJ").first()
-        if vj_prog:
+        # Solo procesar si VJ existe Y fue efectivamente seleccionado
+        if vj_prog and any(s["programa_id"] == vj_prog.id for s in seleccion_programas):
+            vj_blocks = list(vj_prog.bloques.all())
+            optative_blocks = [b for b in vj_blocks if _normalize_text(b.nombre) in ["arte y animacion", "programacion de entornos virtuales"]]
+            obligatory_blocks = [b for b in vj_blocks if _normalize_text(b.nombre) not in ["arte y animacion", "programacion de entornos virtuales"]]
+            optative_ids = {b.id for b in optative_blocks}
+            obligatory_ids = {b.id for b in obligatory_blocks}
+
             for seleccion in seleccion_programas:
                 if seleccion["programa_id"] == vj_prog.id:
-                    vj_blocks = list(vj_prog.bloques.all())
-                    optative_blocks = [b for b in vj_blocks if _normalize_text(b.nombre) in ["arte y animacion", "programacion de entornos virtuales"]]
-                    obligatory_blocks = [b for b in vj_blocks if _normalize_text(b.nombre) not in ["arte y animacion", "programacion de entornos virtuales"]]
-                    
-                    optative_ids = {b.id for b in optative_blocks}
-                    obligatory_ids = {b.id for b in obligatory_blocks}
-                    
                     selected_ids = set(seleccion["bloque_ids"] or [])
-                    
+
                     # Validar: al menos un bloque optativo
                     if not (selected_ids & optative_ids):
                         raise HttpError(400, "Debe seleccionar al menos un bloque optativo (Arte y Animación o Programación de Entornos Virtuales).")
-                    
+
                     # Auto-agregar los bloques obligatorios/transversales
                     new_selected_ids = selected_ids | obligatory_ids
                     seleccion["bloque_ids"] = list(new_selected_ids)
