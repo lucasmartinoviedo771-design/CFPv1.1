@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowRight, ArrowLeft, CheckCircle2, User, BookOpen,
-  Monitor, Heart, X, AlertTriangle, UploadCloud, FileText,
+  Monitor, Heart, X, AlertTriangle, UploadCloud,
 } from "lucide-react";
 import { apiClientV2 } from "../api/client";
 
@@ -15,7 +15,7 @@ const PROVINCIAS_AR = [
   "Tierra del Fuego, Antártida e Islas del Atlántico Sur", "Tucumán",
 ];
 
-const CIUDADES_POR_PROVINCIA = {
+const CIUDADES_POR_PROVINCIA: Record<string, string[]> = {
   "Buenos Aires": ["La Plata", "Mar del Plata", "Bahía Blanca", "Quilmes", "Lanús", "Lomas de Zamora", "General Roca", "Tandil", "Pergamino", "San Nicolás", "Otra"],
   "Catamarca": ["San Fernando del Valle de Catamarca", "San Isidro", "Belén", "Santa María", "Andalgalá", "Otra"],
   "Chaco": ["Resistencia", "Presidencia Roque Sáenz Peña", "Villa Ángela", "Charata", "Otra"],
@@ -50,7 +50,13 @@ const LOCALIDADES = [
   { value: "zona_rural", label: "Zona Rural (Ej: Estancia Cullen)" },
 ];
 
-const STEPS = [
+interface StepItem {
+  n: number;
+  label: string;
+  icon: React.ReactNode;
+}
+
+const STEPS: StepItem[] = [
   { n: 1, label: "Personales", icon: <User size={18} /> },
   { n: 2, label: "Académicos", icon: <BookOpen size={18} /> },
   { n: 3, label: "Tecnológicos", icon: <Monitor size={18} /> },
@@ -63,7 +69,13 @@ const inputCls =
   "w-full rounded-xl px-4 py-3 border border-[#b8ccd8] bg-white text-[#1a1f4e] focus:outline-none focus:ring-2 focus:ring-[#f5c518] transition-all text-sm";
 const labelCls = "block text-xs font-bold uppercase tracking-wider text-[#1a1f4e] mb-1";
 
-function Field({ label, required, children }) {
+interface FieldProps {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}
+
+function Field({ label, required, children }: FieldProps) {
   return (
     <div className="space-y-1">
       <label className={labelCls}>
@@ -74,7 +86,15 @@ function Field({ label, required, children }) {
   );
 }
 
-function Radio({ name, value, current, onSelect, label }) {
+interface RadioProps {
+  name: string;
+  value: string;
+  current: string;
+  onSelect: (name: string, value: string) => void;
+  label: string;
+}
+
+function Radio({ name, value, current, onSelect, label }: RadioProps) {
   const active = current === value;
   return (
     <button
@@ -91,7 +111,19 @@ function Radio({ name, value, current, onSelect, label }) {
   );
 }
 
-function RadioGroup({ name, value, onSelect, options }) {
+interface RadioOption {
+  value: string;
+  label: string;
+}
+
+interface RadioGroupProps {
+  name: string;
+  value: string;
+  onSelect: (name: string, value: string) => void;
+  options: RadioOption[];
+}
+
+function RadioGroup({ name, value, onSelect, options }: RadioGroupProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((o) => (
@@ -101,8 +133,16 @@ function RadioGroup({ name, value, onSelect, options }) {
   );
 }
 
-function FileUpload({ label, required, file, onFile, accept }) {
-  const ref = useRef();
+interface FileUploadProps {
+  label: string;
+  required?: boolean;
+  file: File | null;
+  onFile: (file: File | null) => void;
+  accept?: string;
+}
+
+function FileUpload({ label, required, file, onFile, accept }: FileUploadProps) {
+  const ref = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
 
   return (
@@ -120,7 +160,7 @@ function FileUpload({ label, required, file, onFile, accept }) {
         {file ? (
           <div className="flex items-center gap-2 text-green-700 text-sm font-semibold">
             <CheckCircle2 size={18} /> {file.name}
-            <button type="button" onClick={(e) => { e.preventDefault(); onFile(null); ref.current.value = ""; }} className="ml-2 text-red-400 hover:text-red-600">
+            <button type="button" onClick={(e) => { e.preventDefault(); onFile(null); if (ref.current) ref.current.value = ""; }} className="ml-2 text-red-400 hover:text-red-600">
               <X size={14} />
             </button>
           </div>
@@ -136,7 +176,11 @@ function FileUpload({ label, required, file, onFile, accept }) {
   );
 }
 
-function ProgressBar({ step }) {
+interface ProgressBarProps {
+  step: number;
+}
+
+function ProgressBar({ step }: ProgressBarProps) {
   const progress = ((step - 1) / (STEPS.length - 1)) * 100;
   return (
     <div className="w-full mb-10">
@@ -162,7 +206,38 @@ function ProgressBar({ step }) {
   );
 }
 
-const INIT_FORM = {
+interface FormState {
+  email: string;
+  apellido: string;
+  nombre: string;
+  dni: string;
+  cuil: string;
+  sexo: string;
+  celular: string;
+  fecha_nacimiento: string;
+  localidad_nacimiento: string;
+  localidad_nacimiento_otra: string;
+  provincia_nacimiento: string;
+  nacionalidad: string;
+  domicilio: string;
+  provincia_residencia: string;
+  localidad: string;
+  finalizo_secundaria: string;
+  posee_estudios_superiores: string;
+  estudios_superiores_finalizado: string;
+  estudios_superiores_carrera: string;
+  posee_pc: string;
+  posee_internet: string;
+  pueblo_originario: string;
+  posee_discapacidad: string;
+  tipo_discapacidad: string;
+  posee_cud: string;
+  apoyo_inclusion: string;
+  requiere_apoyo_especifico: string;
+  descripcion_apoyo: string;
+}
+
+const INIT_FORM: FormState = {
   email: "", apellido: "", nombre: "", dni: "", cuil: "", sexo: "",
   celular: "", fecha_nacimiento: "", localidad_nacimiento: "", localidad_nacimiento_otra: "",
   provincia_nacimiento: "", nacionalidad: "Argentina", domicilio: "",
@@ -173,7 +248,7 @@ const INIT_FORM = {
   apoyo_inclusion: "", requiere_apoyo_especifico: "", descripcion_apoyo: "",
 };
 
-const getEmailPorLocalidad = (localidad) => {
+const getEmailPorLocalidad = (localidad: string) => {
   if (localidad === "ushuaia") {
     return "Tutoria.cetns.ush@tdf.edu.ar";
   }
@@ -183,10 +258,16 @@ const getEmailPorLocalidad = (localidad) => {
   return "Tutoria.cetns.rg@gmail.com";
 };
 
-function ProvinciaSelect({ value, onChange, className }) {
+interface ProvinciaSelectProps {
+  value: string;
+  onChange: (prov: string) => void;
+  className?: string;
+}
+
+function ProvinciaSelect({ value, onChange, className }: ProvinciaSelectProps) {
   const [query, setQuery] = useState(value || "");
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   const filtered = query.length === 0
     ? PROVINCIAS_AR
@@ -197,12 +278,12 @@ function ProvinciaSelect({ value, onChange, className }) {
   }, [value]);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const select = (prov) => {
+  const select = (prov: string) => {
     setQuery(prov);
     setOpen(false);
     onChange(prov);
@@ -235,11 +316,12 @@ function ProvinciaSelect({ value, onChange, className }) {
   );
 }
 
-function loadSaved() {
+function loadSaved(): { form: FormState; step: number } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { form: INIT_FORM, step: 1 };
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as { form?: Partial<FormState>; step?: number; expiresAt?: number } | null;
+    if (!parsed) return { form: INIT_FORM, step: 1 };
     if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
       localStorage.removeItem(STORAGE_KEY);
       return { form: INIT_FORM, step: 1 };
@@ -248,20 +330,27 @@ function loadSaved() {
   } catch { return { form: INIT_FORM, step: 1 }; }
 }
 
+interface PreinscripcionConfig {
+  abierta: boolean;
+  mensaje_cierre?: string;
+  fecha_inicio?: string;
+  fecha_fin?: string;
+}
+
 export default function PreinscripcionTerciario() {
   const saved = loadSaved();
   const [step, setStep] = useState(saved.step);
-  const [form, setForm] = useState(saved.form);
+  const [form, setForm] = useState<FormState>(saved.form);
 
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [rechazado, setRechazado] = useState(false);
   const [configLoading, setConfigLoading] = useState(true);
-  const [config, setConfig] = useState(null);
+  const [config, setConfig] = useState<PreinscripcionConfig | null>(null);
 
   useEffect(() => {
-    apiClientV2.get("/preinscripcion-terciario-config")
+    apiClientV2.get<PreinscripcionConfig>("/preinscripcion-terciario-config")
       .then(({ data }) => setConfig(data))
       .catch(() => setConfig({ abierta: false, mensaje_cierre: "No se pudo verificar el estado del formulario." }))
       .finally(() => setConfigLoading(false));
@@ -273,7 +362,7 @@ export default function PreinscripcionTerciario() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ form, step, expiresAt }));
   }, [form, step]);
 
-  const onSelect = (name, value) => setForm((p) => {
+  const onSelect = (name: string, value: string) => setForm((p) => {
     const next = { ...p, [name]: value };
     if (name === "posee_discapacidad" && value === "no") {
       next.tipo_discapacidad = "";
@@ -288,12 +377,13 @@ export default function PreinscripcionTerciario() {
     }
     return next;
   });
-  const onChange = (e) => {
+
+  const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
   };
 
-  const validate = (s) => {
+  const validate = (s: number): boolean => {
     setError("");
     if (s === 1) {
       if (!form.email.trim()) return setError("El email es obligatorio."), false;
@@ -341,7 +431,7 @@ export default function PreinscripcionTerciario() {
   };
   const prevStep = () => { setError(""); setStep((p) => Math.max(p - 1, 1)); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
-  const onSubmit = async (e) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (step < 4) {
       nextStep();
@@ -361,7 +451,6 @@ export default function PreinscripcionTerciario() {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ""));
 
-
       await apiClientV2.post("/preinscripcion-terciario", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -370,11 +459,14 @@ export default function PreinscripcionTerciario() {
       setDone(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      const data = err?.response?.data;
+      const errorObj = err as { response?: { data?: string | { detail?: string } } };
+      const data = errorObj.response?.data;
       let msg = "Error al enviar el formulario.";
       if (data) {
         if (typeof data === "string") msg = data;
-        else if (data.detail) msg = data.detail;
+        else if (data && typeof data === "object" && "detail" in data && typeof data.detail === "string") {
+          msg = data.detail;
+        }
       }
       setError(msg);
       window.scrollTo({ top: 0, behavior: "smooth" });

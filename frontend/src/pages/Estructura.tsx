@@ -4,7 +4,7 @@ import {
   Box, Typography, Accordion, AccordionSummary, AccordionDetails, CircularProgress,
   List, ListItem, ListItemText, Grid, IconButton, Tooltip, Button,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Checkbox, FormControlLabel,
-  Snackbar, Alert, Select, MenuItem, FormControl, InputLabel
+  Snackbar, Alert, Select, MenuItem, FormControl, InputLabel, SelectChangeEvent
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
@@ -13,26 +13,93 @@ import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import api from '../api/client';
 
-const initialModuloFormState = {
+interface ModuloEstructura {
+  id: number;
+  nombre: string;
+  es_practica: boolean;
+  asistencia_requerida_practica: number;
+  bloque_id: number | null;
+  bloque?: { id: number } | null;
+}
+
+interface BloqueEstructura {
+  id: number;
+  nombre: string;
+  programa_id: number | null;
+  correlativas_ids: number[];
+  modulos: ModuloEstructura[];
+}
+
+interface ProgramaEstructura {
+  id: number;
+  nombre: string;
+  codigo: string;
+  resolucion_id: number | null;
+  bloques: BloqueEstructura[];
+}
+
+interface ResolucionEstructura {
+  id: number;
+  numero: string;
+  nombre: string;
+  fecha_publicacion: string;
+  vigente: boolean;
+  observaciones: string;
+  programas: ProgramaEstructura[];
+}
+
+// Dialog forms interfaces
+interface ModuloForm {
+  id?: number;
+  nombre: string;
+  es_practica: boolean;
+  asistencia_requerida_practica: number;
+  bloque_id: number | null;
+}
+
+interface BloqueForm {
+  id?: number;
+  nombre: string;
+  programa_id: number | null;
+  correlativas_ids: number[];
+}
+
+interface ProgramaForm {
+  id?: number;
+  nombre: string;
+  codigo: string;
+  resolucion_id: number | null;
+}
+
+interface ResolucionForm {
+  id?: number;
+  numero: string;
+  nombre: string;
+  fecha_publicacion: string;
+  vigente: boolean;
+  observaciones: string;
+}
+
+const initialModuloFormState: ModuloForm = {
   nombre: '',
   es_practica: false,
   asistencia_requerida_practica: 80,
   bloque_id: null,
 };
 
-const initialBloqueFormState = {
+const initialBloqueFormState: BloqueForm = {
   nombre: '',
   programa_id: null,
   correlativas_ids: [],
 };
 
-const initialProgramaFormState = {
+const initialProgramaFormState: ProgramaForm = {
   nombre: '',
   codigo: '',
   resolucion_id: null,
 };
 
-const initialResolucionFormState = {
+const initialResolucionFormState: ResolucionForm = {
   numero: '',
   nombre: '',
   fecha_publicacion: '',
@@ -42,22 +109,31 @@ const initialResolucionFormState = {
 
 // ============ DIALOGS ============
 
-function ModuloFormDialog({ open, onClose, onSave, modulo, bloqueId }) {
-  const [form, setForm] = useState(initialModuloFormState);
+interface ModuloFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (form: ModuloForm) => void;
+  modulo: ModuloForm | null;
+  bloqueId: number | null;
+}
+
+function ModuloFormDialog({ open, onClose, onSave, modulo, bloqueId }: ModuloFormDialogProps) {
+  const [form, setForm] = useState<ModuloForm>(initialModuloFormState);
 
   useEffect(() => {
     if (modulo) {
       setForm({
         ...modulo,
-        bloque_id: modulo.bloque_id || (modulo.bloque ? modulo.bloque.id : null)
+        bloque_id: modulo.bloque_id
       });
     } else {
       setForm({ ...initialModuloFormState, bloque_id: bloqueId });
     }
   }, [modulo, bloqueId, open]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setForm(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -88,8 +164,17 @@ function ModuloFormDialog({ open, onClose, onSave, modulo, bloqueId }) {
   );
 }
 
-function BloqueFormDialog({ open, onClose, onSave, bloque, programaId, availableBloques = [] }) {
-  const [form, setForm] = useState(initialBloqueFormState);
+interface BloqueFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (form: BloqueForm) => void;
+  bloque: BloqueForm | null;
+  programaId: number | null;
+  availableBloques: BloqueEstructura[];
+}
+
+function BloqueFormDialog({ open, onClose, onSave, bloque, programaId, availableBloques = [] }: BloqueFormDialogProps) {
+  const [form, setForm] = useState<BloqueForm>(initialBloqueFormState);
 
   useEffect(() => {
     if (bloque) {
@@ -104,7 +189,7 @@ function BloqueFormDialog({ open, onClose, onSave, bloque, programaId, available
     }
   }, [bloque, programaId, open]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<number[]>) => {
     const { name, value } = e.target;
     if (name === 'correlativas_ids') {
       const list = Array.isArray(value) ? value : [];
@@ -127,7 +212,7 @@ function BloqueFormDialog({ open, onClose, onSave, bloque, programaId, available
           <Grid item xs={12}>
             <FormControl fullWidth>
               <InputLabel id="correlativas-label">Correlativas (requisitos previos)</InputLabel>
-              <Select
+              <Select<number[]>
                 labelId="correlativas-label"
                 multiple
                 name="correlativas_ids"
@@ -163,8 +248,16 @@ function BloqueFormDialog({ open, onClose, onSave, bloque, programaId, available
   );
 }
 
-function ProgramaFormDialog({ open, onClose, onSave, programa, resolucionId }) {
-  const [form, setForm] = useState(initialProgramaFormState);
+interface ProgramaFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (form: ProgramaForm) => void;
+  programa: ProgramaForm | null;
+  resolucionId: number | null;
+}
+
+function ProgramaFormDialog({ open, onClose, onSave, programa, resolucionId }: ProgramaFormDialogProps) {
+  const [form, setForm] = useState<ProgramaForm>(initialProgramaFormState);
 
   useEffect(() => {
     if (programa) {
@@ -174,7 +267,7 @@ function ProgramaFormDialog({ open, onClose, onSave, programa, resolucionId }) {
     }
   }, [programa, resolucionId, open]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
@@ -200,8 +293,15 @@ function ProgramaFormDialog({ open, onClose, onSave, programa, resolucionId }) {
   );
 }
 
-function ResolucionFormDialog({ open, onClose, onSave, resolucion }) {
-  const [form, setForm] = useState(initialResolucionFormState);
+interface ResolucionFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (form: ResolucionForm) => void;
+  resolucion: ResolucionForm | null;
+}
+
+function ResolucionFormDialog({ open, onClose, onSave, resolucion }: ResolucionFormDialogProps) {
+  const [form, setForm] = useState<ResolucionForm>(initialResolucionFormState);
 
   useEffect(() => {
     if (resolucion) {
@@ -211,8 +311,9 @@ function ResolucionFormDialog({ open, onClose, onSave, resolucion }) {
     }
   }, [resolucion, open]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
@@ -242,7 +343,13 @@ function ResolucionFormDialog({ open, onClose, onSave, resolucion }) {
 
 // ============ ITEM COMPONENTS ============
 
-function ModuloItem({ modulo, onEdit, onDelete }) {
+interface ModuloItemProps {
+  modulo: ModuloEstructura;
+  onEdit: (modulo: ModuloEstructura) => void;
+  onDelete: (modulo: ModuloEstructura) => void;
+}
+
+function ModuloItem({ modulo, onEdit, onDelete }: ModuloItemProps) {
   return (
     <ListItem
       disablePadding
@@ -274,7 +381,22 @@ function ModuloItem({ modulo, onEdit, onDelete }) {
   );
 }
 
-function BloqueItem({ bloque, programaBloques = [], onAddModulo, onEdit, onDelete, onEditModulo, onDeleteModulo, expandedBloque, handleBloqueChange }) {
+interface BloqueItemProps {
+  bloque: BloqueEstructura;
+  programaBloques: BloqueEstructura[];
+  onAddModulo: (bloqueId: number) => void;
+  onEdit: (bloque: BloqueEstructura) => void;
+  onDelete: (bloque: BloqueEstructura) => void;
+  onEditModulo: (modulo: ModuloEstructura, bloqueId: number) => void;
+  onDeleteModulo: (modulo: ModuloEstructura) => void;
+  expandedBloque: string | boolean;
+  handleBloqueChange: (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => void;
+}
+
+function BloqueItem({
+  bloque, programaBloques = [], onAddModulo, onEdit, onDelete,
+  onEditModulo, onDeleteModulo, expandedBloque, handleBloqueChange
+}: BloqueItemProps) {
   const correlativasNombres = (bloque.correlativas_ids || [])
     .map((id) => programaBloques.find((b) => Number(b.id) === Number(id))?.nombre)
     .filter(Boolean);
@@ -327,7 +449,27 @@ function BloqueItem({ bloque, programaBloques = [], onAddModulo, onEdit, onDelet
   );
 }
 
-function ProgramaItem({ programa, onAddBloque, onEdit, onDelete, onAddModulo, onEditBloque, onDeleteBloque, onEditModulo, onDeleteModulo, expandedProgram, expandedBloque, handleProgramChange, handleBloqueChange }) {
+interface ProgramaItemProps {
+  programa: ProgramaEstructura;
+  onAddBloque: (programaId: number) => void;
+  onEdit: (programa: ProgramaEstructura) => void;
+  onDelete: (programa: ProgramaEstructura) => void;
+  onAddModulo: (bloqueId: number) => void;
+  onEditBloque: (bloque: BloqueEstructura) => void;
+  onDeleteBloque: (bloque: BloqueEstructura) => void;
+  onEditModulo: (modulo: ModuloEstructura, bloqueId: number) => void;
+  onDeleteModulo: (modulo: ModuloEstructura) => void;
+  expandedProgram: string | boolean;
+  expandedBloque: string | boolean;
+  handleProgramChange: (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => void;
+  handleBloqueChange: (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => void;
+}
+
+function ProgramaItem({
+  programa, onAddBloque, onEdit, onDelete, onAddModulo, onEditBloque,
+  onDeleteBloque, onEditModulo, onDeleteModulo, expandedProgram,
+  expandedBloque, handleProgramChange, handleBloqueChange
+}: ProgramaItemProps) {
   return (
     <Accordion expanded={expandedProgram === `programa-${programa.id}`} onChange={handleProgramChange(`programa-${programa.id}`)}
       sx={{
@@ -390,34 +532,34 @@ function ProgramaItem({ programa, onAddBloque, onEdit, onDelete, onAddModulo, on
 // ============ MAIN COMPONENT ============
 
 export default function Estructura() {
-  const [resoluciones, setResoluciones] = useState([]);
+  const [resoluciones, setResoluciones] = useState<ResolucionEstruct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedResolucion, setExpandedResolucion] = useState(false);
-  const [expandedProgram, setExpandedProgram] = useState(false);
-  const [expandedBloque, setExpandedBloque] = useState(false);
+  const [expandedResolucion, setExpandedResolucion] = useState<string | boolean>(false);
+  const [expandedProgram, setExpandedProgram] = useState<string | boolean>(false);
+  const [expandedBloque, setExpandedBloque] = useState<string | boolean>(false);
 
   // Dialog states
   const [openModuloDialog, setOpenModuloDialog] = useState(false);
-  const [currentModulo, setCurrentModulo] = useState(null);
-  const [parentBloqueId, setParentBloqueId] = useState(null);
+  const [currentModulo, setCurrentModulo] = useState<ModuloForm | null>(null);
+  const [parentBloqueId, setParentBloqueId] = useState<number | null>(null);
 
   const [openBloqueDialog, setOpenBloqueDialog] = useState(false);
-  const [currentBloque, setCurrentBloque] = useState(null);
-  const [parentProgramaId, setParentProgramaId] = useState(null);
+  const [currentBloque, setCurrentBloque] = useState<BloqueForm | null>(null);
+  const [parentProgramaId, setParentProgramaId] = useState<number | null>(null);
 
   const [openProgramaDialog, setOpenProgramaDialog] = useState(false);
-  const [currentPrograma, setCurrentPrograma] = useState(null);
-  const [parentResolucionId, setParentResolucionId] = useState(null);
+  const [currentPrograma, setCurrentPrograma] = useState<ProgramaForm | null>(null);
+  const [parentResolucionId, setParentResolucionId] = useState<number | null>(null);
 
   const [openResolucionDialog, setOpenResolucionDialog] = useState(false);
-  const [currentResolucion, setCurrentResolucion] = useState(null);
+  const [currentResolucion, setCurrentResolucion] = useState<ResolucionForm | null>(null);
 
-  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
+  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
   const fetchResoluciones = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/resoluciones/estructura_completa');
+      const { data } = await api.get<ResolucionEstructura[]>('/resoluciones/estructura_completa');
       setResoluciones(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error al cargar resoluciones:", error);
@@ -431,18 +573,18 @@ export default function Estructura() {
     fetchResoluciones();
   }, [fetchResoluciones]);
 
-  const handleResolucionChange = (panel) => (event, isExpanded) => {
+  const handleResolucionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedResolucion(isExpanded ? panel : false);
     setExpandedProgram(false);
     setExpandedBloque(false);
   };
 
-  const handleProgramChange = (panel) => (event, isExpanded) => {
+  const handleProgramChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedProgram(isExpanded ? panel : false);
     setExpandedBloque(false);
   };
 
-  const handleBloqueChange = (panel) => (event, isExpanded) => {
+  const handleBloqueChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedBloque(isExpanded ? panel : false);
   };
 
@@ -453,26 +595,28 @@ export default function Estructura() {
     setOpenResolucionDialog(true);
   };
 
-  const handleEditResolucion = (resolucion) => {
+  const handleEditResolucion = (resolucion: ResolucionForm) => {
     setCurrentResolucion(resolucion);
     setOpenResolucionDialog(true);
   };
 
-  const handleDeleteResolucion = async (resolucion) => {
+  const handleDeleteResolucion = async (resolucion: ResolucionForm) => {
+    if (!resolucion.id) return;
     if (!window.confirm(`¿Eliminar resolución "${resolucion.numero}"?`)) return;
     try {
       await api.delete(`/resoluciones/${resolucion.id}`);
       setFeedback({ open: true, message: 'Resolución eliminada con éxito', severity: 'success' });
       fetchResoluciones();
     } catch (error) {
-      const errorMsg = error.response?.data?.error || error.message;
+      const errorObj = error as { response?: { data?: { error?: string } }; message: string };
+      const errorMsg = errorObj.response?.data?.error || errorObj.message;
       setFeedback({ open: true, message: `Error al eliminar resolución: ${errorMsg}`, severity: 'error' });
     }
   };
 
-  const handleSaveResolucion = async (resolucionData) => {
+  const handleSaveResolucion = async (resolucionData: ResolucionForm) => {
     try {
-      if (currentResolucion) {
+      if (currentResolucion && currentResolucion.id) {
         await api.put(`/resoluciones/${currentResolucion.id}`, resolucionData);
         setFeedback({ open: true, message: 'Resolución actualizada con éxito', severity: 'success' });
       } else {
@@ -482,7 +626,8 @@ export default function Estructura() {
       setOpenResolucionDialog(false);
       fetchResoluciones();
     } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      const errorObj = error as { response?: { data?: unknown }; message: string };
+      const errorMsg = errorObj.response?.data ? JSON.stringify(errorObj.response.data) : errorObj.message;
       setFeedback({ open: true, message: `Error al guardar resolución: ${errorMsg}`, severity: 'error' });
     }
   };
@@ -494,42 +639,45 @@ export default function Estructura() {
 
   // ============ PROGRAMA CRUD ============
 
-  const handleAddPrograma = (resolucionId) => {
+  const handleAddPrograma = (resolucionId: number) => {
     setCurrentPrograma(null);
     setParentResolucionId(resolucionId);
     setOpenProgramaDialog(true);
   };
 
-  const handleEditPrograma = (programa) => {
+  const handleEditPrograma = (programa: ProgramaForm) => {
     setCurrentPrograma(programa);
     setOpenProgramaDialog(true);
   };
 
-  const handleDeletePrograma = async (programa) => {
+  const handleDeletePrograma = async (programa: ProgramaForm) => {
+    if (!programa.id) return;
     if (!window.confirm(`¿Eliminar programa "${programa.nombre}"?`)) return;
     try {
       await api.delete(`/programas/${programa.id}`);
       setFeedback({ open: true, message: 'Programa eliminado con éxito', severity: 'success' });
       fetchResoluciones();
     } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      const errorObj = error as { response?: { data?: unknown }; message: string };
+      const errorMsg = errorObj.response?.data ? JSON.stringify(errorObj.response.data) : errorObj.message;
       setFeedback({ open: true, message: `Error al eliminar programa: ${errorMsg}`, severity: 'error' });
     }
   };
 
-  const handleSavePrograma = async (programaData) => {
+  const handleSavePrograma = async (programaData: ProgramaForm) => {
     try {
-      if (currentPrograma) {
-        await api.put(`/programas/${currentPrograma.id}`, programaData);
+      if (currentPrograma && currentPrograma.id) {
+        await api.put(`/programas/${currentPrograma.id}`, { ...programaData, resolucion_id: parentResolucionId });
         setFeedback({ open: true, message: 'Programa actualizado con éxito', severity: 'success' });
       } else {
-        await api.post('/programas', programaData);
+        await api.post('/programas', { ...programaData, resolucion_id: parentResolucionId });
         setFeedback({ open: true, message: 'Programa añadido con éxito', severity: 'success' });
       }
       setOpenProgramaDialog(false);
       fetchResoluciones();
     } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      const errorObj = error as { response?: { data?: unknown }; message: string };
+      const errorMsg = errorObj.response?.data ? JSON.stringify(errorObj.response.data) : errorObj.message;
       setFeedback({ open: true, message: `Error al guardar programa: ${errorMsg}`, severity: 'error' });
     }
   };
@@ -541,43 +689,46 @@ export default function Estructura() {
 
   // ============ BLOQUE CRUD ============
 
-  const handleAddBloque = (programaId) => {
+  const handleAddBloque = (programaId: number) => {
     setCurrentBloque(null);
     setParentProgramaId(programaId);
     setOpenBloqueDialog(true);
   };
 
-  const handleEditBloque = (bloque) => {
+  const handleEditBloque = (bloque: BloqueForm) => {
     setCurrentBloque(bloque);
-    setParentProgramaId(bloque.programa_id || bloque.programa?.id || null);
+    setParentProgramaId(bloque.programa_id);
     setOpenBloqueDialog(true);
   };
 
-  const handleDeleteBloque = async (bloque) => {
+  const handleDeleteBloque = async (bloque: BloqueForm) => {
+    if (!bloque.id) return;
     if (!window.confirm(`¿Eliminar bloque "${bloque.nombre}"?`)) return;
     try {
       await api.delete(`/bloques/${bloque.id}`);
       setFeedback({ open: true, message: 'Bloque eliminado con éxito', severity: 'success' });
       fetchResoluciones();
     } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      const errorObj = error as { response?: { data?: unknown }; message: string };
+      const errorMsg = errorObj.response?.data ? JSON.stringify(errorObj.response.data) : errorObj.message;
       setFeedback({ open: true, message: `Error al eliminar bloque: ${errorMsg}`, severity: 'error' });
     }
   };
 
-  const handleSaveBloque = async (bloqueData) => {
+  const handleSaveBloque = async (bloqueData: BloqueForm) => {
     try {
-      if (currentBloque) {
-        await api.put(`/bloques/${currentBloque.id}`, bloqueData);
+      if (currentBloque && currentBloque.id) {
+        await api.put(`/bloques/${currentBloque.id}`, { ...bloqueData, programa_id: parentProgramaId });
         setFeedback({ open: true, message: 'Bloque actualizado con éxito', severity: 'success' });
       } else {
-        await api.post('/bloques', bloqueData);
+        await api.post('/bloques', { ...bloqueData, programa_id: parentProgramaId });
         setFeedback({ open: true, message: 'Bloque añadido con éxito', severity: 'success' });
       }
       setOpenBloqueDialog(false);
       fetchResoluciones();
     } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      const errorObj = error as { response?: { data?: unknown }; message: string };
+      const errorMsg = errorObj.response?.data ? JSON.stringify(errorObj.response.data) : errorObj.message;
       setFeedback({ open: true, message: `Error al guardar bloque: ${errorMsg}`, severity: 'error' });
     }
   };
@@ -589,43 +740,46 @@ export default function Estructura() {
 
   // ============ MÓDULO CRUD ============
 
-  const handleAddModulo = (bloqueId) => {
+  const handleAddModulo = (bloqueId: number) => {
     setCurrentModulo(null);
     setParentBloqueId(bloqueId);
     setOpenModuloDialog(true);
   };
 
-  const handleEditModulo = (modulo, bloqueId) => {
+  const handleEditModulo = (modulo: ModuloForm, bloqueId: number) => {
     setCurrentModulo(modulo);
     setParentBloqueId(bloqueId);
     setOpenModuloDialog(true);
   };
 
-  const handleDeleteModulo = async (modulo) => {
+  const handleDeleteModulo = async (modulo: ModuloForm) => {
+    if (!modulo.id) return;
     if (!window.confirm(`¿Eliminar módulo "${modulo.nombre}"?`)) return;
     try {
       await api.delete(`/modulos/${modulo.id}`);
       setFeedback({ open: true, message: 'Módulo eliminado con éxito', severity: 'success' });
       fetchResoluciones();
     } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      const errorObj = error as { response?: { data?: unknown }; message: string };
+      const errorMsg = errorObj.response?.data ? JSON.stringify(errorObj.response.data) : errorObj.message;
       setFeedback({ open: true, message: `Error al eliminar módulo: ${errorMsg}`, severity: 'error' });
     }
   };
 
-  const handleSaveModulo = async (moduloData) => {
+  const handleSaveModulo = async (moduloData: ModuloForm) => {
     try {
-      if (currentModulo) {
-        await api.put(`/modulos/${currentModulo.id}`, moduloData);
+      if (currentModulo && currentModulo.id) {
+        await api.put(`/modulos/${currentModulo.id}`, { ...moduloData, bloque_id: parentBloqueId });
         setFeedback({ open: true, message: 'Módulo actualizado con éxito', severity: 'success' });
       } else {
-        await api.post('/modulos', moduloData);
+        await api.post('/modulos', { ...moduloData, bloque_id: parentBloqueId });
         setFeedback({ open: true, message: 'Módulo añadido con éxito', severity: 'success' });
       }
       setOpenModuloDialog(false);
       fetchResoluciones();
     } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      const errorObj = error as { response?: { data?: unknown }; message: string };
+      const errorMsg = errorObj.response?.data ? JSON.stringify(errorObj.response.data) : errorObj.message;
       setFeedback({ open: true, message: `Error al guardar módulo: ${errorMsg}`, severity: 'error' });
     }
   };
@@ -635,12 +789,12 @@ export default function Estructura() {
     setCurrentModulo(null);
   };
 
-  const handleCloseFeedback = (event, reason) => {
+  const handleCloseFeedback = (event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') return;
-    setFeedback({ ...feedback, open: false });
+    setFeedback(prev => ({ ...prev, open: false }));
   };
 
-  const getBloquesByProgramaId = (programaId) => {
+  const getBloquesByProgramaId = (programaId: number | null): BloqueEstructura[] => {
     if (!programaId) return [];
     for (const resolucion of resoluciones) {
       for (const programa of (resolucion.programas || [])) {
@@ -651,6 +805,8 @@ export default function Estructura() {
     }
     return [];
   };
+
+  type ResolucionEstruct = ResolucionEstructura;
 
   if (loading) {
     return (
