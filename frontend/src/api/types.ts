@@ -106,3 +106,45 @@ export type EstudianteListParams = {
   search?: string;
 };
 
+export type Examen = {
+  id: number;
+  modulo_id?: number | null;
+  bloque_id?: number | null;
+  tipo_examen: string;
+  fecha?: string | null;
+  peso: string | number;
+};
+
+export type Nota = {
+  id: number;
+  examen_id: number;
+  estudiante_id: number;
+  calificacion: number;
+  aprobado: boolean;
+  fecha_calificacion?: string | null;
+  es_equivalencia: boolean;
+  origen_equivalencia?: string | null;
+  fecha_ref_equivalencia?: string | null;
+  intento: number;
+  es_nota_definitiva: boolean;
+  habilitado_por_id?: number | null;
+};
+
+export type Asistencia = {
+  id: number;
+  estudiante_id: number;
+  modulo_id: number;
+  fecha: string;
+  presente: boolean;
+  archivo_origen?: string | null;
+};
+
+export type DashboardStats = {
+  active_students_count?: number;
+  courses_count?: number;
+  pending_registrations_count?: number;
+  graduates_count?: number;
+  [key: string]: unknown;
+};
+
+
