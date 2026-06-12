@@ -8,7 +8,7 @@ interface BackendErrorData {
   detail?: string;
   message?: string;
   errors?: Record<string, string | string[]>;
-  [key: string]: any; // Allow indexing if needed, but not using any directly for variables
+  [key: string]: unknown;
 }
 
 /**
