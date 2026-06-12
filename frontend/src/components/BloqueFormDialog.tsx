@@ -3,8 +3,15 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button
 } from '@mui/material';
 
-export default function BloqueFormDialog({ open, onClose, onSave, bloque }) {
-  const [form, setForm] = useState({ nombre: '', descripcion: '' });
+interface BloqueFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (form: { nombre: string; descripcion: string }) => void;
+  bloque?: { id?: number; nombre: string; descripcion?: string | null } | null;
+}
+
+export default function BloqueFormDialog({ open, onClose, onSave, bloque }: BloqueFormDialogProps) {
+  const [form, setForm] = useState<{ nombre: string; descripcion: string }>({ nombre: '', descripcion: '' });
 
   useEffect(() => {
     if (bloque) {
@@ -14,7 +21,7 @@ export default function BloqueFormDialog({ open, onClose, onSave, bloque }) {
     }
   }, [bloque, open]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };

@@ -1,8 +1,19 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   Card, CardContent, Stack, Typography, Button, LinearProgress, Alert, Snackbar
 } from "@mui/material";
 import UploadIcon from "@mui/icons-material/UploadFile";
+import type { AxiosProgressEvent } from 'axios';
+
+interface FileUploadProps {
+  title?: string;
+  description?: string;
+  endpoint?: string;
+  onUpload?: (data: unknown) => void;
+  doUpload?: (file: File, onProgress: (evt: AxiosProgressEvent) => void) => Promise<unknown>;
+  maxSizeMB?: number;
+  accept?: string;
+}
 
 const ACCEPTED = [".csv", ".xlsx",
   "text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
@@ -15,17 +26,17 @@ export default function FileUpload({
   doUpload,
   maxSizeMB = 25,
   accept = ".csv,.xlsx",
-}) {
-  const [file, setFile] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState("");
-  const [ok, setOk] = useState("");
-  const inputRef = useRef(null);
+}: FileUploadProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState<boolean>(false);
+  const [progress, setProgress] = useState<number>(0);
+  const [error, setError] = useState<string>("");
+  const [ok, setOk] = useState<string>("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const handlePick = (e) => {
+  const handlePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
-    const ext = `.${f.name.split(".").pop().toLowerCase()}`;
+    const ext = `.${f.name.split(".").pop()?.toLowerCase()}`;
     const typeOk = ACCEPTED.includes(ext) || ACCEPTED.includes(f.type);
     if (!typeOk) return setError("Formato no soportado (.csv o .xlsx).");
     if (f.size > maxSizeMB * 1024 * 1024) return setError(`Máx ${maxSizeMB}MB.`);
@@ -42,13 +53,22 @@ export default function FileUpload({
       setOk("Archivo procesado correctamente.");
       onUpload?.(data);
     } catch (err) {
-      const msg = err?.response?.data?.detail || err?.response?.data?.error || err?.message || "Error al subir.";
+      const errorObj = err as {
+        response?: {
+          data?: {
+            detail?: string;
+            error?: string;
+          };
+        };
+        message?: string;
+      };
+      const msg = errorObj?.response?.data?.detail || errorObj?.response?.data?.error || errorObj?.message || "Error al subir.";
       setError(msg);
     } finally { setBusy(false); }
   };
 
   const clear = () => {
-    setFile(null); inputRef.current && (inputRef.current.value = "");
+    setFile(null); if (inputRef.current) inputRef.current.value = "";
     setProgress(0); setError(""); setOk("");
   };
 

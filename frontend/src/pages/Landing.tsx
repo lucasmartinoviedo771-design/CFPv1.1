@@ -4,7 +4,13 @@ import { Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 
-const FeatureCard = ({ icon, title, desc }) => (
+interface FeatureCardProps {
+    icon: React.ReactNode;
+    title: string;
+    desc: string;
+}
+
+const FeatureCard = ({ icon, title, desc }: FeatureCardProps) => (
     <div className="bg-brand-primary/20 backdrop-blur-sm border border-white/5 p-6 rounded-2xl hover:bg-brand-primary/40 transition-all hover:-translate-y-1 hover:border-brand-cyan/30 group">
         <div className="w-12 h-12 bg-gradient-to-br from-brand-accent to-purple-600 rounded-lg flex items-center justify-center mb-4 group-hover:shadow-[0_0_15px_rgba(255,102,0,0.5)] transition-shadow">
             {icon}

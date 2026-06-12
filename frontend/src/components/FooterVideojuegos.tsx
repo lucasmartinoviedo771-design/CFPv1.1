@@ -2,7 +2,7 @@ import React from "react";
 import { LogoVideojuegos } from "./NavbarVideojuegos";
 import { MapPin, Phone, Mail, MessageCircle } from "lucide-react";
 
-export const FooterVideojuegos = () => {
+export const FooterVideojuegos: React.FC = () => {
   return (
     <footer className="bg-black/40 backdrop-blur-lg border-t border-indigo-500/10 pt-10 pb-8 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

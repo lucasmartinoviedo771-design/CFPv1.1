@@ -38,6 +38,7 @@ export type Programa = {
   codigo: string;
   nombre: string;
   activo: boolean;
+  resolucion_id?: number | null;
 };
 
 export type Bloque = {

@@ -3,21 +3,30 @@ import { Clock, CheckCircle2, XCircle } from "lucide-react";
 
 export const P = { navy: "#1a1f4e", yellow: "#f5c518", blue: "#b8ccd8", gray: "#c8c4bc" };
 
-export const BADGE = {
+export const BADGE: Record<string, string> = {
   pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
   aprobada: "bg-green-100 text-green-800 border-green-200",
   rechazada: "bg-red-100 text-red-800 border-red-200",
 };
 
-export const BADGE_ICON = {
-  pendiente: <Clock size={11} />, aprobada: <CheckCircle2 size={11} />, rechazada: <XCircle size={11} />,
+export const BADGE_ICON: Record<string, React.ReactNode> = {
+  pendiente: <Clock size={11} />,
+  aprobada: <CheckCircle2 size={11} />,
+  rechazada: <XCircle size={11} />,
 };
 
-export function StatCard({ label, value, icon, color }) {
+interface StatCardProps {
+  label: string;
+  value: string | number;
+  icon: React.ReactElement;
+  color: string;
+}
+
+export function StatCard({ label, value, icon, color }: StatCardProps) {
   return (
     <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#b8ccd8]/50 flex items-center gap-4">
       <div className="p-3 rounded-xl flex-shrink-0" style={{ background: color + "20" }}>
-        {React.cloneElement(icon, { size: 22, color })}
+        {React.cloneElement(icon as React.ReactElement<{ size?: number; color?: string }>, { size: 22, color })}
       </div>
       <div>
         <p className="text-2xl font-black text-[#1a1f4e]">{value}</p>
@@ -27,21 +36,34 @@ export function StatCard({ label, value, icon, color }) {
   );
 }
 
-export function Badge({ estado }) {
+interface BadgeProps {
+  estado: string;
+}
+
+export function Badge({ estado }: BadgeProps) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-semibold ${BADGE[estado] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
-      {BADGE_ICON[estado]} {estado?.charAt(0).toUpperCase() + estado?.slice(1)}
+      {BADGE_ICON[estado]} {estado ? (estado.charAt(0).toUpperCase() + estado.slice(1)) : ""}
     </span>
   );
 }
 
-export function YesNo({ v }) {
+interface YesNoProps {
+  v?: boolean | null;
+}
+
+export function YesNo({ v }: YesNoProps) {
   if (v === true) return <span className="text-green-600 font-semibold text-xs">Sí</span>;
   if (v === false) return <span className="text-red-500 font-semibold text-xs">No</span>;
   return <span className="text-gray-400 text-xs">—</span>;
 }
 
-export function Row({ label, value }) {
+interface RowProps {
+  label: string;
+  value: React.ReactNode;
+}
+
+export function Row({ label, value }: RowProps) {
   return (
     <div className="flex gap-3 text-sm">
       <span className="font-bold text-[#1a1f4e]/50 text-xs uppercase tracking-wide w-44 flex-shrink-0 pt-0.5">{label}</span>
@@ -50,8 +72,16 @@ export function Row({ label, value }) {
   );
 }
 
-export function DocRow({ label, url, field, onUpload, uploading }) {
-  const ref = React.useRef();
+interface DocRowProps {
+  label: string;
+  url?: string | null;
+  field: string;
+  onUpload: (field: string, file: File | undefined) => void;
+  uploading?: boolean;
+}
+
+export function DocRow({ label, url, field, onUpload, uploading }: DocRowProps) {
+  const ref = React.useRef<HTMLInputElement | null>(null);
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
       <span className="font-bold text-[#1a1f4e]/50 text-xs uppercase tracking-wide w-44 flex-shrink-0">{label}</span>
@@ -66,7 +96,7 @@ export function DocRow({ label, url, field, onUpload, uploading }) {
         }
         <label className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer border-2 border-dashed border-[#b8ccd8] hover:border-[#f5c518] transition-colors ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
           <input ref={ref} type="file" className="hidden" accept=".pdf,.doc,.docx,image/*"
-            onChange={(e) => { onUpload(field, e.target.files?.[0]); ref.current.value = ""; }} />
+            onChange={(e) => { onUpload(field, e.target.files?.[0]); if (ref.current) ref.current.value = ""; }} />
           {uploading ? "Subiendo..." : url ? "Reemplazar" : "Subir"}
         </label>
       </div>
@@ -74,7 +104,12 @@ export function DocRow({ label, url, field, onUpload, uploading }) {
   );
 }
 
-export function Section({ title, children }) {
+interface SectionProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+export function Section({ title, children }: SectionProps) {
   return (
     <div>
       <p className="text-xs font-black uppercase tracking-widest text-[#1a1f4e]/40 border-b border-[#b8ccd8] pb-1 mb-3">{title}</p>
