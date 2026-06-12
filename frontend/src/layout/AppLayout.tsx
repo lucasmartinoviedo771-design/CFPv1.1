@@ -3,11 +3,15 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import { ThemeModeContext } from '../App';
 
-const drawerWidth = 240;
+interface AppLayoutProps {
+  children: React.ReactNode;
+  title?: string;
+}
 
-export default function AppLayout({ children, title }) {
+export default function AppLayout({ children, title }: AppLayoutProps) {
   // Estado para controlar sidebar en móvil si fuera necesario, 
   // por ahora asumimos layout desktop responsive básico con Tailwind
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const { mode } = React.useContext(ThemeModeContext);
 
