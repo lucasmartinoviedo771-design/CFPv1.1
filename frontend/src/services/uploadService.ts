@@ -1,4 +1,5 @@
 import apiClient from "../api/client";
+import type { AxiosProgressEvent } from "axios";
 
 export interface UploadResponse {
   imported?: number;
@@ -12,7 +13,7 @@ export interface UploadResponse {
 export async function uploadFile(
   endpoint: string,
   file: File,
-  onUploadProgress?: (progressEvent: any) => void
+  onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
 ): Promise<UploadResponse> {
   const fd = new FormData();
   fd.append("file", file);
