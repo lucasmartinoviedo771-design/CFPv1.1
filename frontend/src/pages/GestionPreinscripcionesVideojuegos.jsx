@@ -557,7 +557,7 @@ export default function GestionPreinscripcionesVideojuegos() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050814] flex text-white font-sans selection:bg-[#00ccff]/30 relative overflow-hidden">
+    <div className={`min-h-screen flex font-sans selection:bg-[#00ccff]/30 relative overflow-hidden ${mode === 'light' ? 'app-shell theme-light' : 'bg-[#050814] text-white'}`}>
       {/* Background visual glows */}
       <div className="absolute top-10 right-10 w-96 h-96 bg-[#00ccff]/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-10 left-10 w-96 h-96 bg-[#FF6600]/5 rounded-full blur-[120px] pointer-events-none" />

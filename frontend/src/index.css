@@ -303,3 +303,68 @@ h1, h2, h3, h4, h5, h6 {
   /* Custom background images aren't directly exposed in @theme the same way, usually, 
      but we can use utilities or standard CSS. The components use 'bg-brand-primary' etc. */
 }
+
+/* Videojuegos panel support in theme-light */
+.app-shell.theme-light [class*="bg-[#050814]"] {
+  background: #e8f6ff !important;
+}
+.app-shell.theme-light [class*="bg-[#0c122c]"] {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  color: #0b1324 !important;
+}
+.app-shell.theme-light [class*="bg-[#0a0d24]"] {
+  background-color: #f1f5f9 !important;
+}
+.app-shell.theme-light [class*="text-[#00ccff]"] {
+  color: #0284c7 !important;
+}
+.app-shell.theme-light [class*="text-[#FF6600]"] {
+  color: #ea580c !important;
+}
+.app-shell.theme-light [class*="border-[#00ccff]"] {
+  border-color: rgba(2, 132, 199, 0.35) !important;
+}
+.app-shell.theme-light [class*="bg-[#00ccff]/25"] {
+  background-color: rgba(2, 132, 199, 0.15) !important;
+}
+.app-shell.theme-light option[class*="bg-[#0c122c]"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Terciario panel support in theme-dark */
+.theme-dark {
+  background-color: #050814 !important;
+  color: #ffffff !important;
+}
+.theme-dark [class*="bg-[#eef2f7]"] {
+  background-color: #050814 !important;
+}
+.theme-dark header.bg-white {
+  background-color: #0c122c !important;
+  border-color: rgba(99, 102, 241, 0.1) !important;
+}
+.theme-dark .bg-white,
+.theme-dark [class*="bg-white"] {
+  background-color: #0c122c !important;
+  border-color: rgba(99, 102, 241, 0.1) !important;
+  color: #ffffff !important;
+}
+.theme-dark [class*="text-[#1a1f4e]"] {
+  color: #ffffff !important;
+}
+.theme-dark [class*="text-[#1a1f4e]/60"],
+.theme-dark [class*="text-[#1a1f4e]/40"] {
+  color: #a5b4fc !important;
+}
+.theme-dark [class*="border-[#b8ccd8]"] {
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+.theme-dark input,
+.theme-dark select,
+.theme-dark textarea {
+  background-color: rgba(10, 15, 30, 0.8) !important;
+  color: #ffffff !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+

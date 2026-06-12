@@ -102,7 +102,7 @@ export default function AdminTerciario() {
   };
 
   return (
-    <div className="min-h-screen bg-[#eef2f7] flex">
+    <div className={`min-h-screen flex ${mode === 'dark' ? 'theme-dark' : 'bg-[#eef2f7] text-[#1a1f4e]'}`}>
       <aside style={{ background: P.navy }} className="flex flex-col w-64 flex-shrink-0 min-h-screen shadow-xl">
         <div className="px-5 py-5 border-b border-white/10">
           <div className="flex items-center gap-3">
