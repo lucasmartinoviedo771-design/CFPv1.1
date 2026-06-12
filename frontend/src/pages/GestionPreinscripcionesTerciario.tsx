@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiClientV2 } from "../api/client";
-import { Search, Eye, X, CheckCircle2, XCircle, Clock, ChevronDown } from "lucide-react";
+import { Search, Eye, X, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { PreinscripcionTerciario } from "../api/types";
 
 const ESTADOS = [
   { value: "", label: "Todos los estados" },
@@ -9,7 +10,7 @@ const ESTADOS = [
   { value: "rechazada", label: "Rechazada" },
 ];
 
-const LOCALIDAD_LABELS = {
+const LOCALIDAD_LABELS: Record<string, string> = {
   ushuaia: "Ushuaia", rg_sur: "Río Grande Sur", rg_norte: "Río Grande Norte",
   tolhuin: "Tolhuin", zona_rural: "Zona Rural", otras: "Otras",
 };
@@ -23,19 +24,19 @@ const LOCALIDADES = [
   { value: "zona_rural", label: "Zona Rural" },
 ];
 
-const BADGE = {
+const BADGE: Record<string, string> = {
   pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
   aprobada: "bg-green-100 text-green-800 border-green-200",
   rechazada: "bg-red-100 text-red-800 border-red-200",
 };
 
-const BADGE_ICON = {
+const BADGE_ICON: Record<string, React.ReactNode> = {
   pendiente: <Clock size={12} />,
   aprobada: <CheckCircle2 size={12} />,
   rechazada: <XCircle size={12} />,
 };
 
-function StateBadge({ estado }) {
+function StateBadge({ estado }: { estado: string }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-semibold ${BADGE[estado] || "bg-gray-100 text-gray-700 border-gray-200"}`}>
       {BADGE_ICON[estado]}
@@ -44,13 +45,13 @@ function StateBadge({ estado }) {
   );
 }
 
-function YesNo({ value }) {
+function YesNo({ value }: { value: boolean | string | null | undefined }) {
   if (value === true || value === "si") return <span className="text-green-600 font-semibold">Sí</span>;
   if (value === false || value === "no") return <span className="text-red-500 font-semibold">No</span>;
   return <span className="text-gray-400">—</span>;
 }
 
-function Row({ label, value }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-col sm:flex-row sm:gap-4">
       <span className="text-xs font-bold uppercase tracking-wide text-indigo-400 sm:w-48 flex-shrink-0">{label}</span>
@@ -59,11 +60,17 @@ function Row({ label, value }) {
   );
 }
 
-function DetailModal({ p, onClose, onSave }) {
-  const [estado, setEstado] = useState(p.estado);
-  const [obs, setObs] = useState(p.observaciones || "");
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
+interface DetailModalProps {
+  p: PreinscripcionTerciario;
+  onClose: () => void;
+  onSave: () => void;
+}
+
+function DetailModal({ p, onClose, onSave }: DetailModalProps) {
+  const [estado, setEstado] = useState<string>(p.estado);
+  const [obs, setObs] = useState<string>(p.observaciones || "");
+  const [saving, setSaving] = useState<boolean>(false);
+  const [msg, setMsg] = useState<string>("");
 
   const save = async () => {
     setSaving(true);
@@ -191,17 +198,17 @@ function DetailModal({ p, onClose, onSave }) {
 }
 
 export default function GestionPreinscripcionesTerciario() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("");
-  const [filtroLocalidad, setFiltroLocalidad] = useState("");
-  const [selected, setSelected] = useState(null);
+  const [data, setData] = useState<PreinscripcionTerciario[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
+  const [filtroEstado, setFiltroEstado] = useState<string>("");
+  const [filtroLocalidad, setFiltroLocalidad] = useState<string>("");
+  const [selected, setSelected] = useState<PreinscripcionTerciario | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params = {};
+      const params: Record<string, string> = {};
       if (filtroEstado) params.estado = filtroEstado;
       if (filtroLocalidad) params.localidad = filtroLocalidad;
       const { data: res } = await apiClientV2.get("/preinscripciones-terciario", { params });
@@ -287,7 +294,7 @@ export default function GestionPreinscripcionesTerciario() {
                 <tr key={p.id} className="hover:bg-indigo-500/5 transition-colors">
                   <td className="px-4 py-3 font-semibold text-white">{p.apellido_nombre}</td>
                   <td className="px-4 py-3 text-indigo-200">{p.dni}</td>
-                  <td className="px-4 py-3 text-indigo-200">{LOCALIDAD_LABELS[p.localidad] || p.localidad}</td>
+                  <td className="px-4 py-3 text-indigo-200">{(p.localidad && LOCALIDAD_LABELS[p.localidad]) || p.localidad || ""}</td>
                   <td className="px-4 py-3 text-indigo-200">
                     {p.finalizo_secundaria === "si" ? "Sí" :
                      p.finalizo_secundaria === "no" ? "No" :

@@ -11,7 +11,7 @@ import Estudiantes from "./pages/Estudiantes.jsx";
 import Notas from "./pages/Notas.jsx";
 import CursoDetail from "./pages/CursoDetail";
 import DashboardPage from "./pages/Dashboard.jsx"; // Check extension if needed, safe to add .jsx if it is jsx
-import Login from "./pages/Login.jsx";
+import Login from "./pages/Login";
 import SetPassword from './pages/SetPassword.jsx';
 import Inscripciones from './pages/Inscripciones.jsx';
 import Programas from './pages/Programas'; // Still .tsx based on file list
@@ -29,11 +29,11 @@ import PreinscripcionPublica from './pages/PreinscripcionPublica.jsx';
 import PreinscripcionTerciario from './pages/PreinscripcionTerciario.jsx';
 import PreinscripcionVideojuegos from './pages/PreinscripcionVideojuegos.jsx';
 import GestionPreinscripciones from './pages/GestionPreinscripciones.jsx';
-import GestionPreinscripcionesTerciario from './pages/GestionPreinscripcionesTerciario.jsx';
+import GestionPreinscripcionesTerciario from './pages/GestionPreinscripcionesTerciario';
 import GestionPreinscripcionesVideojuegos from './pages/GestionPreinscripcionesVideojuegos.jsx';
 import AdminTerciario from './pages/AdminTerciario.jsx';
 import AutorizacionParental from './pages/AutorizacionParental.jsx';
-import NivelacionDigital from './pages/NivelacionDigital.jsx';
+import NivelacionDigital from './pages/NivelacionDigital';
 
 // Services
 import authService from "./services/authService";

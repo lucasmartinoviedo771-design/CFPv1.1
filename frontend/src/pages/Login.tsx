@@ -4,6 +4,8 @@ import authService from '../services/authService';
 import { UserContext } from '../App';
 import { Button } from '../components/UI';
 import { User, Lock, ArrowRight, Info, Eye, EyeOff } from 'lucide-react';
+import { UserDetails } from '../api/types';
+import { handleApiError } from '../utils/errorHandler';
 
 export default function Login() {
     const [username, setUsername] = useState('admin');
@@ -15,12 +17,12 @@ export default function Login() {
     const { setUser } = useContext(UserContext);
 
     const [showChoice, setShowChoice] = useState(false);
-    const [pendingUser, setPendingUser] = useState(null);
+    const [pendingUser, setPendingUser] = useState<UserDetails | null>(null);
 
     const GRUPOS_TERCIARIO = ['Admin', 'Terciario', 'Rector'];
     const GRUPOS_CFP = ['Admin', 'Secretaría', 'Regencia', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel', 'Rector'];
 
-    const resolveDestino = (userData) => {
+    const resolveDestino = (userData: UserDetails | null) => {
         const groups = userData?.groups || [];
         const isSuperuser = userData?.is_superuser || userData?.is_staff;
         
@@ -44,7 +46,7 @@ export default function Login() {
         return '/dashboard';
     };
 
-    const handleLogin = async (e) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
@@ -60,8 +62,7 @@ export default function Login() {
                 setShowChoice(true);
             }
         } catch (err) {
-            const msg = err.response?.data?.detail || err.message || 'Credenciales inválidas';
-            setError(msg);
+            setError(handleApiError(err, 'Credenciales inválidas'));
         } finally {
             setLoading(false);
         }

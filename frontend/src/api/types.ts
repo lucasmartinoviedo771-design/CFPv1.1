@@ -144,6 +144,7 @@ export type PreinscripcionTerciario = {
   apoyo_inclusion?: string | null;
   requiere_apoyo_especifico?: boolean;
   descripcion_apoyo?: string | null;
+  created_at?: string;
 };
 
 

@@ -7,7 +7,7 @@ import { Card, Button } from '../components/UI';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v2';
 
-const iconMap = {
+const iconMap: Record<number, React.ReactNode> = {
     1: <Shield className="text-orange-400" />,
     2: <Cpu className="text-blue-400" />,
     3: <Wifi className="text-emerald-400" />,
@@ -20,22 +20,41 @@ const iconMap = {
     10: <Mail className="text-green-400" />,
 };
 
-export default function NivelacionDigital() {
-    const { token } = useParams();
-    const [testData, setTestData] = useState(null);
-    const [answers, setAnswers] = useState({});
-    const [wantsModule1, setWantsModule1] = useState(false);
-    const [step, setStep] = useState('questions'); // 'questions' | 'preference' | 'result'
-    const [loading, setLoading] = useState(true);
+interface Question {
+    id: number;
+    text: string;
+    options: string[];
+    correct: number;
+}
 
-    const [submitting, setSubmitting] = useState(false);
-    const [result, setResult] = useState(null);
-    const [error, setError] = useState(null);
+interface TestData {
+    student_name: string;
+    questions: Question[];
+    error?: string;
+}
+
+interface TestResult {
+    passed: boolean;
+    message: string;
+    error?: string;
+}
+
+export default function NivelacionDigital() {
+    const { token } = useParams<{ token: string }>();
+    const [testData, setTestData] = useState<TestData | null>(null);
+    const [answers, setAnswers] = useState<Record<number, number>>({});
+    const [wantsModule1, setWantsModule1] = useState<boolean>(false);
+    const [step, setStep] = useState<'questions' | 'preference' | 'result'>('questions');
+    const [loading, setLoading] = useState<boolean>(true);
+
+    const [submitting, setSubmitting] = useState<boolean>(false);
+    const [result, setResult] = useState<TestResult | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchTest = async () => {
             try {
-                const { data } = await axios.get(`${API_URL}/nivelacion/test/${token}`);
+                const { data } = await axios.get<TestData>(`${API_URL}/nivelacion/test/${token}`);
                 if (data.error) {
                     setError(data.error);
                 } else {
@@ -50,11 +69,12 @@ export default function NivelacionDigital() {
         fetchTest();
     }, [token]);
 
-    const handleOptionSelect = (qId, optionIdx) => {
+    const handleOptionSelect = (qId: number, optionIdx: number) => {
         setAnswers(prev => ({ ...prev, [qId]: optionIdx }));
     };
 
-    const calculateCurrentScore = () => {
+    const calculateCurrentScore = (): number => {
+        if (!testData) return 0;
         let score = 0;
         testData.questions.forEach(q => {
             if (answers[q.id] === q.correct) score++;
@@ -63,6 +83,7 @@ export default function NivelacionDigital() {
     };
 
     const handleContinue = () => {
+        if (!testData) return;
         if (Object.keys(answers).length < testData.questions.length) {
             alert("Por favor, responde todas las preguntas antes de continuar.");
             return;
@@ -76,10 +97,10 @@ export default function NivelacionDigital() {
         }
     };
 
-    const handleSubmit = async (finalWantsModule1) => {
+    const handleSubmit = async (finalWantsModule1: boolean) => {
         setSubmitting(true);
         try {
-            const { data } = await axios.post(`${API_URL}/nivelacion/submit/${token}`, { 
+            const { data } = await axios.post<TestResult>(`${API_URL}/nivelacion/submit/${token}`, { 
                 answers,
                 wants_module1: finalWantsModule1
             });
@@ -104,13 +125,13 @@ export default function NivelacionDigital() {
             <Card className="max-w-md w-full text-center">
                 <AlertCircle className="mx-auto text-red-400 mb-4" size={64} />
                 <h2 className="text-2xl font-bold text-white mb-2">Atención</h2>
-                <p className="text-indigo-200 mb-6">{error || result.error}</p>
+                <p className="text-indigo-200 mb-6">{error || result?.error}</p>
                 <Button onClick={() => window.location.href = '/'} variant="outline">Volver al inicio</Button>
             </Card>
         </div>
     );
 
-    if (step === 'result') return (
+    if (step === 'result' && result) return (
         <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
             <Card className="max-w-xl w-full text-center py-10 px-8">
                 <div className="relative inline-block mb-8">
@@ -219,17 +240,17 @@ export default function NivelacionDigital() {
                     <Button 
                         onClick={() => handleSubmit(wantsModule1)} 
                         isLoading={submitting}
-                        fullWidth
                         size="lg"
-                        className="bg-brand-accent hover:bg-orange-600 h-16 text-xl shadow-2xl shadow-brand-accent/20 font-black uppercase tracking-widest"
+                        className="bg-brand-accent hover:bg-orange-600 h-16 text-xl shadow-2xl shadow-brand-accent/20 font-black uppercase tracking-widest w-full"
                     >
                         Confirmar e Inscribirse
                     </Button>
                 </div>
              </Card>
         </div>
-    )
+    );
 
+    if (!testData) return null;
 
     return (
         <div className="min-h-screen bg-[#0f172a] py-12 px-4 sm:px-6 lg:px-8">
@@ -249,38 +270,40 @@ export default function NivelacionDigital() {
 
                 <div className="space-y-8">
                     {testData.questions.map((q, idx) => (
-                        <Card key={q.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
-                            <div className="flex items-start gap-4 mb-6">
-                                <div className="p-3 bg-indigo-950/50 rounded-lg border border-indigo-500/20">
-                                    {iconMap[q.id] || <Star className="text-indigo-400" />}
+                        <div key={q.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
+                            <Card>
+                                <div className="flex items-start gap-4 mb-6">
+                                    <div className="p-3 bg-indigo-950/50 rounded-lg border border-indigo-500/20">
+                                        {iconMap[q.id] || <Star className="text-indigo-400" />}
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-brand-accent uppercase tracking-wider">Pregunta {idx + 1} de 10</span>
+                                        <h3 className="text-xl font-bold text-white mt-1">{q.text}</h3>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span className="text-xs font-bold text-brand-accent uppercase tracking-wider">Pregunta {idx + 1} de 10</span>
-                                    <h3 className="text-xl font-bold text-white mt-1">{q.text}</h3>
-                                </div>
-                            </div>
 
-                            <div className="grid grid-cols-1 gap-3">
-                                {q.options.map((opt, optIdx) => (
-                                    <button
-                                        key={optIdx}
-                                        onClick={() => handleOptionSelect(q.id, optIdx)}
-                                        className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-center gap-4 ${
-                                            answers[q.id] === optIdx
-                                                ? 'bg-brand-accent/20 border-brand-accent text-white shadow-lg shadow-brand-accent/10'
-                                                : 'bg-indigo-950/30 border-indigo-500/10 text-indigo-300 hover:bg-white/5 hover:border-indigo-500/30'
-                                        }`}
-                                    >
-                                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center flex-shrink-0 ${
-                                            answers[q.id] === optIdx ? 'bg-brand-accent border-brand-accent' : 'border-indigo-500/50'
-                                        }`}>
-                                            {answers[q.id] === optIdx && <CheckCircle size={14} className="text-white" />}
-                                        </div>
-                                        <span className="text-lg">{opt}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </Card>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {q.options.map((opt, optIdx) => (
+                                        <button
+                                            key={optIdx}
+                                            onClick={() => handleOptionSelect(q.id, optIdx)}
+                                            className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-center gap-4 ${
+                                                answers[q.id] === optIdx
+                                                    ? 'bg-brand-accent/20 border-brand-accent text-white shadow-lg shadow-brand-accent/10'
+                                                    : 'bg-indigo-950/30 border-indigo-500/10 text-indigo-300 hover:bg-white/5 hover:border-indigo-500/30'
+                                            }`}
+                                        >
+                                            <div className={`w-6 h-6 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                                                answers[q.id] === optIdx ? 'bg-brand-accent border-brand-accent' : 'border-indigo-500/50'
+                                            }`}>
+                                                {answers[q.id] === optIdx && <CheckCircle size={14} className="text-white" />}
+                                            </div>
+                                            <span className="text-lg">{opt}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </Card>
+                        </div>
                     ))}
                 </div>
 
