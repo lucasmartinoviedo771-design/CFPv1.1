@@ -7,7 +7,13 @@ import imgCampus from '../assets/social/campus.png';
 import imgWeb from '../assets/social/web.png';
 import imgFacebook from '../assets/social/facebook.png';
 
-const SOCIAL_LINKS = [
+interface SocialLink {
+    href: string;
+    label: string;
+    src: string;
+}
+
+const SOCIAL_LINKS: SocialLink[] = [
     { href: 'https://politecnico.ar/', label: 'Politécnico', src: imgWeb },
     { href: 'https://politecnico.ar/campus/', label: 'Campus', src: imgCampus },
     { href: 'https://www.instagram.com/politecnicotdf/', label: 'Instagram', src: imgInstagram },
@@ -15,7 +21,7 @@ const SOCIAL_LINKS = [
     { href: 'https://www.youtube.com/@politecnicotdf', label: 'YouTube', src: imgYoutube },
 ];
 
-export const LogoVideojuegos = () => (
+export const LogoVideojuegos: React.FC = () => (
     <div className="flex items-center gap-3">
         <div className="w-12 h-12 shrink-0 bg-gradient-to-br from-[#00ccff] to-[#FF6600] rounded-xl flex items-center justify-center shadow-lg shadow-[#00ccff]/20">
             <Gamepad2 size={24} className="text-[#050814]" />
@@ -27,8 +33,8 @@ export const LogoVideojuegos = () => (
     </div>
 );
 
-export const NavbarVideojuegos = () => {
-    const [isOpen, setIsOpen] = useState(false);
+export const NavbarVideojuegos: React.FC = () => {
+    const [isOpen, setIsOpen] = useState<boolean>(false);
 
     return (
         <nav className="fixed w-full z-50 transition-all duration-300 backdrop-blur-md bg-[#050814]/70 border-b border-indigo-500/10">
