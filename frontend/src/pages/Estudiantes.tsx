@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Modal } from "../components/Estudiantes/Modal";
 import { ModalQR } from "../components/Estudiantes/ModalQR";
+import { ModalConfirmDelete } from "../components/Estudiantes/ModalConfirmDelete";
 import { useEstudiantes, useSaveEstudiante, useProgramas, useBloques, useModulos, useCohortes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
 import { formatDateDisplay, formatDateTimeDisplay } from "../utils/dateFormat";
@@ -916,21 +917,11 @@ export default function Estudiantes() {
                 </div>
             )}
 
-            {/* Modal Confirmación Delete */}
-            <Modal
-                isOpen={!!deleteTarget}
-                onClose={() => setDeleteTarget(null)}
-                title="Confirmar Baja"
-                actions={
-                    <>
-                        <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
-                        <Button onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700 text-white border-none">Dar de Baja</Button>
-                    </>
-                }
-            >
-                <p>¿Estás seguro de que quieres dar de baja a <strong>{deleteTarget?.apellido}, {deleteTarget?.nombre}</strong>?</p>
-                <p className="text-sm text-gray-400 mt-2">El estudiante no aparecerá en las listas activas pero su historial se conservará.</p>
-            </Modal >
+            <ModalConfirmDelete
+                deleteTarget={deleteTarget}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
 
             <Modal
                 isOpen={!!viewStudentId}
