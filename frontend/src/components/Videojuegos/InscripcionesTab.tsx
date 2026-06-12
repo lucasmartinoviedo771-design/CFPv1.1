@@ -143,9 +143,16 @@ export default function InscripcionesTab() {
         setStudentSearch("");
         setSuccess("");
       }, 1000);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err?.response?.data?.detail || "Ocurrió un error al registrar la inscripción.");
+      const errorObj = err as {
+        response?: {
+          data?: {
+            detail?: string;
+          };
+        };
+      };
+      setError(errorObj?.response?.data?.detail || "Ocurrió un error al registrar la inscripción.");
     } finally {
       setSaving(false);
     }
