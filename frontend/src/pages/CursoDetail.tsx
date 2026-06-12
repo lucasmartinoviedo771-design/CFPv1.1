@@ -10,16 +10,61 @@ import { getCurso, listCohortes } from "../services/cursosService";
 import {
   listBloques, createBloque, deleteBloque,
   listModulos, createModulo, deleteModulo,
-  listExamenes, createExamen, deleteExamen
+  listExamenes, createExamen, deleteExamen,
+  getCoursesGraph
 } from "../services/estructuraService";
-import { getCoursesGraph } from "../services/estructuraService";
 import { formatDateDisplay } from "../utils/dateFormat";
+import type { Programa, Cohorte, Bloque, Modulo, Examen } from "../api/types";
+
+interface ExamenFormState {
+  tipo_examen: string;
+  fecha: string;
+  modulo: number | null;
+  bloque: number | null;
+}
+
+interface ModuloFormState {
+  nombre: string;
+  orden: number;
+  bloque: number;
+}
+
+interface BloqueFormState {
+  nombre: string;
+  orden: number;
+  programa_id: number;
+}
+
+interface GraphChild {
+  id: number;
+  orden: number;
+  nombre: string;
+  es_practica: boolean;
+}
+
+interface GraphFinal {
+  id: number;
+  tipo_examen: string;
+  fecha?: string | null;
+}
+
+interface GraphBloque {
+  id: number;
+  orden: number;
+  nombre: string;
+  children?: GraphChild[];
+  finales?: GraphFinal[];
+}
+
+interface CourseGraph {
+  tree: GraphBloque[];
+}
 
 // --- ModuloExamenManager (for Parcial/Recup) ---
-function ModuloExamenManager({ modulo }) {
-  const [examenes, setExamenes] = useState([]);
-  const [form, setForm] = useState({ tipo_examen: 'PARCIAL', fecha: '', modulo: modulo.id, bloque: null });
-  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle', 'saving', 'saved', 'error' 
+function ModuloExamenManager({ modulo }: { modulo: Modulo }) {
+  const [examenes, setExamenes] = useState<Examen[]>([]);
+  const [form, setForm] = useState<ExamenFormState>({ tipo_examen: 'PARCIAL', fecha: '', modulo: modulo.id, bloque: null });
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const fetchExamenes = useCallback(async () => {
     try {
@@ -30,27 +75,34 @@ function ModuloExamenManager({ modulo }) {
 
   useEffect(() => { fetchExamenes(); }, [fetchExamenes]);
 
-  const handleFormChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown } }) => {
+    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaveStatus('saving');
     try {
-      const payload = { ...form };
-      if (payload.fecha === '') payload.fecha = null;
+      const payload: Partial<Examen> & { fecha: string | null } = {
+        tipo_examen: form.tipo_examen,
+        fecha: form.fecha === '' ? null : form.fecha,
+        modulo_id: form.modulo,
+        bloque_id: form.bloque,
+        peso: 1
+      };
       await createExamen(payload);
       setForm({ tipo_examen: 'PARCIAL', fecha: '', modulo: modulo.id, bloque: null });
       fetchExamenes();
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
-      console.error("Error creating module examen:", err.response?.data || err);
+      console.error("Error creating module examen:", err);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: number) => {
     if (window.confirm("¿Eliminar examen?")) {
       setSaveStatus('saving');
       try {
@@ -59,7 +111,7 @@ function ModuloExamenManager({ modulo }) {
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (err) {
-        console.error("Error deleting module examen:", err.response?.data || err);
+        console.error("Error deleting module examen:", err);
         setSaveStatus('error');
         setTimeout(() => setSaveStatus('idle'), 2000);
       }
@@ -72,7 +124,7 @@ function ModuloExamenManager({ modulo }) {
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1, my: 1, alignItems: 'center' }}>
         <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Tipo</InputLabel>
-          <Select name="tipo_examen" value={form.tipo_examen} label="Tipo" onChange={handleFormChange}>
+          <Select name="tipo_examen" value={form.tipo_examen} label="Tipo" onChange={(e) => handleFormChange(e)}>
             <MenuItem value="PARCIAL">Parcial</MenuItem>
             <MenuItem value="RECUP">Recuperatorio</MenuItem>
           </Select>
@@ -80,7 +132,7 @@ function ModuloExamenManager({ modulo }) {
         <TextField name="fecha" type="date" value={form.fecha} onChange={handleFormChange} size="small" InputLabelProps={{ shrink: true }} />
         <Button type="submit" variant="outlined" size="small" disabled={saveStatus === 'saving'}>Agregar Examen</Button>
         {saveStatus === 'saving' && <CircularProgress size={20} />}
-        {saveStatus === 'saved' && <Typography color="success">Guardado ✓</Typography>}
+        {saveStatus === 'saved' && <Typography sx={{ color: 'success.main' }}>Guardado ✓</Typography>}
         {saveStatus === 'error' && <Typography color="error">Error al guardar</Typography>}
       </Box>
       <TableContainer component={Paper} variant="outlined">
@@ -101,10 +153,10 @@ function ModuloExamenManager({ modulo }) {
 }
 
 // --- BloqueExamenManager (for Finals/Equiv) ---
-function BloqueExamenManager({ bloque }) {
-  const [examenes, setExamenes] = useState([]);
-  const [form, setForm] = useState({ tipo_examen: 'FINAL_SINC', fecha: '', bloque: bloque.id, modulo: null });
-  const [saveStatus, setSaveStatus] = useState('idle');
+function BloqueExamenManager({ bloque }: { bloque: Bloque }) {
+  const [examenes, setExamenes] = useState<Examen[]>([]);
+  const [form, setForm] = useState<ExamenFormState>({ tipo_examen: 'FINAL_SINC', fecha: '', bloque: bloque.id, modulo: null });
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const fetchExamenes = useCallback(async () => {
     try {
@@ -115,27 +167,34 @@ function BloqueExamenManager({ bloque }) {
 
   useEffect(() => { fetchExamenes(); }, [fetchExamenes]);
 
-  const handleFormChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown } }) => {
+    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaveStatus('saving');
     try {
-      const payload = { ...form };
-      if (payload.fecha === '') payload.fecha = null;
+      const payload: Partial<Examen> & { fecha: string | null } = {
+        tipo_examen: form.tipo_examen,
+        fecha: form.fecha === '' ? null : form.fecha,
+        modulo_id: form.modulo,
+        bloque_id: form.bloque,
+        peso: 1
+      };
       await createExamen(payload);
       setForm({ tipo_examen: 'FINAL_SINC', fecha: '', bloque: bloque.id, modulo: null });
       fetchExamenes();
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
-      console.error("Error creating bloque examen:", err.response?.data || err);
+      console.error("Error creating bloque examen:", err);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: number) => {
     if (window.confirm("¿Eliminar examen final?")) {
       setSaveStatus('saving');
       try {
@@ -144,7 +203,7 @@ function BloqueExamenManager({ bloque }) {
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (err) {
-        console.error("Error deleting bloque examen:", err.response?.data || err);
+        console.error("Error deleting bloque examen:", err);
         setSaveStatus('error');
         setTimeout(() => setSaveStatus('idle'), 2000);
       }
@@ -157,7 +216,7 @@ function BloqueExamenManager({ bloque }) {
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1, my: 1, alignItems: 'center' }}>
         <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Tipo</InputLabel>
-          <Select name="tipo_examen" value={form.tipo_examen} label="Tipo" onChange={handleFormChange}>
+          <Select name="tipo_examen" value={form.tipo_examen} label="Tipo" onChange={(e) => handleFormChange(e)}>
             <MenuItem value="FINAL_VIRTUAL">Final Virtual</MenuItem>
             <MenuItem value="FINAL_SINC">Final Sincrónico</MenuItem>
             <MenuItem value="EQUIVALENCIA">Equivalencia</MenuItem>
@@ -166,7 +225,7 @@ function BloqueExamenManager({ bloque }) {
         <TextField name="fecha" type="date" value={form.fecha} onChange={handleFormChange} size="small" InputLabelProps={{ shrink: true }} />
         <Button type="submit" variant="outlined" size="small" disabled={saveStatus === 'saving'}>Agregar Examen Final</Button>
         {saveStatus === 'saving' && <CircularProgress size={20} />}
-        {saveStatus === 'saved' && <Typography color="success">Guardado ✓</Typography>}
+        {saveStatus === 'saved' && <Typography sx={{ color: 'success.main' }}>Guardado ✓</Typography>}
         {saveStatus === 'error' && <Typography color="error">Error al guardar</Typography>}
       </Box>
       <TableContainer component={Paper} variant="outlined">
@@ -186,12 +245,11 @@ function BloqueExamenManager({ bloque }) {
   );
 }
 
-
 // --- ModuloManager ---
-function ModuloManager({ bloque }) {
-  const [modulos, setModulos] = useState([]);
-  const [form, setForm] = useState({ nombre: '', orden: 10, bloque: bloque.id });
-  const [saveStatus, setSaveStatus] = useState('idle');
+function ModuloManager({ bloque }: { bloque: Bloque }) {
+  const [modulos, setModulos] = useState<Modulo[]>([]);
+  const [form, setForm] = useState<ModuloFormState>({ nombre: '', orden: 10, bloque: bloque.id });
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const fetchModulos = useCallback(async () => {
     try {
@@ -202,25 +260,34 @@ function ModuloManager({ bloque }) {
 
   useEffect(() => { fetchModulos(); }, [fetchModulos]);
 
-  const handleFormChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const val = e.target.name === 'orden' ? Number(e.target.value) : e.target.value;
+    setForm(f => ({ ...f, [e.target.name]: val }));
+  };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaveStatus('saving');
     try {
-      await createModulo(form);
+      await createModulo({
+        nombre: form.nombre,
+        orden: form.orden,
+        bloque_id: form.bloque,
+        es_practica: false,
+        asistencia_requerida_practica: 80
+      });
       setForm({ nombre: '', orden: 10, bloque: bloque.id });
       fetchModulos();
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
-      console.error("Error creating modulo:", err.response?.data || err);
+      console.error("Error creating modulo:", err);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: number) => {
     if (window.confirm("¿Eliminar módulo? Se borrarán sus exámenes.")) {
       setSaveStatus('saving');
       try {
@@ -229,7 +296,7 @@ function ModuloManager({ bloque }) {
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (err) {
-        console.error("Error deleting modulo:", err.response?.data || err);
+        console.error("Error deleting modulo:", err);
         setSaveStatus('error');
         setTimeout(() => setSaveStatus('idle'), 2000);
       }
@@ -244,7 +311,7 @@ function ModuloManager({ bloque }) {
         <TextField name="orden" value={form.orden} onChange={handleFormChange} label="Orden" type="number" size="small" required />
         <Button type="submit" variant="outlined" size="small" disabled={saveStatus === 'saving'}>Agregar Módulo</Button>
         {saveStatus === 'saving' && <CircularProgress size={20} />}
-        {saveStatus === 'saved' && <Typography color="success">Guardado ✓</Typography>}
+        {saveStatus === 'saved' && <Typography sx={{ color: 'success.main' }}>Guardado ✓</Typography>}
         {saveStatus === 'error' && <Typography color="error">Error al guardar</Typography>}
       </Box>
       {modulos.map(m => (
@@ -263,10 +330,16 @@ function ModuloManager({ bloque }) {
   );
 }
 
+interface BloqueManagerProps {
+  curso: Programa;
+  bloques: Bloque[];
+  setBloques: React.Dispatch<React.SetStateAction<Bloque[]>>;
+}
+
 // --- BloqueManager ---
-function BloqueManager({ curso, bloques, setBloques }) {
-  const [form, setForm] = useState({ nombre: '', orden: 10, programa_id: curso.id });
-  const [saveStatus, setSaveStatus] = useState('idle');
+function BloqueManager({ curso, bloques, setBloques }: BloqueManagerProps) {
+  const [form, setForm] = useState<BloqueFormState>({ nombre: '', orden: 10, programa_id: curso.id });
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   useEffect(() => {
     setForm(f => ({ ...f, programa_id: curso.id }));
@@ -281,26 +354,33 @@ function BloqueManager({ curso, bloques, setBloques }) {
 
   useEffect(() => { fetchBloques(); }, [fetchBloques, setBloques]);
 
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const val = e.target.name === 'orden' ? Number(e.target.value) : e.target.value;
+    setForm(f => ({ ...f, [e.target.name]: val }));
+  };
 
-  const handleFormChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaveStatus('saving');
     try {
-      await createBloque(form);
+      await createBloque({
+        nombre: form.nombre,
+        orden: form.orden,
+        programa_id: form.programa_id,
+        correlativas_ids: []
+      });
       setForm({ nombre: '', orden: 10, programa_id: curso.id });
       fetchBloques();
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
-      console.error("Error creating bloque:", err.response?.data || err);
+      console.error("Error creating bloque:", err);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: number) => {
     if (window.confirm("¿Eliminar bloque? Se borrarán sus módulos y exámenes.")) {
       setSaveStatus('saving');
       try {
@@ -309,7 +389,7 @@ function BloqueManager({ curso, bloques, setBloques }) {
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (err) {
-        console.error("Error deleting bloque:", err.response?.data || err);
+        console.error("Error deleting bloque:", err);
         setSaveStatus('error');
         setTimeout(() => setSaveStatus('idle'), 2000);
       }
@@ -317,14 +397,14 @@ function BloqueManager({ curso, bloques, setBloques }) {
   };
 
   return (
-    <Box mt={2}>
+    <Box sx={{ mt: 2 }}>
       <Typography variant="h6">Bloques del Curso</Typography>
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 2, my: 2, alignItems: 'center' }}>
         <TextField name="nombre" value={form.nombre} onChange={handleFormChange} label="Nombre del Bloque" size="small" required />
         <TextField name="orden" value={form.orden} onChange={handleFormChange} label="Orden" type="number" size="small" required />
         <Button type="submit" variant="contained" disabled={saveStatus === 'saving'}>Agregar Bloque</Button>
         {saveStatus === 'saving' && <CircularProgress size={20} />}
-        {saveStatus === 'saved' && <Typography color="success">Guardado ✓</Typography>}
+        {saveStatus === 'saved' && <Typography sx={{ color: 'success.main' }}>Guardado ✓</Typography>}
         {saveStatus === 'error' && <Typography color="error">Error al guardar</Typography>}
       </Box>
 
@@ -350,8 +430,8 @@ function BloqueManager({ curso, bloques, setBloques }) {
   );
 }
 
-function ModuloExamenPreview({ modulo }) {
-  const [examenes, setExamenes] = useState([]);
+function ModuloExamenPreview({ modulo }: { modulo: Modulo }) {
+  const [examenes, setExamenes] = useState<Examen[]>([]);
 
   useEffect(() => {
     async function fetchModuloExamenes() {
@@ -387,8 +467,8 @@ function ModuloExamenPreview({ modulo }) {
   );
 }
 
-function ModuloPreview({ bloque }) {
-  const [modulos, setModulos] = useState([]);
+function ModuloPreview({ bloque }: { bloque: Bloque }) {
+  const [modulos, setModulos] = useState<Modulo[]>([]);
 
   useEffect(() => {
     async function fetchModulos() {
@@ -421,8 +501,8 @@ function ModuloPreview({ bloque }) {
   );
 }
 
-function BloqueExamenPreview({ bloque }) {
-  const [examenes, setExamenes] = useState([]);
+function BloqueExamenPreview({ bloque }: { bloque: Bloque }) {
+  const [examenes, setExamenes] = useState<Examen[]>([]);
 
   useEffect(() => {
     async function fetchBloqueExamenes() {
@@ -458,7 +538,12 @@ function BloqueExamenPreview({ bloque }) {
   );
 }
 
-function CoursePreview({ curso, bloques }) {
+interface CoursePreviewProps {
+  curso: Programa;
+  bloques: Bloque[];
+}
+
+function CoursePreview({ curso, bloques }: CoursePreviewProps) {
   return (
     <Box>
       <Typography variant="h5" gutterBottom>Vista Previa del Curso: {curso.nombre}</Typography>
@@ -483,23 +568,24 @@ function CoursePreview({ curso, bloques }) {
 
 // --- Main Component ---
 export default function CursoDetail() {
-  const { id } = useParams();
-  const [curso, setCurso] = useState(null);
+  const { id } = useParams<{ id: string }>();
+  const [curso, setCurso] = useState<Programa | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [viewMode, setViewMode] = useState('edit'); // 'edit' or 'preview'
-  const [bloques, setBloques] = useState([]);
+  const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit'); // 'edit' or 'preview'
+  const [bloques, setBloques] = useState<Bloque[]>([]);
   // Inline graph (API-based)
-  const [cohortes, setCohortes] = useState([]);
-  const [cohorteId, setCohorteId] = useState('');
-  const [graph, setGraph] = useState(null);
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [cohorteId, setCohorteId] = useState<string>('');
+  const [graph, setGraph] = useState<CourseGraph | null>(null);
   const [graphLoading, setGraphLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
+    if (!id) return;
     setLoading(true);
     setError(null);
     try {
-      const currentCurso = await getCurso(id);
+      const currentCurso = await getCurso(Number(id));
       setCurso(currentCurso);
 
       const bloquesData = await listBloques({ programa_id: currentCurso.id });
@@ -519,8 +605,9 @@ export default function CursoDetail() {
 
   useEffect(() => {
     const loadCohorts = async () => {
+      if (!id) return;
       try {
-        const res = await listCohortes({ programa_id: id });
+        const res = await listCohortes({ programa_id: Number(id) });
         setCohortes(Array.isArray(res) ? res : []);
       } catch (e) {
         setCohortes([]);
@@ -533,7 +620,7 @@ export default function CursoDetail() {
     if (!id) return;
     setGraphLoading(true);
     try {
-      const data = await getCoursesGraph({ programa_id: id, cohorte_id: cohorteId || undefined });
+      const data = await getCoursesGraph({ programa_id: Number(id), cohorte_id: cohorteId || undefined }) as CourseGraph;
       setGraph(data);
     } catch (e) {
       setGraph(null);
@@ -553,7 +640,7 @@ export default function CursoDetail() {
         <Typography color="text.primary">{curso.nombre}</Typography>
       </Breadcrumbs>
 
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4" gutterBottom>{curso.nombre}</Typography>
         <Button variant="outlined" onClick={() => setViewMode(viewMode === 'edit' ? 'preview' : 'edit')}>
           {viewMode === 'edit' ? 'Vista Previa' : 'Volver a Edición'}
@@ -567,7 +654,7 @@ export default function CursoDetail() {
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
             <FormControl size="small" sx={{ minWidth: 240 }}>
               <InputLabel id="coh-label">Cohorte (opcional)</InputLabel>
-              <Select labelId="coh-label" label="Cohorte (opcional)" value={cohorteId} onChange={(e) => setCohorteId(e.target.value)}>
+              <Select labelId="coh-label" label="Cohorte (opcional)" value={cohorteId} onChange={(e) => setCohorteId(e.target.value as string)}>
                 <MenuItem value=""><em>Todas</em></MenuItem>
                 {(cohortes || []).map(c => (
                   <MenuItem key={c.id} value={c.id}>{c.nombre}</MenuItem>
