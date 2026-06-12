@@ -42,6 +42,7 @@ import UsuariosTab from "../components/Videojuegos/UsuariosTab";
 import InscripcionesTab from "../components/Videojuegos/InscripcionesTab";
 import AsistenciaTab from "../components/Videojuegos/AsistenciaTab";
 import CalificacionesTab from "../components/Videojuegos/CalificacionesTab";
+import type { UserDetails } from "../api/types";
 
 // States mapping
 const ESTADOS = [
@@ -51,19 +52,23 @@ const ESTADOS = [
   { value: "rechazado", label: "Rechazado" },
 ];
 
-const BADGE_CLASSES = {
+const BADGE_CLASSES: Record<string, string> = {
   pendiente: "border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]",
   aprobado: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]",
   rechazado: "border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]",
 };
 
-const BADGE_ICONS = {
+const BADGE_ICONS: Record<string, React.ReactNode> = {
   pendiente: <Clock size={12} className="animate-pulse" />,
   aprobado: <CheckCircle2 size={12} />,
   rechazado: <XCircle size={12} />,
 };
 
-function StateBadge({ estado }) {
+interface StateBadgeProps {
+  estado: string;
+}
+
+function StateBadge({ estado }: StateBadgeProps) {
   const norm = estado?.toLowerCase() || "pendiente";
   const label = norm === "aprobado" ? "Aprobado" : norm === "rechazado" ? "Rechazado" : "Pendiente";
   return (
@@ -74,7 +79,13 @@ function StateBadge({ estado }) {
   );
 }
 
-function YesNoIcon({ value, trueIcon, falseIcon }) {
+interface YesNoIconProps {
+  value?: boolean;
+  trueIcon: React.ReactNode;
+  falseIcon: React.ReactNode;
+}
+
+function YesNoIcon({ value, trueIcon, falseIcon }: YesNoIconProps) {
   if (value) {
     return (
       <span className="text-emerald-400 flex items-center gap-1 font-bold text-xs" title="Sí">
@@ -89,7 +100,13 @@ function YesNoIcon({ value, trueIcon, falseIcon }) {
   );
 }
 
-function DetailRow({ label, value, icon }) {
+interface DetailRowProps {
+  label: string;
+  value?: string | null;
+  icon?: React.ReactNode;
+}
+
+function DetailRow({ label, value, icon }: DetailRowProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 py-2 border-b border-indigo-500/5 last:border-b-0">
       <span className="text-xs font-black uppercase tracking-widest text-indigo-300 sm:w-48 flex-shrink-0 flex items-center gap-1.5">
@@ -101,7 +118,13 @@ function DetailRow({ label, value, icon }) {
   );
 }
 
-function DocumentLink({ url, label, colorClass }) {
+interface DocumentLinkProps {
+  url?: string | null;
+  label: string;
+  colorClass: string;
+}
+
+function DocumentLink({ url, label, colorClass }: DocumentLinkProps) {
   if (!url) return null;
   const fullUrl = getMediaUrl(url);
   return (
@@ -119,12 +142,50 @@ function DocumentLink({ url, label, colorClass }) {
   );
 }
 
-function DetailModal({ student, onClose, onSave }) {
+interface PreinscripcionVJ {
+  id: number;
+  apellido: string;
+  nombre: string;
+  dni: string;
+  email: string;
+  sexo?: string | null;
+  fecha_nacimiento?: string | null;
+  nacionalidad?: string | null;
+  lugar_nacimiento?: string | null;
+  cuit?: string | null;
+  nivel_educativo?: string | null;
+  telefono?: string | null;
+  ciudad?: string | null;
+  barrio?: string | null;
+  domicilio?: string | null;
+  posee_pc?: boolean;
+  posee_conectividad?: boolean;
+  trabaja?: boolean;
+  lugar_trabajo?: string | null;
+  tutor_nombre?: string | null;
+  tutor_dni?: string | null;
+  tutor_telefono?: string | null;
+  autorizacion_status?: string | null;
+  dni_digitalizado?: string | null;
+  titulo_secundario_digitalizado?: string | null;
+  dni_tutor_digitalizado?: string | null;
+  nota_parental_firmada?: string | null;
+  estado_vj: string;
+  bloques_vj?: string[];
+}
+
+interface DetailModalProps {
+  student: PreinscripcionVJ;
+  onClose: () => void;
+  onSave: () => void;
+}
+
+function DetailModal({ student, onClose, onSave }: DetailModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const handleStatusChange = async (newEstado) => {
+  const handleStatusChange = async (newEstado: string) => {
     setSaving(true);
     setError("");
     setSuccess("");
@@ -376,7 +437,7 @@ function DetailModal({ student, onClose, onSave }) {
               <button
                 onClick={() => handleStatusChange("aprobado")}
                 disabled={saving}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-brand-cyan to-brand-accent text-[#050814] font-black text-xs uppercase tracking-widest transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:scale-[1.02] flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-orange-500 text-[#050814] font-black text-xs uppercase tracking-widest transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:scale-[1.02] flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 <CheckCircle2 size={15} /> Aprobar Postulación
               </button>
@@ -397,7 +458,7 @@ function DetailModal({ student, onClose, onSave }) {
             <button
               onClick={() => handleStatusChange("aprobado")}
               disabled={saving}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-brand-cyan to-brand-accent text-[#050814] font-black text-xs uppercase tracking-widest transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:scale-[1.02] flex items-center justify-center gap-1.5 disabled:opacity-50"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-orange-500 text-[#050814] font-black text-xs uppercase tracking-widest transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:scale-[1.02] flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               <CheckCircle2 size={15} /> Cambiar a Aprobado
             </button>
@@ -408,7 +469,14 @@ function DetailModal({ student, onClose, onSave }) {
   );
 }
 
-function StatCard({ label, value, icon, glowClass }) {
+interface StatCardProps {
+  label: string;
+  value: number | string;
+  icon: React.ReactNode;
+  glowClass?: string;
+}
+
+function StatCard({ label, value, icon, glowClass }: StatCardProps) {
   return (
     <div className={`p-6 rounded-[2rem] bg-[#0c122c]/50 border border-indigo-500/10 backdrop-blur-xl relative overflow-hidden shadow-lg ${glowClass}`}>
       <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full translate-x-8 -translate-y-8" />
@@ -425,22 +493,40 @@ function StatCard({ label, value, icon, glowClass }) {
   );
 }
 
+interface GeograficCity {
+  label: string;
+  value: number;
+}
+
+interface VideojuegosStats {
+  total: number;
+  pendiente: number;
+  aprobado: number;
+  rechazado: number;
+  conPC: number;
+  conInternet: number;
+  trabaja: number;
+  porCiudad: GeograficCity[];
+  menores: number;
+  mayores: number;
+}
+
 export default function GestionPreinscripcionesVideojuegos() {
   const navigate = useNavigate();
-  const { user } = useContext(UserContext);
-  const { mode, toggleMode } = useContext(ThemeModeContext);
+  const { user } = useContext(UserContext) as { user: UserDetails | null };
+  const { mode, toggleMode } = useContext(ThemeModeContext) as { mode: 'light' | 'dark'; toggleMode: () => void };
   
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const tab = queryParams.get("tab") || "dashboard";
-  const setTab = (newTab) => {
+  const setTab = (newTab: string) => {
     navigate(`/admin-videojuegos?tab=${newTab}`);
   };
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<PreinscripcionVJ[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<PreinscripcionVJ | null>(null);
   const [actionError, setActionError] = useState("");
 
   const esAdmin = user && (user.is_superuser || user.is_staff || user.groups?.includes("Admin"));
@@ -460,7 +546,7 @@ export default function GestionPreinscripcionesVideojuegos() {
     setLoading(true);
     setActionError("");
     try {
-      const { data: res } = await apiClientV2.get("/videojuegos/preinscripciones");
+      const { data: res } = await apiClientV2.get<PreinscripcionVJ[]>("/videojuegos/preinscripciones");
       setData(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error(err);
@@ -476,7 +562,7 @@ export default function GestionPreinscripcionesVideojuegos() {
   }, [fetchData]);
 
   // Aggregate stats dynamically in the frontend
-  const stats = useMemo(() => {
+  const stats = useMemo<VideojuegosStats>(() => {
     const total = data.length;
     const pendiente = data.filter((s) => s.estado_vj === "pendiente").length;
     const aprobado = data.filter((s) => s.estado_vj === "aprobado").length;
