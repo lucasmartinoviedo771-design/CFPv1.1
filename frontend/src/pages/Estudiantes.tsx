@@ -1,5 +1,10 @@
 import React, { useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { Modal } from "../components/Estudiantes/Modal";
+import { ModalQR } from "../components/Estudiantes/ModalQR";
+import { ModalConfirmDelete } from "../components/Estudiantes/ModalConfirmDelete";
+import { ModalRespuestas } from "../components/Estudiantes/ModalRespuestas";
+import { ModalExport } from "../components/Estudiantes/ModalExport";
+import { ModalDetalle } from "../components/Estudiantes/ModalDetalle";
 import { useEstudiantes, useSaveEstudiante, useProgramas, useBloques, useModulos, useCohortes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
 import { formatDateDisplay, formatDateTimeDisplay } from "../utils/dateFormat";
@@ -12,56 +17,34 @@ import { getMediaUrl } from '../utils/media';
 import type { Estudiante, EstudianteDetail, Programa, Bloque, Modulo, Cohorte, Inscripcion, Nota } from "../api/types";
 
 // Section Header Helper
-interface SectionDividerProps {
+export interface SectionDividerProps {
     title: string;
     icon?: React.ComponentType<{ size?: number | string; className?: string }>;
 }
 
-const SectionDivider: React.FC<SectionDividerProps> = ({ title, icon: Icon }) => (
+export const SectionDivider: React.FC<SectionDividerProps> = ({ title, icon: Icon }) => (
     <div className="flex items-center gap-2 text-indigo-300 border-b border-indigo-500/20 pb-2 mb-4 mt-6">
         {Icon && <Icon size={16} />}
         <span className="text-sm font-bold uppercase tracking-wider">{title}</span>
     </div>
 );
 
-// Modal Custom
-interface ModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    title: string;
-    children: React.ReactNode;
-    actions: React.ReactNode;
-    maxWidthClass?: string;
-}
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max-w-lg" }) => {
-    if (!isOpen) return null;
-    if (typeof document === "undefined") return null;
-    return createPortal((
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-            <div className={`bg-[#1e1b4b] border border-indigo-500/30 rounded-xl shadow-2xl w-full ${maxWidthClass}`}>
-                <div className="p-6 border-b border-indigo-500/20"><h3 className="text-xl font-bold text-white">{title}</h3></div>
-                <div className="p-6 text-gray-200 max-h-[75vh] overflow-y-auto">{children}</div>
-                <div className="p-4 border-t border-indigo-500/20 flex justify-end gap-3 bg-indigo-950/30 rounded-b-xl">{actions}</div>
-            </div>
-        </div>
-    ), document.body);
-};
 
-interface NivelacionQuestion {
+export interface NivelacionQuestion {
     id: number;
     text: string;
     options: string[];
     correct: number;
 }
 
-const NIVELACION_QUESTIONS: NivelacionQuestion[] = [
+export const NIVELACION_QUESTIONS: NivelacionQuestion[] = [
     { id: 1, text: '¿Qué es un "enlace" o "hipervínculo" en una página web?', options: ["Una imagen decorativa", "Un texto o imagen que al hacer clic te lleva a otra página o sección", "Un anuncio publicitario", "El título principal de la página"], correct: 1 },
     { id: 2, text: '¿Qué significa "descargar" un archivo de internet?', options: ["Subir un archivo a una página web", "Guardar una copia del archivo en tu dispositivo", "Eliminar el archivo de internet", "Compartir el archivo con otros usuarios en línea"], correct: 1 },
     { id: 3, text: '¿Cuál es la función principal de un explorador web (navegador)?', options: ["Escribir y editar documentos de texto.", "Mostrar páginas web y permitir la navegación por internet.", "Enviar y recibir correos electrónicos.", "Reproducir música y videos."], correct: 1 },
     { id: 4, text: '¿Qué es una "contraseña" o "clave" en el contexto de internet?', options: ["Un programa para proteger la computadora de virus", "Una secuencia secreta de caracteres para acceder a una cuenta o servicio en línea", "El nombre de usuario para iniciar sesión en una página web", "Un código de descuento para compras en línea"], correct: 1 },
     { id: 5, text: '¿Qué significa "cerrar sesión" o "salir" de una cuenta en línea?', options: ["Eliminar la cuenta permanentemente", "Desactivar temporalmente la cuenta", "Finalizar la sesión activa y requerir volver a ingresar las credenciales para acceder", "Guardar la información de la sesión para un acceso más rápido la próxima vez"], correct: 2 },
-    { id: 6, text: '¿Qué es el "correo electrónico" o "e-mail"?', options: ["Un programa para crear presentaciones", "Un servicio para enviar y recibir mensajes a través de internet", "Una red social para compartir mensajes cortos", "Un sistema para realizar videollamadas"], correct: 1 },
+    { id: 6, text: '¿Qué es el "correo electrónico" o "e-mail"?', options: ["Un programa para crear presentations", "Un servicio para enviar y recibir mensajes a través de internet", "Una red social para compartir mensajes cortos", "Un sistema para realizar videollamadas"], correct: 1 },
     { id: 7, text: '¿Qué precaución básica se debe tener al navegar por internet?', options: ["Compartir contraseñas con amigos cercanos", "Hacer clic en todos los enlaces que aparezcan", "Evitar ingresar información personal en sitios web no seguros (sin \"https://\")", "Descargar archivos de fuentes desconocidas sin analizarlos"], correct: 2 },
     { id: 8, text: '¿Cuál de los siguientes dispositivos se utiliza principalmente para almacenar información de forma permanente en una computadora?', options: ["Memoria RAM", "Unidad Central de Procesamiento (CPU)", "Disco duro o unidad de estado sólido (SSD)", "Una marca de computadoras"], correct: 2 },
     { id: 9, text: '¿Cuál de los siguientes iconos suele representar una conexión Wi-Fi en un dispositivo electrónico?', options: ["Un enchufe", "Unas ondas o barras curvas que se expanden hacia arriba", "Un círculo con una flecha", "Un candado cerrado para navegar por internet", "Una marca de computadoras"], correct: 1 },
@@ -142,7 +125,7 @@ interface LocalNivelacionDigital {
     } | null;
 }
 
-type LocalEstudianteDetail = EstudianteDetail & {
+export type LocalEstudianteDetail = EstudianteDetail & {
     nivelacion_digital?: LocalNivelacionDigital | null;
     autorizacion_fecha?: string | null;
     autorizacion_selfie?: string | null;
@@ -150,7 +133,7 @@ type LocalEstudianteDetail = EstudianteDetail & {
     autorizacion_token?: string | null;
 };
 
-interface ViewDataState {
+export interface ViewDataState {
     loading: boolean;
     error: string;
     student: LocalEstudianteDetail | null;
@@ -158,7 +141,7 @@ interface ViewDataState {
     notas: Nota[];
 }
 
-interface ExportConfigState {
+export interface ExportConfigState {
     columns: string[];
     format: "excel" | "pdf";
     anio: string;
@@ -456,43 +439,7 @@ export default function Estudiantes() {
         }));
     };
 
-    const trayectoria = useMemo(() => {
-        const inscripciones = viewData.inscripciones || [];
-        const notas = viewData.notas || [];
 
-        const inscripcionesActivas = inscripciones.filter(i => i.estado === "CURSANDO");
-        interface MapValue extends Modulo {
-            _programa_nombre?: string | null;
-            _bloque_nombre?: string | null;
-        }
-        const modulosMap = new Map<number, MapValue>();
-        inscripcionesActivas.forEach(i => {
-            if (i?.modulo?.id && !modulosMap.has(i.modulo.id)) {
-                modulosMap.set(i.modulo.id, {
-                    ...i.modulo,
-                    _programa_nombre: i?.cohorte?.programa?.nombre,
-                    _bloque_nombre: i?.modulo?.bloque?.nombre || i?.cohorte?.bloque_fechas?.nombre
-                });
-            }
-        });
-        const modulosInscriptos = Array.from(modulosMap.values());
-
-        const modulosAprobadosIds = new Set(
-            notas
-                .filter(n => n.aprobado && n.examen_modulo_id)
-                .map(n => n.examen_modulo_id)
-        );
-
-        const modulosAprobados = modulosInscriptos.filter(m => modulosAprobadosIds.has(m.id));
-        const modulosPendientes = modulosInscriptos.filter(m => !modulosAprobadosIds.has(m.id));
-
-        return {
-            inscripcionesActivas,
-            modulosAprobados,
-            modulosPendientes,
-            notasAprobadas: notas.filter(n => n.aprobado),
-        };
-    }, [viewData.inscripciones, viewData.notas]);
 
     return (
         <div className="space-y-6 animate-fade-in-up">
@@ -937,528 +884,45 @@ export default function Estudiantes() {
                 </div>
             )}
 
-            {/* Modal Confirmación Delete */}
-            <Modal
-                isOpen={!!deleteTarget}
-                onClose={() => setDeleteTarget(null)}
-                title="Confirmar Baja"
-                actions={
-                    <>
-                        <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
-                        <Button onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700 text-white border-none">Dar de Baja</Button>
-                    </>
-                }
-            >
-                <p>¿Estás seguro de que quieres dar de baja a <strong>{deleteTarget?.apellido}, {deleteTarget?.nombre}</strong>?</p>
-                <p className="text-sm text-gray-400 mt-2">El estudiante no aparecerá en las listas activas pero su historial se conservará.</p>
-            </Modal >
+            <ModalConfirmDelete
+                deleteTarget={deleteTarget}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
 
-            <Modal
+            <ModalDetalle
                 isOpen={!!viewStudentId}
+                studentId={viewStudentId}
+                viewData={viewData}
                 onClose={() => setViewStudentId(null)}
-                title={viewData.student ? `Detalle: ${viewData.student.apellido}, ${viewData.student.nombre} ` : "Detalle del Estudiante"}
-                maxWidthClass="max-w-5xl"
-                actions={<Button variant="ghost" onClick={() => setViewStudentId(null)}>Cerrar</Button>}
-            >
-                {viewData.loading && <p className="text-indigo-200">Cargando detalle...</p>}
-                {!!viewData.error && <p className="text-red-300">{viewData.error}</p>}
+                onRefresh={() => handleOpenDetail({ id: viewStudentId! } as LocalEstudiante)}
+                onOpenRespuestas={() => setShowRespuestasModal(true)}
+                onOpenQR={(url, name) => setQrModal({ open: true, url, studentName: name })}
+                setFeedback={setFeedback}
+            />
 
-                {!viewData.loading && !viewData.error && viewData.student && (
-                    <div className="space-y-6">
-                        <div>
-                            <SectionDivider title="Datos Personales" icon={User} />
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                                <p><span className="text-indigo-300">DNI:</span> {viewData.student.dni || "-"}</p>
-                                <p><span className="text-indigo-300">CUIT:</span> {viewData.student.cuit || "-"}</p>
-                                <p><span className="text-indigo-300">Email:</span> {viewData.student.email || "-"}</p>
-                                <p><span className="text-indigo-300">Sexo:</span> {viewData.student.sexo || "-"}</p>
-                                <p><span className="text-indigo-300">Fecha Nacimiento:</span> {formatDateDisplay(viewData.student.fecha_nacimiento)}</p>
-                                <p><span className="text-indigo-300">Estatus:</span> {viewData.student.estatus || "-"}</p>
-                                <p><span className="text-indigo-300">País Nacimiento:</span> {viewData.student.pais_nacimiento || "-"}</p>
-                                <p><span className="text-indigo-300">Nacionalidad:</span> {viewData.student.nacionalidad || "-"}</p>
-                                <p><span className="text-indigo-300">Lugar Nacimiento:</span> {viewData.student.lugar_nacimiento || "-"}</p>
-                                <p><span className="text-indigo-300">Domicilio:</span> {viewData.student.domicilio || "-"}</p>
-                                <p><span className="text-indigo-300">Ciudad:</span> {viewData.student.ciudad || "-"}</p>
-                                <p><span className="text-indigo-300">Barrio:</span> {viewData.student.barrio || "-"}</p>
-                                <p><span className="text-indigo-300">Teléfono:</span> {viewData.student.telefono || "-"}</p>
-                                <p><span className="text-indigo-300">Nivel Educativo:</span> {viewData.student.nivel_educativo || "-"}</p>
-                                <p><span className="text-indigo-300">Lugar de trabajo:</span> {viewData.student.lugar_trabajo || "-"}</p>
-                            </div>
-
-                            <SectionDivider title="Documentación" icon={FileText} />
-                            <div className="flex gap-4">
-                                {viewData.student.dni_digitalizado ? (
-                                    <a
-                                        href={getMediaUrl(viewData.student.dni_digitalizado)}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex items-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-4 py-2 rounded-lg text-cyan-300 transition-all border border-cyan-500/30"
-                                    >
-                                        <Download size={18} /> Ver DNI Digitalizado
-                                    </a>
-                                ) : (
-                                    <div className="flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-lg text-red-400 border border-red-500/20">
-                                        <X size={18} /> DNI no disponible
-                                    </div>
-                                )}
-
-                                {viewData.student.titulo_secundario_digitalizado ? (
-                                    <a
-                                        href={getMediaUrl(viewData.student.titulo_secundario_digitalizado)}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex items-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/40 px-4 py-2 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
-                                    >
-                                        <Download size={18} /> Ver Título Secundario
-                                    </a>
-                                ) : (
-                                    <div className="flex items-center gap-2 bg-indigo-900/40 px-4 py-2 rounded-lg text-gray-500 border border-white/10">
-                                        <X size={18} /> Título no disponible
-                                    </div>
-                                )}
-                            </div>
-
-                            {(() => {
-                                const hoy = new Date();
-                                const nac = viewData.student!.fecha_nacimiento ? new Date(viewData.student!.fecha_nacimiento) : null;
-                                let edad = 18;
-                                if (nac) {
-                                    edad = hoy.getFullYear() - nac.getFullYear();
-                                    const mm = hoy.getMonth() - nac.getMonth();
-                                    if (mm < 0 || (mm === 0 && hoy.getDate() < nac.getDate())) edad--;
-                                }
-                                if (edad >= 18) return null;
-
-                                return (
-                                    <>
-                                        <SectionDivider title="Información del Padre/Madre o Tutor (Menor de Edad)" icon={User} />
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-4">
-                                            <p><span className="text-indigo-300">Responsable:</span> <span className="text-white font-bold">{viewData.student!.tutor_nombre || "No cargado"}</span></p>
-                                            <p><span className="text-indigo-300">DNI Responsable:</span> <span className="text-white font-bold">{viewData.student!.tutor_dni || "No cargado"}</span></p>
-                                            <p><span className="text-indigo-300">WhatsApp Tutor:</span> <span className="text-emerald-400 font-bold">{viewData.student!.tutor_telefono || "No cargado"}</span></p>
-                                        </div>
-                                        <div className="flex flex-wrap gap-4">
-                                            <div className="flex flex-col gap-2">
-                                                {viewData.student!.dni_tutor_digitalizado ? (
-                                                    <a
-                                                        href={getMediaUrl(viewData.student!.dni_tutor_digitalizado)}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="flex items-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 px-4 py-2 rounded-lg text-orange-300 transition-all border border-orange-500/30"
-                                                    >
-                                                        <Download size={18} /> Ver DNI del Padre/Madre o Tutor
-                                                    </a>
-                                                ) : (
-                                                    <div className="flex items-center gap-2 bg-orange-900/20 px-4 py-2 rounded-lg text-orange-400/50 border border-orange-500/10 italic text-xs">
-                                                        DNI Padre/Madre o Tutor pendiente
-                                                    </div>
-                                                )}
-                                                <label className="cursor-pointer bg-orange-600/80 hover:bg-orange-500 text-white text-[10px] px-3 py-1.5 rounded-full text-center transition-all flex items-center justify-center gap-1">
-                                                    <Download size={12} className="rotate-180" /> {viewData.student!.dni_tutor_digitalizado ? "REEMPLAZAR DNI TUTOR" : "SUBIR DNI TUTOR"}
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*,application/pdf"
-                                                        className="hidden"
-                                                        onChange={async (e) => {
-                                                            const f = e.target.files?.[0];
-                                                            if (!f) return;
-                                                            try {
-                                                                const fd = new FormData();
-                                                                fd.append('dni_tutor_digitalizado', f);
-                                                                await apiClientV2.post(`/estudiantes/${viewData.student!.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-                                                                setFeedback({ open: true, message: "DNI del tutor actualizado correctamente.", severity: "success" });
-                                                                handleOpenDetail(viewData.student!);
-                                                            } catch {
-                                                                setFeedback({ open: true, message: "Error al subir el DNI.", severity: "error" });
-                                                            }
-                                                        }}
-                                                    />
-                                                </label>
-                                            </div>
-
-                                            {viewData.student!.nota_parental_firmada ? (
-                                                <a
-                                                    href={getMediaUrl(viewData.student!.nota_parental_firmada)}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 px-4 py-2 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
-                                                >
-                                                    <Check size={18} /> Autorización Parental OK
-                                                </a>
-                                            ) : (
-                                                <div className="flex items-center gap-2 bg-red-900/20 px-4 py-2 rounded-lg text-red-300 border border-red-500/20 italic text-xs">
-                                                    <AlertCircle size={14} /> Falta Autorización Firmada
-                                                </div>
-                                            )}
-
-                                            {viewData.student!.autorizacion_status === 'DIGITAL' && (
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="flex flex-col gap-1 items-center bg-emerald-500/10 px-4 py-2 rounded-lg border border-emerald-500/20 text-xs shadow-sm">
-                                                        <span className="text-emerald-400 font-bold flex items-center gap-2">
-                                                            <Check size={14} /> Firma Digital Validada
-                                                        </span>
-                                                        <span className="text-[10px] text-emerald-300 opacity-80">
-                                                            {formatDateTimeDisplay(viewData.student!.autorizacion_fecha)}
-                                                        </span>
-                                                    </div>
-                                                    {viewData.student!.autorizacion_selfie && (
-                                                        <a
-                                                            href={getMediaUrl(viewData.student!.autorizacion_selfie)}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-3 py-1.5 rounded-full transition-all"
-                                                        >
-                                                            <Eye size={12} /> VER SELFIE DE FIRMA
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {viewData.student!.autorizacion_status === 'PENDIENTE' && (
-                                                <div className="flex flex-col gap-2 p-3 bg-indigo-950/50 border border-indigo-500/20 rounded-xl">
-                                                    <p className="text-[10px] font-bold text-indigo-300 uppercase mb-1">Firma Presencial</p>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={async () => {
-                                                                let token = viewData.student!.autorizacion_token;
-                                                                if (!token) {
-                                                                    const { data } = await apiClientV2.post<{ token: string }>(`/autorizaciones/generate/${viewData.student!.id}`);
-                                                                    token = data.token;
-                                                                }
-                                                                const url = `https://politecnico.ar/cfp/autorizar.html?token=${token}`;
-                                                                window.open(url, '_blank');
-                                                            }}
-                                                            className="text-[10px] py-1 h-auto"
-                                                            title="Abrir en este dispositivo"
-                                                        >
-                                                            Abrir Link
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={async () => {
-                                                                let token = viewData.student!.autorizacion_token;
-                                                                if (!token) {
-                                                                    const { data } = await apiClientV2.post<{ token: string }>(`/autorizaciones/generate/${viewData.student!.id}`);
-                                                                    token = data.token;
-                                                                }
-                                                                const url = `https://politecnico.ar/cfp/autorizar.html?token=${token}`;
-                                                                setQrModal({ open: true, url, studentName: `${viewData.student!.nombre} ${viewData.student!.apellido}` });
-                                                            }}
-                                                            className="text-[10px] py-1 h-auto"
-                                                        >
-                                                            Generar QR / Link
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </>
-                                );
-                            })()}
-                        </div >
-
-                        {/* Nivelación Digital */}
-                        {viewData.inscripciones.some(i => (i?.cohorte?.programa?.nombre || "").toLowerCase().includes("habilidades digitales")) && (
-                            <div className="mx-6 mb-8 p-5 bg-brand-accent/5 border border-brand-accent/20 rounded-2xl backdrop-blur-md animate-in fade-in slide-in-from-left-4 duration-500">
-                                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-brand-accent/20 rounded-xl">
-                                            <Cpu className="text-brand-accent" size={24} />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-lg font-bold text-white tracking-tight">Nivelación: Habilidades Digitales</h4>
-                                            <div className="flex items-center gap-3 mt-1">
-                                                {viewData.student.nivelacion_digital ? (
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${viewData.student.nivelacion_digital.completado ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                                                                {viewData.student.nivelacion_digital.completado ? `Completado: ${viewData.student.nivelacion_digital.puntaje}/10` : 'Enviado / Pendiente'}
-                                                            </span>
-                                                            {viewData.student.nivelacion_digital.completado && (
-                                                                <span className="text-xs font-medium text-indigo-300">
-                                                                    Asignación final: <span className={viewData.student.nivelacion_digital.puntaje >= 7 && !viewData.student.nivelacion_digital.respuestas_json?.wants_module1 ? 'text-emerald-400' : 'text-amber-400'}>
-                                                                        {viewData.student.nivelacion_digital.puntaje >= 7 && !viewData.student.nivelacion_digital.respuestas_json?.wants_module1 ? 'Módulo 2 (Virtual)' : 'Módulo 1 (Presencial)'}
-                                                                    </span>
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {viewData.student.nivelacion_digital.completado && viewData.student.nivelacion_digital.respuestas_json?.wants_module1 && (
-                                                            <span className="text-[10px] text-orange-300 italic">
-                                                                * El estudiante eligió cursar el Módulo 1 presencial a pesar de su puntaje.
-                                                            </span>
-                                                        )}
-                                                        {viewData.student.nivelacion_digital.completado && (
-                                                            <Button
-                                                                onClick={() => setShowRespuestasModal(true)}
-                                                                className="bg-indigo-600/30 hover:bg-indigo-500/50 border border-indigo-500/50 text-xs py-1 mt-1 w-max"
-                                                            >
-                                                                Ver Cuestionario
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-sm text-indigo-300">Test pendiente de envío</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {!viewData.student.nivelacion_digital?.completado && (
-                                        <Button
-                                            onClick={async () => {
-                                                try {
-                                                    const { data } = await apiClientV2.post<{ token: string }>(`/nivelacion/generate/${viewData.student!.id}`);
-                                                    const url = `https://politecnico.ar/cfp/nivelacion.html?token=${data.token}`;
-                                                    setQrModal({ 
-                                                        open: true, 
-                                                        url, 
-                                                        studentName: `${viewData.student!.nombre} ${viewData.student!.apellido} (Test Nivelación)` 
-                                                    });
-                                                } catch {
-                                                    alert("Error al generar el test.");
-                                                }
-                                            }}
-                                            className="bg-brand-accent hover:bg-orange-600 border-none shadow-lg shadow-brand-accent/20"
-                                            startIcon={<Send size={16} />}
-                                        >
-                                            Generar Invitación
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        <div>
-                            <SectionDivider title="Trayectoria Académica" icon={Briefcase} />
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
-                                    <p className="text-xs text-indigo-300">Inscripciones activas</p>
-                                    <p className="text-xl font-bold text-white">{trayectoria.inscripcionesActivas.length}</p>
-                                </div>
-                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
-                                    <p className="text-xs text-indigo-300">Módulos aprobados</p>
-                                    <p className="text-xl font-bold text-green-400">{trayectoria.modulosAprobados.length}</p>
-                                </div>
-                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
-                                    <p className="text-xs text-indigo-300">Módulos pendientes</p>
-                                    <p className="text-xl font-bold text-amber-300">{trayectoria.modulosPendientes.length}</p>
-                                </div>
-                                <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3">
-                                    <p className="text-xs text-indigo-300">Notas aprobadas</p>
-                                    <p className="text-xl font-bold text-cyan-300">{trayectoria.notasAprobadas.length}</p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Card className="bg-indigo-950/30 border-indigo-500/20">
-                                    <h4 className="text-white font-semibold mb-2">Inscripciones</h4>
-                                    <div className="space-y-2 text-sm">
-                                        {viewData.inscripciones.length ? viewData.inscripciones.map(i => (
-                                            <div key={i.id} className="border-b border-indigo-500/10 pb-3 mb-2 last:border-0 last:mb-0">
-                                                <div className="flex flex-col">
-                                                    <p className="text-indigo-100 font-bold">{i?.cohorte?.programa?.nombre || "Programa"}</p>
-                                                    <p className="text-indigo-300 text-xs">{i?.modulo?.bloque?.nombre || i?.cohorte?.bloque_fechas?.nombre || "-"}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-200 text-[10px] border border-indigo-500/20">
-                                                            {i?.modulo?.nombre || "Inscripción"}
-                                                        </span>
-                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider ${i.estado === 'APROBADO' ? 'bg-green-500/20 text-green-400' :
-                                                            i.estado === 'CURSANDO' ? 'bg-blue-500/20 text-blue-400' :
-                                                                i.estado === 'PAUSADO' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                    'bg-red-500/20 text-red-400'
-                                                            }`}>
-                                                            {i.estado}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )) : <p className="text-indigo-500/50 italic text-center py-4">Sin inscripciones registradas.</p>}
-                                    </div>
-                                </Card>
-
-                                <Card className="bg-indigo-950/30 border-indigo-500/20">
-                                    <h4 className="text-white font-semibold mb-2">Qué le falta aprobar</h4>
-                                    <div className="space-y-2 text-sm">
-                                        {trayectoria.modulosPendientes.length ? trayectoria.modulosPendientes.map(m => (
-                                            <div key={m.id} className="border-b border-indigo-500/10 pb-1 mb-1">
-                                                <p className="text-indigo-300 text-xs">{m._programa_nombre || "Programa"} - {m._bloque_nombre || "Bloque"}</p>
-                                                <p className="text-amber-300">{m.nombre}</p>
-                                            </div>
-                                        )) : <p className="text-green-300">No tiene módulos pendientes en sus inscripciones activas.</p>}
-                                    </div>
-                                </Card>
-                            </div>
-                        </div>
-                    </div >
-                )}
-            </Modal >
-
-            {/* Modal QR */}
-            <Modal
-                isOpen={qrModal.open}
+            <ModalQR
+                open={qrModal.open}
+                url={qrModal.url}
+                studentName={qrModal.studentName}
                 onClose={() => setQrModal({ ...qrModal, open: false })}
-                title="Autorización Presencial"
-                maxWidthClass="max-w-sm"
-                actions={<Button onClick={() => setQrModal({ ...qrModal, open: false })}>Cerrar</Button>}
-            >
-                <div className="flex flex-col items-center text-center space-y-4">
-                    <p className="text-sm text-indigo-200">
-                        Pedile al <b>Padre/Madre o Tutor</b> que escanee este código para firmar la autorización de <b>{qrModal.studentName}</b>
-                    </p>
-                    <div className="p-4 bg-white rounded-2xl shadow-xl">
-                        <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrModal.url)}`}
-                            alt="QR de Autorización"
-                            className="w-48 h-48"
-                        />
-                    </div>
-                    <div className="w-full p-3 bg-black/40 rounded-lg border border-white/5 overflow-hidden">
-                        <p className="text-[10px] text-indigo-400 uppercase font-bold mb-1">Link Directo</p>
-                        <p className="text-[10px] text-gray-400 break-all select-all cursor-pointer font-mono">{qrModal.url}</p>
-                    </div>
-                </div>
-            </Modal>
+            />
 
-            {showRespuestasModal && (
-                <Modal
-                    isOpen={showRespuestasModal}
-                    onClose={() => setShowRespuestasModal(false)}
-                    title={`Respuestas de ${viewData.student?.nombre} ${viewData.student?.apellido}`}
-                    maxWidthClass="max-w-2xl"
-                    actions={
-                        <Button onClick={() => setShowRespuestasModal(false)} className="bg-indigo-600 hover:bg-indigo-500 text-white">
-                            Cerrar
-                        </Button>
-                    }
-                >
-                    <div className="space-y-4">
-                        {NIVELACION_QUESTIONS.map(q => {
-                            const answerStr = viewData.student?.nivelacion_digital?.respuestas_json?.answers?.[q.id];
-                            const answerInt = answerStr !== undefined ? parseInt(answerStr) : -1;
-                            return (
-                                <div key={q.id} className="p-3 bg-indigo-950/40 rounded-lg border border-indigo-500/20">
-                                    <p className="font-bold text-sm text-indigo-100 mb-2">{q.id}. {q.text}</p>
-                                    <div className="space-y-1 pl-2">
-                                        {q.options.map((opt, idx) => {
-                                            let style = "text-indigo-300 text-xs";
-                                            let icon = null;
-                                            if (idx === q.correct && idx === answerInt) {
-                                                style = "text-emerald-400 font-bold";
-                                                icon = "✓";
-                                            } else if (idx === answerInt && idx !== q.correct) {
-                                                style = "text-red-400 font-bold";
-                                                icon = "✗";
-                                            } else if (idx === q.correct) {
-                                                style = "text-emerald-400/70";
-                                            }
-                                            return (
-                                                <div key={idx} className={`flex items-start gap-2 ${style}`}>
-                                                    <span className="mt-0.5">{icon || "•"}</span>
-                                                    <span>{opt}</span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Modal>
-            )}
+            <ModalRespuestas
+                isOpen={showRespuestasModal}
+                student={viewData.student}
+                onClose={() => setShowRespuestasModal(false)}
+            />
 
-            {/* Modal Exportación */}
-            <Modal
+            <ModalExport
                 isOpen={exportModalOpen}
+                exportConfig={exportConfig}
+                exportLoading={exportLoading}
+                setExportConfig={setExportConfig}
+                toggleColumn={toggleColumn}
+                handleExport={handleExport}
                 onClose={() => setExportModalOpen(false)}
-                title="Exportar Datos de Estudiantes"
-                maxWidthClass="max-w-2xl"
-                actions={
-                    <>
-                        <Button variant="ghost" onClick={() => setExportModalOpen(false)}>Cancelar</Button>
-                        <Button 
-                            onClick={handleExport} 
-                            isLoading={exportLoading}
-                            className="bg-brand-accent hover:bg-orange-600 border-none" 
-                            startIcon={<Download size={18} />}
-                        >
-                            Descargar {exportConfig.format === 'excel' ? 'Excel' : 'PDF'}
-                        </Button>
-                    </>
-                }
-            >
-                <div className="space-y-6">
-                    <div className="bg-indigo-950/40 p-4 border border-indigo-500/20 rounded-xl mb-4">
-                        <p className="text-xs text-indigo-300">
-                            La exportación incluirá a los estudiantes según los <b>filtros que seleccionaste en la pantalla principal</b>.
-                        </p>
-                    </div>
-
-                    <div>
-                        <p className="text-sm text-indigo-300 mb-4">Seleccione las columnas que desea incluir en el archivo:</p>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {[
-                                { id: "apellido", label: "Apellido" },
-                                { id: "nombre", label: "Nombre" },
-                                { id: "dni", label: "DNI" },
-                                { id: "sexo", label: "Sexo" },
-                                { id: "email", label: "Email" },
-                                { id: "telefono", label: "Teléfono" },
-                                { id: "ciudad", label: "Ciudad" },
-                                { id: "estatus", label: "Estatus" },
-                                { id: "fecha_nacimiento", label: "Fecha Nac." },
-                                { id: "fecha_inscripcion", label: "Fecha Inscripción" },
-                                { id: "materias_aprobadas", label: "Módulos Aprobados" },
-                                { id: "materias_cursando", label: "Módulos Cursando" },
-                                { id: "materias_pendientes", label: "Módulos Pendientes" },
-                            ].map(col => (
-                                <label key={col.id} className="flex items-center gap-2 p-2 rounded bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={exportConfig.columns.includes(col.id)}
-                                        onChange={() => toggleColumn(col.id)}
-                                        className="rounded border-indigo-500 bg-indigo-900 text-brand-accent"
-                                    />
-                                    <span className="text-sm text-white">{col.label}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <p className="text-sm text-indigo-300 mb-4">Formato de salida:</p>
-                        <div className="flex gap-4">
-                            <label className="flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all bg-white/5 border-white/10 hover:border-brand-accent/50 group">
-                                <input 
-                                    type="radio" 
-                                    name="exportFormat" 
-                                    hidden 
-                                    checked={exportConfig.format === 'excel'} 
-                                    onChange={() => setExportConfig({...exportConfig, format: 'excel'})} 
-                                />
-                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${exportConfig.format === 'excel' ? 'border-brand-accent' : 'border-gray-500'}`}>
-                                    {exportConfig.format === 'excel' && <div className="w-2 h-2 rounded-full bg-brand-accent" />}
-                                </div>
-                                <span className={`font-bold ${exportConfig.format === 'excel' ? 'text-brand-accent' : 'text-gray-400 group-hover:text-white'}`}>Excel (.xlsx)</span>
-                            </label>
-                            <label className="flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all bg-white/5 border-white/10 hover:border-brand-accent/50 group">
-                                <input 
-                                    type="radio" 
-                                    name="exportFormat" 
-                                    hidden 
-                                    checked={exportConfig.format === 'pdf'} 
-                                    onChange={() => setExportConfig({...exportConfig, format: 'pdf'})} 
-                                />
-                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${exportConfig.format === 'pdf' ? 'border-brand-accent' : 'border-gray-500'}`}>
-                                    {exportConfig.format === 'pdf' && <div className="w-2 h-2 rounded-full bg-brand-accent" />}
-                                </div>
-                                <span className={`font-bold ${exportConfig.format === 'pdf' ? 'text-brand-accent' : 'text-gray-400 group-hover:text-white'}`}>Documento PDF (.pdf)</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </Modal>
+            />
 
             {/* Toast Feedback */}
             {feedback.open && (
