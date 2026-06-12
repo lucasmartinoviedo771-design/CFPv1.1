@@ -129,7 +129,7 @@ export default function Sidebar() {
   const preinscripcionesItems: MenuItem[] = [
     { label: 'Preinscripciones CFP', icon: <ClipboardList size={20} />, href: '/gestion-preinscripciones' },
     { label: 'Preinscripciones Terciario', icon: <GraduationCap size={20} />, href: '/preinscripciones-terciario' },
-    ...(hasVideojuegos ? [{ label: 'Preinscripciones Video Juegos', icon: <Gamepad2 size={20} />, href: '/admin-videojuegos' }] : []),
+    ...(hasVideojuegos ? [{ label: 'Preinscripciones Video Juegos', icon: <Gamepad2 size={20} />, href: '/admin-videojuegos?tab=preinscripciones' }] : []),
   ];
 
   const filteredPreinscripciones = preinscripcionesItems.filter(item => {

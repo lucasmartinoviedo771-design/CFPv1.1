@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { apiClientV2 } from "../api/client";
 import { getMediaUrl } from "../utils/media";
 import authService from "../services/authService";
@@ -430,7 +430,12 @@ export default function GestionPreinscripcionesVideojuegos() {
   const { user } = useContext(UserContext);
   const { mode, toggleMode } = useContext(ThemeModeContext);
   
-  const [tab, setTab] = useState("dashboard");
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const tab = queryParams.get("tab") || "dashboard";
+  const setTab = (newTab) => {
+    navigate(`/admin-videojuegos?tab=${newTab}`);
+  };
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

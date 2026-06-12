@@ -90,8 +90,16 @@ export default function Programas() {
       setForm(initialForm);
       setEditing(null);
       refetch();
-    } catch (error: any) {
-      const msg = error?.response?.data ? JSON.stringify(error.response.data) : error?.message || "Error";
+    } catch (error: unknown) {
+      let msg = "Error";
+      if (error && typeof error === "object") {
+        if ("response" in error) {
+          const errObj = error as { response?: { data?: unknown } };
+          msg = errObj.response?.data ? JSON.stringify(errObj.response.data) : "Error";
+        } else if ("message" in error) {
+          msg = (error as { message: string }).message;
+        }
+      }
       setFeedback({ open: true, message: `Error al guardar: ${msg}`, severity: "error" });
     }
   };
@@ -112,8 +120,16 @@ export default function Programas() {
       await deletePrograma.mutateAsync(id);
       setFeedback({ open: true, message: "Programa eliminado", severity: "success" });
       refetch();
-    } catch (error: any) {
-      const msg = error?.response?.data ? JSON.stringify(error.response.data) : error?.message || "Error";
+    } catch (error: unknown) {
+      let msg = "Error";
+      if (error && typeof error === "object") {
+        if ("response" in error) {
+          const errObj = error as { response?: { data?: unknown } };
+          msg = errObj.response?.data ? JSON.stringify(errObj.response.data) : "Error";
+        } else if ("message" in error) {
+          msg = (error as { message: string }).message;
+        }
+      }
       setFeedback({ open: true, message: `Error al eliminar: ${msg}`, severity: "error" });
     }
   };
@@ -123,7 +139,7 @@ export default function Programas() {
     setPage(0);
   };
 
-  const handleCloseFeedback = (_: any, reason?: string) => {
+  const handleCloseFeedback = (_: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === "clickaway") return;
     setFeedback((f) => ({ ...f, open: false }));
   };

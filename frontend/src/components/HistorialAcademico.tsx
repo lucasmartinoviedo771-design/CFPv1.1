@@ -17,7 +17,7 @@ interface ExamenSimple {
   bloque_id?: number | null;
 }
 
-interface HistorialNota {
+export interface HistorialNota {
   id: number;
   examen_programa_nombre?: string;
   examen_bloque_nombre?: string;

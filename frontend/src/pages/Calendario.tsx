@@ -12,20 +12,32 @@ import SecuenciaFormDialog from '../components/SecuenciaFormDialog';
 import BloqueFormDialog from '../components/BloqueFormDialog';
 import { ThemeModeContext } from '../App';
 
+export interface PlantillaCalendario {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+}
+
+interface Feedback {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error';
+}
+
 // --- Main Calendario Page Component ---
 export default function Calendario() {
   const { mode } = useContext(ThemeModeContext);
-  const [bloques, setBloques] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [openBloqueDialog, setOpenBloqueDialog] = useState(false);
-  const [openSecuenciaDialog, setOpenSecuenciaDialog] = useState(false);
-  const [currentBloque, setCurrentBloque] = useState(null);
-  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
+  const [bloques, setBloques] = useState<PlantillaCalendario[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [openBloqueDialog, setOpenBloqueDialog] = useState<boolean>(false);
+  const [openSecuenciaDialog, setOpenSecuenciaDialog] = useState<boolean>(false);
+  const [currentBloque, setCurrentBloque] = useState<PlantillaCalendario | null>(null);
+  const [feedback, setFeedback] = useState<Feedback>({ open: false, message: '', severity: 'success' });
 
   const fetchBloques = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/bloques-de-fechas');
+      const { data } = await api.get<PlantillaCalendario[]>('/bloques-de-fechas');
       setBloques(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error al cargar los bloques de fechas:", error);
@@ -44,24 +56,32 @@ export default function Calendario() {
     setOpenBloqueDialog(true);
   };
 
-  const handleEditBloque = (bloque) => {
+  const handleEditBloque = (bloque: PlantillaCalendario) => {
     setCurrentBloque(bloque);
     setOpenBloqueDialog(true);
   };
 
-  const handleDeleteBloque = async (id) => {
+  const handleDeleteBloque = async (id: number) => {
     if (!window.confirm("¿Estás seguro de eliminar este bloque de fechas?")) return;
     try {
       await api.delete(`/bloques-de-fechas/${id}`);
       setFeedback({ open: true, message: 'Bloque eliminado con éxito.', severity: 'success' });
       fetchBloques();
-    } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+    } catch (error: unknown) {
+      let errorMsg = 'Error';
+      if (error && typeof error === 'object') {
+        if ('response' in error) {
+          const errObj = error as { response?: { data?: unknown } };
+          errorMsg = errObj.response?.data ? JSON.stringify(errObj.response.data) : 'Error';
+        } else if ('message' in error) {
+          errorMsg = (error as { message: string }).message;
+        }
+      }
       setFeedback({ open: true, message: `Error al eliminar: ${errorMsg}`, severity: 'error' });
     }
   };
 
-  const handleSaveBloque = async (formData) => {
+  const handleSaveBloque = async (formData: { nombre: string; descripcion: string }) => {
     try {
       if (currentBloque && currentBloque.id) {
         await api.put(`/bloques-de-fechas/${currentBloque.id}`, formData);
@@ -72,13 +92,21 @@ export default function Calendario() {
       }
       setOpenBloqueDialog(false);
       fetchBloques();
-    } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+    } catch (error: unknown) {
+      let errorMsg = 'Error';
+      if (error && typeof error === 'object') {
+        if ('response' in error) {
+          const errObj = error as { response?: { data?: unknown } };
+          errorMsg = errObj.response?.data ? JSON.stringify(errObj.response.data) : 'Error';
+        } else if ('message' in error) {
+          errorMsg = (error as { message: string }).message;
+        }
+      }
       setFeedback({ open: true, message: `Error al guardar: ${errorMsg}`, severity: 'error' });
     }
   };
 
-  const handleOpenSecuencia = (bloque) => {
+  const handleOpenSecuencia = (bloque: PlantillaCalendario) => {
     setCurrentBloque(bloque);
     setOpenSecuenciaDialog(true);
   };
@@ -88,7 +116,7 @@ export default function Calendario() {
     fetchBloques(); // Refetch to get updated data if needed
   };
 
-  const handleCloseFeedback = (event, reason) => {
+  const handleCloseFeedback = (_event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') return;
     setFeedback({ ...feedback, open: false });
   };

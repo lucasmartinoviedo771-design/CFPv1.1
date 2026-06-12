@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from '../api/client';
-import HistorialAcademico from '../components/HistorialAcademico';
+import HistorialAcademico, { HistorialNota } from '../components/HistorialAcademico';
 import { Card, Select } from '../components/UI';
 import { UserSearch } from 'lucide-react';
+import { Estudiante } from '../api/types';
 
-async function fetchEstudiantes() {
+async function fetchEstudiantes(): Promise<Estudiante[]> {
   try {
-    const { data } = await apiClient.get('/estudiantes');
+    const { data } = await apiClient.get<Estudiante[]>('/estudiantes');
     if (Array.isArray(data)) return data;
     return [];
   } catch (error) {
@@ -16,9 +17,9 @@ async function fetchEstudiantes() {
 }
 
 export default function HistoricoEstudiante() {
-  const [estudiantes, setEstudiantes] = useState([]);
-  const [selEstudiante, setSelEstudiante] = useState('');
-  const [historial, setHistorial] = useState([]);
+  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
+  const [selEstudiante, setSelEstudiante] = useState<string>('');
+  const [historial, setHistorial] = useState<HistorialNota[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -33,7 +34,7 @@ export default function HistoricoEstudiante() {
     }
     (async () => {
       try {
-        const { data } = await apiClient.get('/historico-estudiante', { params: { estudiante_id: selEstudiante } });
+        const { data } = await apiClient.get<HistorialNota[]>('/historico-estudiante', { params: { estudiante_id: selEstudiante } });
         setHistorial(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Error fetching history:", error);

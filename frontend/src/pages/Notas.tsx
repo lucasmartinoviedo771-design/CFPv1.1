@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from '../api/client';
-import HistorialAcademico from '../components/HistorialAcademico';
+import HistorialAcademico, { HistorialNota } from '../components/HistorialAcademico';
 import { Card, Select } from '../components/UI';
 import { Autocomplete } from '../components/Autocomplete';
 import { UserSearch, FileText, Search } from 'lucide-react';
+import { EstudianteDetail, Programa } from '../api/types';
 
-const calculateAge = (birthDate) => {
+const calculateAge = (birthDate?: string | null): number | null => {
   if (!birthDate) return null;
   const today = new Date();
   const birth = new Date(birthDate);
@@ -17,9 +18,9 @@ const calculateAge = (birthDate) => {
   return age;
 };
 
-async function fetchEstudiantes() {
+async function fetchEstudiantes(): Promise<EstudianteDetail[]> {
   try {
-    const { data } = await apiClient.get('/estudiantes');
+    const { data } = await apiClient.get<EstudianteDetail[]>('/estudiantes');
     if (Array.isArray(data)) return data;
     return [];
   } catch (err) {
@@ -29,10 +30,10 @@ async function fetchEstudiantes() {
 }
 
 export default function Notas() {
-  const [estudiantes, setEstudiantes] = useState([]);
-  const [cursos, setCursos] = useState([]);
-  const [selEstudiante, setSelEstudiante] = useState('');
-  const [historial, setHistorial] = useState([]);
+  const [estudiantes, setEstudiantes] = useState<EstudianteDetail[]>([]);
+  const [cursos, setCursos] = useState<Programa[]>([]);
+  const [selEstudiante, setSelEstudiante] = useState<number | ''>('');
+  const [historial, setHistorial] = useState<HistorialNota[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -48,13 +49,13 @@ export default function Notas() {
     }
     // Fetch student's full academic history
     (async () => {
-      const { data } = await apiClient.get('/examenes/notas', { params: { estudiante_id: selEstudiante } });
+      const { data } = await apiClient.get<HistorialNota[]>('/examenes/notas', { params: { estudiante_id: selEstudiante } });
       setHistorial(Array.isArray(data) ? data : []);
     })();
 
     // Fetch courses for the selected student
     (async () => {
-      const { data: allProgramas } = await apiClient.get('/programas');
+      const { data: allProgramas } = await apiClient.get<Programa[]>('/programas');
       setCursos(Array.isArray(allProgramas) ? allProgramas : []);
     })();
   }, [selEstudiante]);

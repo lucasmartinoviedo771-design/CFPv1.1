@@ -4,23 +4,45 @@ import api from '../api/client';
 import analytics from '../services/analyticsService';
 import { Card, Select, Button } from '../components/UI';
 import { GraduationCap } from 'lucide-react';
+import { Programa, Cohorte, Bloque } from '../api/types';
+
+interface Graduate {
+  id: number;
+  nombre: string;
+  apellido: string;
+  dni: string;
+}
+
+interface GraduatesReport {
+  programa?: {
+    nombre: string;
+  };
+  cohorte_id?: number | string;
+  overall?: {
+    total_bloques_requeridos: number;
+    graduados: number;
+    total_estudiantes: number;
+    rate: number;
+  };
+  graduados?: Graduate[];
+}
 
 export default function Egresados() {
-  const [programas, setProgramas] = useState([]);
-  const [bloques, setBloques] = useState([]);
-  const [cohortes, setCohortes] = useState([]);
-  const [programaId, setProgramaId] = useState('');
-  const [bloqueId, setBloqueId] = useState('');
-  const [cohorteId, setCohorteId] = useState('');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [programas, setProgramas] = useState<Programa[]>([]);
+  const [bloques, setBloques] = useState<Bloque[]>([]);
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [programaId, setProgramaId] = useState<string>('');
+  const [bloqueId, setBloqueId] = useState<string>('');
+  const [cohorteId, setCohorteId] = useState<string>('');
+  const [data, setData] = useState<GraduatesReport | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     (async () => {
       try {
         const progs = await listProgramas();
-        setProgramas(Array.isArray(progs) ? progs : []);
+        setProgramas(Array.isArray(progs) ? (progs as Programa[]) : []);
       } catch (e) { }
     })();
   }, []);
@@ -29,8 +51,8 @@ export default function Egresados() {
     const loadCohortes = async () => {
       try {
         const [cohortesRes, bloquesRes] = await Promise.all([
-          api.get('/inscripciones/cohortes', { params: { programa_id: programaId || undefined } }),
-          api.get('/bloques', { params: { programa_id: programaId || undefined } }),
+          api.get<Cohorte[]>('/inscripciones/cohortes', { params: { programa_id: programaId || undefined } }),
+          api.get<Bloque[]>('/bloques', { params: { programa_id: programaId || undefined } }),
         ]);
         setCohortes(Array.isArray(cohortesRes.data) ? cohortesRes.data : []);
         setBloques(Array.isArray(bloquesRes.data) ? bloquesRes.data : []);
@@ -45,12 +67,12 @@ export default function Egresados() {
   const fetchGraduates = async () => {
     setLoading(true); setError(''); setData(null);
     try {
-      const params = {};
+      const params: Record<string, unknown> = {};
       if (programaId) params.programa_id = programaId;
       if (bloqueId) params.bloque_id = bloqueId;
       if (cohorteId) params.cohorte_id = cohorteId;
       const d = await analytics.getGraduates(params);
-      setData(d);
+      setData(d as GraduatesReport);
     } catch (e) {
       setError('Error al cargar egresados');
     } finally {

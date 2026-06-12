@@ -64,7 +64,14 @@ class EstudianteSerializer(serializers.ModelSerializer):
 
     def get_trayectos(self, obj):
         trayectos = set()
-        for insc in obj.inscripciones.select_related('cohorte__programa', 'modulo__bloque', 'cohorte__bloque').all():
+        
+        is_prefetched = hasattr(obj, '_prefetched_objects_cache') and 'inscripciones' in obj._prefetched_objects_cache
+        if is_prefetched:
+            inscs = obj.inscripciones.all()
+        else:
+            inscs = obj.inscripciones.select_related('cohorte__programa', 'modulo__bloque', 'cohorte__bloque').all()
+
+        for insc in inscs:
             prog = insc.cohorte.programa.nombre if insc.cohorte and insc.cohorte.programa else "S/P"
             # Priorizamos el bloque del módulo, luego el de la cohorte
             bloque = (insc.modulo.bloque.nombre if (insc.modulo and insc.modulo.bloque) 

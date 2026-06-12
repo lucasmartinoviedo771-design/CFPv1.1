@@ -4,20 +4,27 @@ import UserFormDialog from '../components/UserFormDialog';
 import { UserContext } from '../App';
 import { Card, Button } from '../components/UI';
 import { Edit2, Trash2, UserPlus, Users as UsersIcon, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { User } from '../api/types';
+
+interface Feedback {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error';
+}
 
 export default function Usuarios() {
   const { user } = useContext(UserContext);
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Feedback>({ open: false, message: '', severity: 'success' });
+  const [openDialog, setOpenDialog] = useState<boolean>(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/users');
+      const response = await api.get<User[]>('/users');
       setUsers(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       console.error("Error fetching users:", err);
@@ -39,12 +46,12 @@ export default function Usuarios() {
     setOpenDialog(true);
   };
 
-  const handleEdit = (user) => {
-    setEditingUser(user);
+  const handleEdit = (u: User) => {
+    setEditingUser(u);
     setOpenDialog(true);
   };
 
-  const handleRegenerate = async (targetUser) => {
+  const handleRegenerate = async (targetUser: User) => {
     if (window.confirm(`¿Regenerar contraseña para ${targetUser.username}?\n\nSeguridad: Esto creará una contraseña nueva aleatoria y se la enviará por correo. El usuario deberá cambiarla al ingresar.`)) {
       try {
         const { data } = await api.post(`/users/${targetUser.id}/regenerate-password`);
@@ -62,22 +69,22 @@ export default function Usuarios() {
           });
         }
         // remove alert quickly
-        setTimeout(() => setFeedback({ ...feedback, open: false }), 4000);
-      } catch (err) {
+        setTimeout(() => setFeedback((prev) => ({ ...prev, open: false })), 4000);
+      } catch (err: unknown) {
         console.error(err);
         setFeedback({ open: true, message: 'Error al regenerar contraseña. Verifique que tenga email.', severity: 'error' });
-        setTimeout(() => setFeedback({ ...feedback, open: false }), 4000);
+        setTimeout(() => setFeedback((prev) => ({ ...prev, open: false })), 4000);
       }
     }
-  }
+  };
 
-  const handleDelete = async (userId) => {
+  const handleDelete = async (userId: number) => {
     if (window.confirm('¿Está seguro de que desea eliminar este usuario?')) {
       try {
         await api.delete(`/users/${userId}`);
         setFeedback({ open: true, message: 'Usuario eliminado con éxito', severity: 'success' });
         fetchUsers();
-      } catch (err) {
+      } catch (err: unknown) {
         setFeedback({ open: true, message: 'Error al eliminar usuario', severity: 'error' });
       }
     }

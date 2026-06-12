@@ -408,7 +408,18 @@ def listar_inscripciones_videojuegos(
     """
     Lista las inscripciones filtrando exclusivamente por cohortes del programa VJ.
     """
-    qs = Inscripcion.objects.select_related("cohorte", "estudiante", "modulo", "modulo__bloque").order_by("-created_at")
+    qs = Inscripcion.objects.select_related(
+        "cohorte__programa__resolucion",
+        "cohorte__bloque",
+        "cohorte__bloque_fechas",
+        "estudiante",
+        "modulo__bloque",
+    ).prefetch_related(
+        "cohorte__bloque_fechas__semanas_config",
+        "estudiante__inscripciones__cohorte__programa",
+        "estudiante__inscripciones__modulo__bloque",
+        "estudiante__inscripciones__cohorte__bloque",
+    ).order_by("-created_at")
     qs = aplicar_filtro_vj(qs)
     if cohorte_id:
         qs = qs.filter(cohorte_id=cohorte_id)

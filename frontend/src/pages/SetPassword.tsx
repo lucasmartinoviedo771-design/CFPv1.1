@@ -18,16 +18,16 @@ export default function SetPassword() {
   const navigate = useNavigate();
   const { setUser } = useContext(UserContext);
 
-  const handleClickShowPassword = (field) => {
+  const handleClickShowPassword = (field: 'current' | 'new') => {
     if (field === 'current') setShowCurrentPassword((show) => !show);
     if (field === 'new') setShowNewPassword((show) => !show);
   };
 
-  const handleMouseDownPassword = (event) => {
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
   };
 
-  const submit = async (e) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(''); setOk(false); setLoading(true);
     try {
@@ -38,8 +38,15 @@ export default function SetPassword() {
       setOk(true);
       setCurrentPassword(''); setNewPassword('');
       navigate('/dashboard');
-    } catch (e) {
-      setError(e?.response?.data?.detail || 'Error al actualizar la contraseña');
+    } catch (e: unknown) {
+      let detailMsg = 'Error al actualizar la contraseña';
+      if (e && typeof e === 'object' && 'response' in e) {
+        const errObj = e as { response?: { data?: { detail?: string } } };
+        if (errObj.response?.data?.detail) {
+          detailMsg = errObj.response.data.detail;
+        }
+      }
+      setError(detailMsg);
     } finally {
       setLoading(false);
     }
