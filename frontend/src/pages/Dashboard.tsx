@@ -6,8 +6,58 @@ import { Users, BookOpen, UserCheck, GraduationCap, X, ChevronRight, TrendingUp 
 import { getDashboardStats } from '../services/dashboardService';
 import { listProgramas } from '../services/programasService';
 import api from '../api/client';
+import type { Programa, Bloque, Cohorte } from '../api/types';
 
-const KPICard = ({ title, value, icon: Icon, color, onClick }) => (
+interface ProgramBreakdownCohort {
+  name: string;
+  count: number;
+}
+
+interface ProgramBreakdownItem {
+  name: string;
+  count: number;
+  cohorts: ProgramBreakdownCohort[];
+}
+
+interface ProgramChart {
+  labels: string[];
+  counts: number[];
+}
+
+interface YearlyTrendItem {
+  year: string | number;
+  count: number;
+}
+
+interface PassRateItem {
+  name: string;
+  rate: number;
+}
+
+interface ExtendedDashboardStats {
+  active_students_count?: number | null;
+  graduated_students_count?: number | null;
+  attendance_rate?: number | null;
+  pass_rate?: number | null;
+  programs_chart?: ProgramChart | null;
+  yearly_trend?: YearlyTrendItem[] | null;
+  active_breakdown?: ProgramBreakdownItem[] | null;
+  graduated_breakdown?: ProgramBreakdownItem[] | null;
+  pass_breakdown?: {
+    by_program: PassRateItem[];
+    by_block: PassRateItem[];
+  } | null;
+}
+
+interface KPICardProps {
+  title: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  onClick?: () => void;
+}
+
+const KPICard: React.FC<KPICardProps> = ({ title, value, icon: Icon, color, onClick }) => (
   <button 
     onClick={onClick}
     className={`w-full text-left relative overflow-hidden rounded-xl bg-indigo-900/20 border border-indigo-500/30 backdrop-blur-sm p-6 transition-all hover:bg-indigo-800/30 hover:scale-[1.02] active:scale-95 group ${onClick ? 'cursor-pointer' : 'cursor-default'}`}
@@ -30,7 +80,14 @@ const KPICard = ({ title, value, icon: Icon, color, onClick }) => (
   </button>
 );
 
-const Modal = ({ isOpen, onClose, title, children }) => {
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
@@ -50,36 +107,34 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   );
 };
 
-
+type ModalType = 'activos' | 'egresados' | 'aprobacion' | null;
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [trendData, setTrendData] = useState([]);
-  const [error, setError] = useState(null);
-  const [programas, setProgramas] = useState([]);
-  const [bloques, setBloques] = useState([]);
-  const [cohortes, setCohortes] = useState([]);
-  const [programaId, setProgramaId] = useState('');
-  const [bloqueId, setBloqueId] = useState('');
-  const [cohorteId, setCohorteId] = useState('');
-  const [modalOpen, setModalOpen] = useState(null); // 'activos', 'egresados', 'aprobacion'
-  const [selectedProgramData, setSelectedProgramData] = useState(null); // Para navegación en modal
-  // fechaDesde/fechaHasta: estado real que dispara el fetch (solo se actualiza al perder foco)
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
-  // localFecha*: estado local del input (se actualiza en cada tecla, no dispara fetch)
-  const [localFechaDesde, setLocalFechaDesde] = useState('');
-  const [localFechaHasta, setLocalFechaHasta] = useState('');
+  const [stats, setStats] = useState<ExtendedDashboardStats | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [trendData, setTrendData] = useState<YearlyTrendItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [programas, setProgramas] = useState<Programa[]>([]);
+  const [bloques, setBloques] = useState<Bloque[]>([]);
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [programaId, setProgramaId] = useState<string>('');
+  const [bloqueId, setBloqueId] = useState<string>('');
+  const [cohorteId, setCohorteId] = useState<string>('');
+  const [modalOpen, setModalOpen] = useState<ModalType>(null);
+  const [selectedProgramData, setSelectedProgramData] = useState<ProgramBreakdownItem | null>(null);
+  const [fechaDesde, setFechaDesde] = useState<string>('');
+  const [fechaHasta, setFechaHasta] = useState<string>('');
+  const [localFechaDesde, setLocalFechaDesde] = useState<string>('');
+  const [localFechaHasta, setLocalFechaHasta] = useState<string>('');
 
-  const isDateComplete = (val) => val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val);
+  const isDateComplete = (val: string | null | undefined): boolean => !!(val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val));
 
   useEffect(() => {
     (async () => {
       try {
         const progs = await listProgramas();
         setProgramas(Array.isArray(progs) ? progs : []);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error cargando programas para dashboard', err);
       }
     })();
@@ -89,12 +144,12 @@ export default function Dashboard() {
     (async () => {
       try {
         const [bloquesRes, cohortesRes] = await Promise.all([
-          api.get('/bloques', { params: { programa_id: programaId || undefined } }),
-          api.get('/inscripciones/cohortes', { params: { programa_id: programaId || undefined } }),
+          api.get<Bloque[]>('/bloques', { params: { programa_id: programaId || undefined } }),
+          api.get<Cohorte[]>('/inscripciones/cohortes', { params: { programa_id: programaId || undefined } }),
         ]);
         setBloques(Array.isArray(bloquesRes.data) ? bloquesRes.data : []);
         setCohortes(Array.isArray(cohortesRes.data) ? cohortesRes.data : []);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error cargando bloques/cohortes para dashboard', err);
       }
     })();
@@ -113,20 +168,18 @@ export default function Dashboard() {
           fecha_desde: fechaDesde || undefined,
           fecha_hasta: fechaHasta || undefined,
         };
-        const [statsResponse] = await Promise.all([
-          getDashboardStats(params),
-        ]);
+        const statsResponse = await getDashboardStats(params) as ExtendedDashboardStats;
 
         if (!mounted) return;
         setStats(statsResponse);
 
         // Tendencia anual desde el backend
-        const parsedTrend = (statsResponse.yearly_trend || []).map((item) => ({
+        const parsedTrend: YearlyTrendItem[] = (statsResponse.yearly_trend || []).map((item) => ({
           year: item.year,
-          inscritos: item.count
+          count: item.count
         }));
         setTrendData(parsedTrend);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error cargando metricas del dashboard', err);
         if (mounted) setError('No pudimos cargar las metricas del dashboard.');
       } finally {
@@ -316,7 +369,7 @@ export default function Dashboard() {
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: chartAxisStroke }} />
                 <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: '#fff' }} />
                 <Legend wrapperStyle={{ color: '#fff' }} />
-                <Line name="Inscritos" type="monotone" dataKey="inscritos" stroke="#FF6600" strokeWidth={3} dot={{ r: 4, fill: '#FF6600', strokeWidth: 0 }} activeDot={{ r: 7, fill: '#fff', stroke: '#FF6600' }} />
+                <Line name="Inscritos" type="monotone" dataKey="count" stroke="#FF6600" strokeWidth={3} dot={{ r: 4, fill: '#FF6600', strokeWidth: 0 }} activeDot={{ r: 7, fill: '#fff', stroke: '#FF6600' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -339,7 +392,7 @@ export default function Dashboard() {
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart 
-                    data={modalOpen === 'activos' ? stats.active_breakdown : stats.graduated_breakdown} 
+                    data={(modalOpen === 'activos' ? stats.active_breakdown : stats.graduated_breakdown) || []} 
                     layout="vertical"
                     margin={{ left: 20, right: 30 }}
                   >
@@ -350,7 +403,7 @@ export default function Dashboard() {
                       width={160} 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={(props) => {
+                      tick={(props: { x: string | number; y: string | number; payload: { value: string } }) => {
                         const { x, y, payload } = props;
                         return (
                           <g transform={`translate(${x},${y})`}>
@@ -363,8 +416,8 @@ export default function Dashboard() {
                               fontSize={12}
                               className="cursor-pointer hover:fill-white transition-colors"
                               onClick={() => {
-                                const item = (modalOpen === 'activos' ? stats.active_breakdown : stats.graduated_breakdown)
-                                  .find(d => d.name === payload.value);
+                                const breakdown = modalOpen === 'activos' ? stats.active_breakdown : stats.graduated_breakdown;
+                                const item = breakdown?.find(d => d.name === payload.value);
                                 if (item) setSelectedProgramData(item);
                               }}
                             >
@@ -385,8 +438,10 @@ export default function Dashboard() {
                       radius={[0, 4, 4, 0]} 
                       barSize={30} 
                       className="cursor-pointer"
-                      onClick={(data) => {
-                        if (data) setSelectedProgramData(data);
+                      onClick={(data: unknown) => {
+                        if (data && typeof data === 'object' && 'name' in data) {
+                          setSelectedProgramData(data as ProgramBreakdownItem);
+                        }
                       }}
                     />
                   </BarChart>
@@ -394,33 +449,37 @@ export default function Dashboard() {
               </div>
               <p className="text-indigo-400 text-xs mt-4 text-center">Tip: Haga clic en una barra para ver el desglose de cohortes de ese programa.</p>
             </div>
-          ) : (
-            <div className="animate-fade-in">
-              <button 
-                onClick={() => setSelectedProgramData(null)}
-                className="mb-6 flex items-center text-sm font-semibold text-brand-cyan hover:text-white transition-colors"
-              >
-                <X size={16} className="mr-1" /> Volver a programas
-              </button>
-              
-              <div className="bg-white/5 p-8 rounded-xl border border-white/20">
-                <h4 className="text-xl font-bold text-white mb-2">{selectedProgramData.name}</h4>
-                <p className="text-indigo-300 text-sm mb-8">Desglose por Cohortes ({selectedProgramData.count} totales)</p>
+          ) : (() => {
+            const programData = selectedProgramData;
+            if (!programData) return null;
+            return (
+              <div className="animate-fade-in">
+                <button 
+                  onClick={() => setSelectedProgramData(null)}
+                  className="mb-6 flex items-center text-sm font-semibold text-brand-cyan hover:text-white transition-colors"
+                >
+                  <X size={16} className="mr-1" /> Volver a programas
+                </button>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedProgramData.cohorts.map((coh, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-indigo-950/40 rounded-lg border border-indigo-500/20 hover:border-brand-cyan/50 transition-colors">
-                      <span className="text-indigo-100 font-medium">{coh.name}</span>
-                      <div className="flex items-center">
-                        <span className="text-xl font-bold text-white mr-2">{coh.count}</span>
-                        <span className="text-xs text-indigo-400">estudiantes</span>
+                <div className="bg-white/5 p-8 rounded-xl border border-white/20">
+                  <h4 className="text-xl font-bold text-white mb-2">{programData.name}</h4>
+                  <p className="text-indigo-300 text-sm mb-8">Desglose por Cohortes ({programData.count} totales)</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {programData.cohorts.map((coh, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-indigo-950/40 rounded-lg border border-indigo-500/20 hover:border-brand-cyan/50 transition-colors">
+                        <span className="text-indigo-100 font-medium">{coh.name}</span>
+                        <div className="flex items-center">
+                          <span className="text-xl font-bold text-white mr-2">{coh.count}</span>
+                          <span className="text-xs text-indigo-400">estudiantes</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </Modal>
 
@@ -436,12 +495,12 @@ export default function Dashboard() {
             </h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.pass_breakdown?.by_program}>
+                <BarChart data={stats.pass_breakdown?.by_program || []}>
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} unit="%" />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Tasa de Aprobación']} />
                   <Bar dataKey="rate" radius={[4, 4, 0, 0]} barSize={40}>
-                    {stats.pass_breakdown?.by_program.map((entry, index) => (
+                    {(stats.pass_breakdown?.by_program || []).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.rate > 70 ? '#10b981' : entry.rate > 50 ? '#f59e0b' : '#ef4444'} />
                     ))}
                   </Bar>
@@ -456,7 +515,7 @@ export default function Dashboard() {
             </h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.pass_breakdown?.by_block}>
+                <BarChart data={stats.pass_breakdown?.by_block || []}>
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} unit="%" />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Tasa de Aprobación']} />

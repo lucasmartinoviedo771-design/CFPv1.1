@@ -4,27 +4,38 @@ import { Card, Select, Button, cn } from '../components/UI';
 import { Search, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { formatDateDisplay } from '../utils/dateFormat';
 import { listProgramas } from '../services/programasService';
+import type { Programa, Bloque, Cohorte } from '../api/types';
+
+interface HistoricoData {
+  headers: string[];
+  rows: Record<string, string | number | boolean | null>[];
+}
+
+interface SortConfig {
+  key: string | null;
+  direction: 'asc' | 'desc';
+}
 
 export default function HistoricoCursos() {
-  const [programas, setProgramas] = useState([]);
-  const [bloques, setBloques] = useState([]);
-  const [cohortes, setCohortes] = useState([]);
-  const [selectedPrograma, setSelectedPrograma] = useState('');
-  const [selectedBloque, setSelectedBloque] = useState('');
-  const [selectedCohorte, setSelectedCohorte] = useState('');
-  const [tipoDato, setTipoDato] = useState('notas');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(50);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [programas, setProgramas] = useState<Programa[]>([]);
+  const [bloques, setBloques] = useState<Bloque[]>([]);
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [selectedPrograma, setSelectedPrograma] = useState<string>('');
+  const [selectedBloque, setSelectedBloque] = useState<string>('');
+  const [selectedCohorte, setSelectedCohorte] = useState<string>('');
+  const [tipoDato, setTipoDato] = useState<string>('notas');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(50);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
 
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [data, setData] = useState<HistoricoData | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const tableContainerRef = useRef(null);
-  const topScrollRef = useRef(null);
-  const [tableWidth, setTableWidth] = useState(0);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = useState<number>(0);
 
   // Sincronizar scroll superior e inferior
   useEffect(() => {
@@ -45,7 +56,7 @@ export default function HistoricoCursos() {
     };
   }, [data]); // data is enough here as refs are persistent
 
-  // Cálculo de datos filtrados y paginados (elevado al componente)
+  // Cálculo de datos filtrados y paginados
   const allRows = data?.rows || [];
   const filteredRows = allRows.filter(row => {
     if (!searchTerm) return true;
@@ -55,7 +66,7 @@ export default function HistoricoCursos() {
     return estudiante.includes(searchLower) || dni.includes(searchLower);
   });
 
-  // NUEVO: Lógica de ordenación
+  // Ordenación
   const sortedRows = [...filteredRows].sort((a, b) => {
     if (!sortConfig.key) return 0;
     
@@ -99,7 +110,7 @@ export default function HistoricoCursos() {
       try {
         const progs = await listProgramas();
         setProgramas(Array.isArray(progs) ? progs : []);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Error al cargar programas:", err);
         setError("No se pudieron cargar los programas.");
       }
@@ -110,17 +121,17 @@ export default function HistoricoCursos() {
     (async () => {
       try {
         const [cohortesRes, bloquesRes] = await Promise.all([
-          apiClient.get('/inscripciones/cohortes', { 
+          apiClient.get<Cohorte[]>('/inscripciones/cohortes', { 
             params: { 
               programa_id: selectedPrograma || undefined,
               bloque_id: selectedBloque || undefined
             } 
           }),
-          apiClient.get('/bloques', { params: { programa_id: selectedPrograma || undefined } }),
+          apiClient.get<Bloque[]>('/bloques', { params: { programa_id: selectedPrograma || undefined } }),
         ]);
         setCohortes(Array.isArray(cohortesRes.data) ? cohortesRes.data : []);
         setBloques(Array.isArray(bloquesRes.data) ? bloquesRes.data : []);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Error al cargar cohortes/bloques:", err);
         setError("No se pudieron cargar cohortes y bloques.");
       }
@@ -133,7 +144,7 @@ export default function HistoricoCursos() {
     setData(null);
     setCurrentPage(1);
 
-    apiClient.get('/historico-cursos', {
+    apiClient.get<HistoricoData>('/historico-cursos', {
       params: {
         tipo_dato: tipoDato,
         programa_id: selectedPrograma || undefined,
@@ -144,7 +155,7 @@ export default function HistoricoCursos() {
       .then(response => {
         setData(response.data);
       })
-      .catch(err => {
+      .catch((err: unknown) => {
         console.error("Error al buscar datos:", err);
         setError("Ocurrió un error al obtener los datos.");
       })
@@ -160,24 +171,24 @@ export default function HistoricoCursos() {
     { value: 'notas', label: 'Notas' },
     { value: 'asistencia', label: 'Asistencia' }
   ];
-  const looksLikeDate = (value) => typeof value === 'string'
+  const looksLikeDate = (value: unknown): boolean => typeof value === 'string'
     && (
       /^\d{4}-\d{2}-\d{2}$/.test(value)
       || /^\d{4}-\d{2}-\d{2}T/.test(value)
       || /^\d{2}\/\d{2}\/\d{4}$/.test(value)
     );
 
-  const renderCellValue = (header, rawValue) => {
+  const renderCellValue = (header: string, rawValue: unknown): string => {
     if (rawValue === null || rawValue === undefined) return '-';
-    if (looksLikeDate(rawValue)) return formatDateDisplay(rawValue);
+    if (looksLikeDate(rawValue)) return formatDateDisplay(rawValue as string);
     if (typeof header === 'string' && header.toLowerCase().includes('fecha') && typeof rawValue === 'string') {
       return formatDateDisplay(rawValue);
     }
     return String(rawValue);
   };
 
-  const handleSort = (key) => {
-    let direction = 'asc';
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }

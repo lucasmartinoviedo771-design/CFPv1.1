@@ -10,7 +10,7 @@ import Asistencia from "./pages/Asistencia";
 import Estudiantes from "./pages/Estudiantes.jsx";
 import Notas from "./pages/Notas.jsx";
 import CursoDetail from "./pages/CursoDetail";
-import DashboardPage from "./pages/Dashboard.jsx"; // Check extension if needed, safe to add .jsx if it is jsx
+import DashboardPage from "./pages/Dashboard"; // Check extension if needed, safe to add .jsx if it is jsx
 import Login from "./pages/Login";
 import SetPassword from './pages/SetPassword.jsx';
 import Inscripciones from './pages/Inscripciones.jsx';
@@ -19,7 +19,7 @@ import Estructura from './pages/Estructura'; // Still .jsx based on file list
 import Calendario from './pages/Calendario';
 import Cohortes from './pages/Cohortes';
 import HorariosCursada from './pages/HorariosCursada';
-import HistoricoCursos from './pages/HistoricoCursos.jsx';
+import HistoricoCursos from './pages/HistoricoCursos';
 import HistoricoEstudiante from './pages/HistoricoEstudiante.jsx';
 import GraficoCursos from './pages/GraficoCursos';
 import Egresados from './pages/Egresados.jsx';
@@ -32,7 +32,7 @@ import GestionPreinscripciones from './pages/GestionPreinscripciones.jsx';
 import GestionPreinscripcionesTerciario from './pages/GestionPreinscripcionesTerciario';
 import GestionPreinscripcionesVideojuegos from './pages/GestionPreinscripcionesVideojuegos.jsx';
 import AdminTerciario from './pages/AdminTerciario';
-import AutorizacionParental from './pages/AutorizacionParental.jsx';
+import AutorizacionParental from './pages/AutorizacionParental';
 import NivelacionDigital from './pages/NivelacionDigital';
 
 // Services

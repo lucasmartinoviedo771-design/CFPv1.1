@@ -15,30 +15,46 @@ import {
 import { apiClientV2 } from '../api/client';
 import { Button, Card } from '../components/UI';
 
+interface AutorizacionInfo {
+    status: string;
+    tutor_nombre: string;
+    estudiante_nombre: string;
+    estudiante_apellido: string;
+    programa_nombre: string;
+}
+
+interface ChecksState {
+    leido: boolean;
+    aceptado: boolean;
+    autorizado: boolean;
+}
+
+type CameraMode = 'idle' | 'requesting' | 'active' | 'denied' | 'captured';
+
 export default function AutorizacionParental() {
-    const { token } = useParams();
-    const [loading, setLoading] = useState(true);
-    const [info, setInfo] = useState(null);
-    const [error, setError] = useState("");
-    const [submitting, setSubmitting] = useState(false);
-    const [done, setDone] = useState(false);
+    const { token } = useParams<{ token?: string }>();
+    const [loading, setLoading] = useState<boolean>(true);
+    const [info, setInfo] = useState<AutorizacionInfo | null>(null);
+    const [error, setError] = useState<string>("");
+    const [submitting, setSubmitting] = useState<boolean>(false);
+    const [done, setDone] = useState<boolean>(false);
 
     // States for the process
-    const [step, setStep] = useState(1); // 1: Welcome/Read, 2: Checks, 3: Selfie
-    const [checks, setChecks] = useState({
+    const [step, setStep] = useState<number>(1); // 1: Welcome/Read, 2: Checks, 3: Selfie
+    const [checks, setChecks] = useState<ChecksState>({
         leido: false,
         aceptado: false,
         autorizado: false
     });
-    const [selfie, setSelfie] = useState(null);
-    const [selfiePreview, setSelfiePreview] = useState(null);
-    const fileInputRef = useRef(null);
+    const [selfie, setSelfie] = useState<File | null>(null);
+    const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     // Camera states
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const streamRef = useRef(null);
-    const [cameraMode, setCameraMode] = useState('idle'); // 'idle' | 'requesting' | 'active' | 'denied' | 'captured'
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const [cameraMode, setCameraMode] = useState<CameraMode>('idle');
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
@@ -65,13 +81,16 @@ export default function AutorizacionParental() {
         if (!video || !canvas) return;
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.drawImage(video, 0, 0);
         canvas.toBlob(blob => {
-            const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
-            setSelfie(file);
-            setSelfiePreview(URL.createObjectURL(blob));
-            setCameraMode('captured');
-            stopCamera();
+            if (blob) {
+                const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+                setSelfie(file);
+                setSelfiePreview(URL.createObjectURL(blob));
+                setCameraMode('captured');
+                stopCamera();
+            }
         }, 'image/jpeg', 0.92);
     }, [stopCamera]);
 
@@ -88,11 +107,12 @@ export default function AutorizacionParental() {
 
     useEffect(() => {
         const fetchInfo = async () => {
+            if (!token) return;
             try {
-                const { data } = await apiClientV2.get(`/autorizaciones/${token}`);
+                const { data } = await apiClientV2.get<AutorizacionInfo>(`/autorizaciones/${token}`);
                 setInfo(data);
                 if (data.status === 'DIGITAL') setDone(true);
-            } catch (err) {
+            } catch (err: unknown) {
                 setError("El enlace es inválido o ha expirado.");
             } finally {
                 setLoading(false);
@@ -101,8 +121,8 @@ export default function AutorizacionParental() {
         fetchInfo();
     }, [token]);
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (file) {
             setSelfie(file);
             setSelfiePreview(URL.createObjectURL(file));
@@ -110,6 +130,7 @@ export default function AutorizacionParental() {
     };
 
     const handleSubmit = async () => {
+        if (!selfie || !token) return;
         setSubmitting(true);
         try {
             const fd = new FormData();
@@ -118,7 +139,7 @@ export default function AutorizacionParental() {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setDone(true);
-        } catch (err) {
+        } catch (err: unknown) {
             alert("Error al enviar la autorización. Intenta de nuevo.");
         } finally {
             setSubmitting(false);
@@ -276,9 +297,8 @@ export default function AutorizacionParental() {
                                     </div>
                                 </div>
                                 <Button
-                                    fullWidth
                                     onClick={() => setStep(2)}
-                                    className="bg-brand-cyan border-none hover:bg-cyan-600 shadow-lg shadow-cyan-900/20"
+                                    className="w-full bg-brand-cyan border-none hover:bg-cyan-600 shadow-lg shadow-cyan-900/20"
                                 >
                                     He leído las condiciones
                                 </Button>
@@ -328,10 +348,9 @@ export default function AutorizacionParental() {
                                 </div>
 
                                 <Button
-                                    fullWidth
                                     disabled={!checks.leido || !checks.aceptado || !checks.autorizado}
                                     onClick={() => setStep(3)}
-                                    className="mt-4 bg-brand-cyan border-none"
+                                    className="w-full mt-4 bg-brand-cyan border-none"
                                 >
                                     Continuar
                                 </Button>
@@ -394,34 +413,30 @@ export default function AutorizacionParental() {
                                     <div className="flex gap-2 w-full max-w-xs">
                                         {cameraMode === 'idle' ? (
                                             <Button
-                                                fullWidth
                                                 onClick={startCamera}
-                                                className="bg-brand-cyan/20 border border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/30 py-3"
+                                                className="w-full bg-brand-cyan/20 border border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/30 py-3"
                                             >
                                                 <Camera size={16} className="mr-2" /> Abrir Cámara
                                             </Button>
                                         ) : cameraMode === 'denied' ? (
                                             <Button
-                                                fullWidth
                                                 onClick={startCamera}
-                                                className="bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 py-3"
+                                                className="w-full bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 py-3"
                                             >
                                                 <RefreshCw size={16} className="mr-2" /> Intentar Nuevamente
                                             </Button>
                                         ) : cameraMode === 'active' ? (
                                             <Button
-                                                fullWidth
                                                 onClick={capturePhoto}
-                                                className="bg-brand-cyan border-none py-3 text-[#090026] font-black hover:bg-cyan-400 shadow-lg shadow-cyan-900/30"
+                                                className="w-full bg-brand-cyan border-none py-3 text-[#090026] font-black hover:bg-cyan-400 shadow-lg shadow-cyan-900/30"
                                             >
                                                 <Camera size={18} className="mr-2" /> Tomar Foto
                                             </Button>
                                         ) : cameraMode === 'captured' ? (
                                             <Button
-                                                fullWidth
                                                 variant="outline"
                                                 onClick={retakePhoto}
-                                                className="border-indigo-500/40 text-indigo-300 py-3"
+                                                className="w-full border-indigo-500/40 text-indigo-300 py-3"
                                             >
                                                 <RefreshCw size={16} className="mr-2" /> Sacar Otra Foto
                                             </Button>
@@ -430,14 +445,21 @@ export default function AutorizacionParental() {
                                 </div>
 
                                 <Button
-                                    fullWidth
                                     isLoading={submitting}
                                     disabled={!selfie}
                                     onClick={handleSubmit}
-                                    className="bg-brand-accent border-none py-6 text-lg hover:bg-orange-600 shadow-xl shadow-orange-950/20"
+                                    className="w-full bg-brand-accent border-none py-6 text-lg hover:bg-orange-600 shadow-xl shadow-orange-950/20"
                                 >
                                     Firmar y Autorizar
                                 </Button>
+
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileChange}
+                                    accept="image/*"
+                                    className="hidden"
+                                />
 
                                 <p className="text-[10px] text-center text-indigo-400 uppercase tracking-widest font-black">
                                     Validado por CFP v2.0
