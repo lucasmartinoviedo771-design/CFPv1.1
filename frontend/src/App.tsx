@@ -13,7 +13,7 @@ import CursoDetail from "./pages/CursoDetail";
 import DashboardPage from "./pages/Dashboard"; // Check extension if needed, safe to add .jsx if it is jsx
 import Login from "./pages/Login";
 import SetPassword from './pages/SetPassword.jsx';
-import Inscripciones from './pages/Inscripciones.jsx';
+import Inscripciones from './pages/Inscripciones';
 import Programas from './pages/Programas'; // Still .tsx based on file list
 import Estructura from './pages/Estructura'; // Still .jsx based on file list
 import Calendario from './pages/Calendario';

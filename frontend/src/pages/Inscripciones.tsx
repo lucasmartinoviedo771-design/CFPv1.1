@@ -6,9 +6,17 @@ import { useCohortes, useDeleteInscripcion, useInscripciones, useProgramas, useS
 import { apiClientV2 } from "../api/client";
 import { Card, Select, Button, Input } from '../components/UI';
 import { formatDateDisplay } from '../utils/dateFormat';
+import type { Estudiante, Cohorte, Programa, Bloque, Modulo, Inscripcion, EstudianteDetail } from "../api/types";
 
 // Custom Accordion Component
-const Accordion = ({ title, children, defaultOpen = false }) => {
+interface AccordionProps {
+    title: string;
+    children: React.ReactNode;
+    defaultOpen?: boolean;
+    defaultExpanded?: boolean;
+}
+
+const Accordion: React.FC<AccordionProps> = ({ title, children, defaultOpen = false }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
         <div className="border border-indigo-500/30 rounded-lg bg-indigo-950/20 overflow-hidden mb-2">
@@ -26,7 +34,14 @@ const Accordion = ({ title, children, defaultOpen = false }) => {
 };
 
 // Custom Checkbox
-const Checkbox = ({ checked, onChange, disabled, label }) => (
+interface CheckboxProps {
+    checked: boolean;
+    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    disabled?: boolean;
+    label: string;
+}
+
+const Checkbox: React.FC<CheckboxProps> = ({ checked, onChange, disabled, label }) => (
     <label className={`flex items-center gap-3 p-2 rounded transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/5 cursor-pointer'}`}>
         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${checked ? 'bg-brand-accent border-brand-accent' : 'border-indigo-500/50 bg-indigo-950/30'}`}>
             {checked && <CheckCircle size={14} className="text-white" />}
@@ -37,7 +52,16 @@ const Checkbox = ({ checked, onChange, disabled, label }) => (
 );
 
 // Modal Custom
-const Modal = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max-w-lg" }) => {
+interface ModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    children: React.ReactNode;
+    actions: React.ReactNode;
+    maxWidthClass?: string;
+}
+
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max-w-lg" }) => {
     if (!isOpen) return null;
     if (typeof document === "undefined") return null;
     return createPortal((
@@ -51,7 +75,7 @@ const Modal = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max
     ), document.body);
 };
 
-const calculateAge = (birthDate) => {
+const calculateAge = (birthDate: string | null | undefined): number | null => {
     if (!birthDate) return null;
     const today = new Date();
     const birth = new Date(birthDate);
@@ -63,39 +87,75 @@ const calculateAge = (birthDate) => {
     return age;
 };
 
+interface LocalModulo {
+    id: number;
+    nombre: string;
+}
+
+interface LocalBloque {
+    id: number;
+    nombre: string;
+    modulos: LocalModulo[];
+}
+
+type ExtendedEstudiante = Estudiante & {
+    tutor_nombre?: string | null;
+    tutor_dni?: string | null;
+    tutor_telefono?: string | null;
+    autorizacion_status?: string | null;
+    autorizacion_token?: string | null;
+    fecha_nacimiento?: string | null;
+};
+
+type ExtendedCohorte = Cohorte & {
+    programa?: Programa;
+    bloque?: { id: number; nombre: string } | null;
+    bloque_fechas?: { id: number; nombre: string; descripcion?: string | null };
+};
+
+type ExtendedInscripcion = Omit<Inscripcion, "estudiante" | "cohorte"> & {
+    estudiante?: ExtendedEstudiante;
+    cohorte?: ExtendedCohorte;
+};
+
 export default function Inscripciones() {
-    const [selectedStudent, setSelectedStudent] = useState("");
-    const [studentSearch, setStudentSearch] = useState("");
-    const [selectedCohortes, setSelectedCohortes] = useState([]);
-    const [selectedModulos, setSelectedModulos] = useState({});
-    const [cohorteBloques, setCohorteBloques] = useState({});
-    const [approvedModuleIds, setApprovedModuleIds] = useState(new Set());
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(25);
-    const [inscripcionSearch, setInscripcionSearch] = useState("");
-    const [editingInscripcionId, setEditingInscripcionId] = useState(null);
-    const [editingEstado, setEditingEstado] = useState("");
-    const [inscToDelete, setInscToDelete] = useState(null);
-    const [feedback, setFeedback] = useState({ open: false, message: "", severity: "success" });
-    const [loadingBloques, setLoadingBloques] = useState({});
-    const [allBloques, setAllBloques] = useState([]);
-    const [filterProgramaId, setFilterProgramaId] = useState("");
-    const [filterBloqueId, setFilterBloqueId] = useState("");
-    const [filterCohorteId, setFilterCohorteId] = useState("");
-    const [filterInicio, setFilterInicio] = useState("");
-    const [filterPeriodo, setFilterPeriodo] = useState("ACTUAL_O_PROXIMO");
+    const [selectedStudent, setSelectedStudent] = useState<string>("");
+    const [studentSearch, setStudentSearch] = useState<string>("");
+    const [selectedCohortes, setSelectedCohortes] = useState<number[]>([]);
+    const [selectedModulos, setSelectedModulos] = useState<Record<number, number[]>>({});
+    const [cohorteBloques, setCohorteBloques] = useState<Record<number, LocalBloque[]>>({});
+    const [approvedModuleIds, setApprovedModuleIds] = useState<Set<number>>(new Set());
+    const [page, setPage] = useState<number>(0);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(25);
+    const [inscripcionSearch, setInscripcionSearch] = useState<string>("");
+    const [editingInscripcionId, setEditingInscripcionId] = useState<number | null>(null);
+    const [editingEstado, setEditingEstado] = useState<string>("");
+    const [inscToDelete, setInscToDelete] = useState<ExtendedInscripcion | null>(null);
+    const [feedback, setFeedback] = useState<{ open: boolean; message: string; severity: "success" | "warning" | "error" }>({ open: false, message: "", severity: "success" });
+    const [loadingBloques, setLoadingBloques] = useState<Record<number, boolean>>({});
+    const [allBloques, setAllBloques] = useState<Bloque[]>([]);
+    const [filterProgramaId, setFilterProgramaId] = useState<string>("");
+    const [filterBloqueId, setFilterBloqueId] = useState<string>("");
+    const [filterCohorteId, setFilterCohorteId] = useState<string>("");
+    const [filterInicio, setFilterInicio] = useState<string>("");
+    const [filterPeriodo, setFilterPeriodo] = useState<string>("ACTUAL_O_PROXIMO");
     
     // Filtros para la tabla de Inscripciones Existentes
-    const [filterListProgramaName, setFilterListProgramaName] = useState("");
-    const [filterListBloqueName, setFilterListBloqueName] = useState("");
-    const [filterListModuloName, setFilterListModuloName] = useState("");
-    const [filterListCohorteName, setFilterListCohorteName] = useState("");
-    const [filterListEstado, setFilterListEstado] = useState("");
+    const [filterListProgramaName, setFilterListProgramaName] = useState<string>("");
+    const [filterListBloqueName, setFilterListBloqueName] = useState<string>("");
+    const [filterListModuloName, setFilterListModuloName] = useState<string>("");
+    const [filterListCohorteName, setFilterListCohorteName] = useState<string>("");
+    const [filterListEstado, setFilterListEstado] = useState<string>("");
 
-    const { data: estudiantes = [] } = useEstudiantes();
+    const { data: rawEstudiantes = [] } = useEstudiantes();
+    const estudiantes = useMemo(() => rawEstudiantes as ExtendedEstudiante[], [rawEstudiantes]);
+
     const { data: cohortes = [] } = useCohortes();
     const { data: programas = [] } = useProgramas();
-    const { data: inscripciones = [], isLoading: loadingInscripciones, refetch: refetchInscripciones } = useInscripciones();
+    
+    const { data: rawInscripciones = [], isLoading: loadingInscripciones, refetch: refetchInscripciones } = useInscripciones();
+    const inscripciones = useMemo(() => rawInscripciones as ExtendedInscripcion[], [rawInscripciones]);
+
     const saveInscripcion = useSaveInscripcion();
     const deleteInscripcion = useDeleteInscripcion();
 
@@ -103,11 +163,13 @@ export default function Inscripciones() {
     const bloquesMap = useMemo(() => Object.fromEntries(allBloques.map((b) => [b.id, b])), [allBloques]);
 
     const inscripcionesAlumnoSet = useMemo(() => {
-        if (!selectedStudent) return new Set();
-        const set = new Set();
+        if (!selectedStudent) return new Set<number>();
+        const set = new Set<number>();
         inscripciones
             .filter((i) => i.estudiante_id === Number(selectedStudent) && i.modulo_id)
-            .forEach((i) => set.add(i.modulo_id));
+            .forEach((i) => {
+                if (i.modulo_id) set.add(i.modulo_id);
+            });
         return set;
     }, [inscripciones, selectedStudent]);
 
@@ -118,14 +180,15 @@ export default function Inscripciones() {
         }
         const fetchApproved = async () => {
             try {
-                const { data } = await apiClientV2.get("/examenes/notas", { params: { estudiante_id: selectedStudent, aprobado: true } });
-                const modIds = new Set();
+                const { data } = await apiClientV2.get<{ examen_modulo_id?: number; aprobado: boolean }[]>("/examenes/notas", { params: { estudiante_id: selectedStudent, aprobado: true } });
+                const modIds = new Set<number>();
                 (data || []).forEach((nota) => {
                     if (nota.examen_modulo_id) modIds.add(nota.examen_modulo_id);
                 });
                 setApprovedModuleIds(modIds);
             } catch (error) {
-                const msg = error?.response?.data ? JSON.stringify(error.response.data) : error?.message || "Error";
+                const errObj = error as { response?: { data?: unknown }; message?: string };
+                const msg = errObj.response?.data ? JSON.stringify(errObj.response.data) : errObj.message || "Error";
                 setFeedback({ open: true, message: `No se pudieron cargar notas aprobadas: ${msg}`, severity: "error" });
             }
         };
@@ -135,7 +198,7 @@ export default function Inscripciones() {
     useEffect(() => {
         const loadBloques = async () => {
             try {
-                const { data } = await apiClientV2.get("/bloques");
+                const { data } = await apiClientV2.get<Bloque[]>("/bloques");
                 setAllBloques(Array.isArray(data) ? data : []);
             } catch (error) {
                 setAllBloques([]);
@@ -144,13 +207,13 @@ export default function Inscripciones() {
         loadBloques();
     }, []);
 
-    const loadBloquesForCohorte = async (cohorteId) => {
+    const loadBloquesForCohorte = async (cohorteId: number) => {
         const cohorte = cohortes.find((c) => c.id === cohorteId);
         if (!cohorte) return;
         setLoadingBloques((prev) => ({ ...prev, [cohorteId]: true }));
         try {
             // Optimización: Usar endpoint de estructura completa
-            const { data } = await apiClientV2.get("/estructura", { params: { programa: cohorte.programa_id } });
+            const { data } = await apiClientV2.get<{ bloques?: LocalBloque[] }>("/estructura", { params: { programa: cohorte.programa_id } });
 
             let bloques = data.bloques || [];
 
@@ -162,14 +225,15 @@ export default function Inscripciones() {
             // Los modulos ya vienen anidados en data.bloques
             setCohorteBloques((prev) => ({ ...prev, [cohorteId]: bloques }));
         } catch (error) {
-            const msg = error?.response?.data ? JSON.stringify(error.response.data) : error?.message || "Error";
+            const errObj = error as { response?: { data?: unknown }; message?: string };
+            const msg = errObj.response?.data ? JSON.stringify(errObj.response.data) : errObj.message || "Error";
             setFeedback({ open: true, message: `Error cargando estructura: ${msg}`, severity: "error" });
         } finally {
             setLoadingBloques((prev) => ({ ...prev, [cohorteId]: false }));
         }
     };
 
-    const handleStudentChange = (e) => {
+    const handleStudentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const studentId = e.target.value;
         setSelectedStudent(studentId);
         setSelectedCohortes([]);
@@ -181,28 +245,29 @@ export default function Inscripciones() {
         setFilterInicio("");
     };
 
-    const handleSendWhatsApp = async (estudiante) => {
-        if (!estudiante.tutor_telefono) {
+    const handleSendWhatsApp = async (estudiante: Estudiante) => {
+        const est = estudiante as ExtendedEstudiante;
+        if (!est.tutor_telefono) {
             setFeedback({ open: true, message: "El estudiante no tiene registrado el teléfono del padre, madre o tutor.", severity: "warning" });
             return;
         }
 
-        if (estudiante.autorizacion_status === 'DIGITAL') {
+        if (est.autorizacion_status === 'DIGITAL') {
             if (!window.confirm("Este estudiante ya tiene una autorización digital válida. ¿Deseas enviar el link de WhatsApp nuevamente?")) {
                 return;
             }
         }
 
         try {
-            let token = estudiante.autorizacion_token;
+            let token = est.autorizacion_token;
             if (!token) {
-                const { data } = await apiClientV2.post(`/autorizaciones/generate/${estudiante.id}`);
+                const { data } = await apiClientV2.post<{ token: string }>(`/autorizaciones/generate/${est.id}`);
                 token = data.token;
             }
 
-            const tutorName = estudiante.tutor_nombre || "Tutor";
-            const studentName = `${estudiante.nombre} ${estudiante.apellido}`;
-            const telefono = estudiante.tutor_telefono.replace(/\D/g, ''); // Limpiar no numéricos
+            const tutorName = est.tutor_nombre || "Tutor";
+            const studentName = `${est.nombre} ${est.apellido}`;
+            const telefono = est.tutor_telefono.replace(/\D/g, ''); // Limpiar no numéricos
 
             // Si el teléfono no tiene código de país, asumimos Argentina +54 9
             const fullPhone = telefono.startsWith('54') ? telefono : `549${telefono}`;
@@ -217,7 +282,7 @@ export default function Inscripciones() {
         }
     };
 
-    const handleCohorteToggle = async (cohorteId) => {
+    const handleCohorteToggle = async (cohorteId: number) => {
         const isSelected = selectedCohortes.includes(cohorteId);
         if (isSelected) {
             setSelectedCohortes((prev) => prev.filter((id) => id !== cohorteId));
@@ -237,7 +302,7 @@ export default function Inscripciones() {
         }
     };
 
-    const handleModuloToggle = (cohorteId, moduloId) => {
+    const handleModuloToggle = (cohorteId: number, moduloId: number) => {
         setSelectedModulos((prev) => {
             const cohorteMods = prev[cohorteId] || [];
             const newMods = cohorteMods.includes(moduloId)
@@ -247,13 +312,19 @@ export default function Inscripciones() {
         });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!selectedStudent) {
             setFeedback({ open: true, message: "Selecciona un estudiante.", severity: "error" });
             return;
         }
-        const inscripcionesACrear = [];
+        interface NewInscripcion {
+            estudiante_id: number;
+            cohorte_id: number;
+            modulo_id: number;
+            estado: string;
+        }
+        const inscripcionesACrear: NewInscripcion[] = [];
         Object.entries(selectedModulos).forEach(([cohorteIdStr, mods]) => {
             const cohorteId = Number(cohorteIdStr);
             mods.forEach((moduloId) => {
@@ -276,19 +347,21 @@ export default function Inscripciones() {
             setSelectedModulos({});
             await refetchInscripciones();
         } catch (error) {
-            const msg = error?.response?.data ? JSON.stringify(error.response.data) : error?.message || "Error";
+            const errObj = error as { response?: { data?: unknown }; message?: string };
+            const msg = errObj.response?.data ? JSON.stringify(errObj.response.data) : errObj.message || "Error";
             setFeedback({ open: true, message: `Error al inscribir: ${msg}`, severity: "error" });
         }
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: number) => {
         try {
             await deleteInscripcion.mutateAsync(id);
             setFeedback({ open: true, message: "Inscripcion eliminada", severity: "success" });
             refetchInscripciones();
             setInscToDelete(null); // Close confirmation dialog
         } catch (error) {
-            const msg = error?.response?.data ? JSON.stringify(error.response.data) : error?.message || "Error";
+            const errObj = error as { response?: { data?: unknown }; message?: string };
+            const msg = errObj.response?.data ? JSON.stringify(errObj.response.data) : errObj.message || "Error";
             setFeedback({ open: true, message: `No se pudo eliminar: ${msg}`, severity: "error" });
         }
     };
@@ -315,13 +388,13 @@ export default function Inscripciones() {
     }, [inscripciones, inscripcionSearch, filterListProgramaName, filterListBloqueName, filterListModuloName, filterListCohorteName, filterListEstado]);
 
     const tableProgramaOpts = useMemo(() => {
-        const set = new Set();
+        const set = new Set<string>();
         inscripciones.forEach(i => { if (i.cohorte?.programa?.nombre) set.add(i.cohorte.programa.nombre); });
         return Array.from(set).sort((a,b) => a.localeCompare(b));
     }, [inscripciones]);
 
     const tableBloqueOpts = useMemo(() => {
-        const set = new Set();
+        const set = new Set<string>();
         inscripciones.forEach(i => { 
             if (filterListProgramaName && i.cohorte?.programa?.nombre !== filterListProgramaName) return;
             if (i.cohorte?.bloque?.nombre) set.add(i.cohorte.bloque.nombre); 
@@ -330,7 +403,7 @@ export default function Inscripciones() {
     }, [inscripciones, filterListProgramaName]);
 
     const tableModuloOpts = useMemo(() => {
-        const set = new Set();
+        const set = new Set<string>();
         inscripciones.forEach(i => { 
             if (filterListProgramaName && i.cohorte?.programa?.nombre !== filterListProgramaName) return;
             if (filterListBloqueName && i.cohorte?.bloque?.nombre !== filterListBloqueName) return;
@@ -340,7 +413,7 @@ export default function Inscripciones() {
     }, [inscripciones, filterListProgramaName, filterListBloqueName]);
 
     const tableCohorteOpts = useMemo(() => {
-        const set = new Set();
+        const set = new Set<string>();
         inscripciones.forEach(i => { 
             if (filterListProgramaName && i.cohorte?.programa?.nombre !== filterListProgramaName) return;
             if (filterListBloqueName && i.cohorte?.bloque?.nombre !== filterListBloqueName) return;
@@ -409,12 +482,12 @@ export default function Inscripciones() {
         return `${y}-${m}-${day}`;
     }, []);
 
-    const isVigenteHoy = (c) => {
+    const isVigenteHoy = (c: Cohorte) => {
         if (!c?.fecha_inicio || !c?.fecha_fin) return false;
         return c.fecha_inicio <= todayIso && c.fecha_fin >= todayIso;
     };
 
-    const applyPeriodoFilter = (items) => {
+    const applyPeriodoFilter = (items: Cohorte[]) => {
         if (filterPeriodo === "TODAS") return items;
         if (filterPeriodo === "VIGENTE_HOY") return items.filter(isVigenteHoy);
 
@@ -426,7 +499,10 @@ export default function Inscripciones() {
 
         const futuras = items.filter((c) => c?.fecha_inicio && c.fecha_inicio > todayIso);
         if (futuras.length === 0) return [];
-        const proximaFecha = futuras.reduce((min, c) => (c.fecha_inicio < min ? c.fecha_inicio : min), futuras[0].fecha_inicio);
+        const proximaFecha = futuras.reduce((min, c) => {
+            const start = c.fecha_inicio || "";
+            return (start < min ? start : min);
+        }, futuras[0].fecha_inicio || "");
         return futuras.filter((c) => c.fecha_inicio === proximaFecha);
     };
 
@@ -470,17 +546,21 @@ export default function Inscripciones() {
             if (filterCohorteId && String(c.id) !== String(filterCohorteId)) return false;
             return true;
         });
-        const uniq = Array.from(new Set(base.map((c) => c.fecha_inicio).filter(Boolean))).sort((a, b) => (a < b ? 1 : -1));
+        const uniq = Array.from(
+            new Set(
+                base.map((c) => c.fecha_inicio).filter((x): x is string => !!x)
+            )
+        ).sort((a, b) => (a < b ? 1 : -1));
         return [{ value: "", label: "Todos" }, ...uniq.map((d) => ({ value: d, label: formatDateDisplay(d) }))];
     }, [cohortes, filterPeriodo, filterProgramaId, filterBloqueId, filterCohorteId, todayIso]);
 
-    const getModuloNivel = (modulo, all = []) => {
+    const getModuloNivel = (modulo: { id: number; nombre: string }, all: { id: number; nombre: string }[] = []) => {
         const nombre = String(modulo?.nombre || "").toUpperCase();
         const match = nombre.match(/M[ÓO]DULO\s*([0-9]+|[IVXLCDM]+)/i);
         if (match?.[1]) {
             const token = match[1].toUpperCase();
             if (/^\d+$/.test(token)) return Number(token);
-            const vals = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+            const vals: { [key: string]: number } = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
             let total = 0;
             let prev = 0;
             for (let i = token.length - 1; i >= 0; i -= 1) {
@@ -498,7 +578,7 @@ export default function Inscripciones() {
         return idx >= 0 ? idx + 1 : 1;
     };
 
-    const visibleModulosByProgression = (modulos) => {
+    const visibleModulosByProgression = (modulos: LocalModulo[]) => {
         const base = [...(modulos || [])];
         const sorted = base.sort((a, b) => {
             const na = getModuloNivel(a, base);
@@ -612,7 +692,7 @@ export default function Inscripciones() {
                                 {cohortesFiltered.map((cohorte) => (
                                     <Checkbox
                                         key={cohorte.id}
-                                        label={`${programaMap[cohorte.programa_id]?.nombre || "Programa"} - ${bloquesMap[cohorte.bloque_id]?.nombre || "Bloque"} - ${cohorte.nombre}`}
+                                        label={`${programaMap[cohorte.programa_id]?.nombre || "Programa"} - ${bloquesMap[cohorte.bloque_id || 0]?.nombre || "Bloque"} - ${cohorte.nombre}`}
                                         checked={selectedCohortes.includes(cohorte.id)}
                                         onChange={() => handleCohorteToggle(cohorte.id)}
                                     />
@@ -871,9 +951,12 @@ export default function Inscripciones() {
                                                             </>
                                                         ) : (
                                                             <div className="flex justify-end gap-2">
-                                                                {r.estudiante && calculateAge(r.estudiante.fecha_nacimiento) < 18 && (
+                                                                {r.estudiante && (() => {
+                                                                    const age = calculateAge(r.estudiante.fecha_nacimiento);
+                                                                    return age !== null && age < 18;
+                                                                })() && (
                                                                     <button
-                                                                        onClick={() => handleSendWhatsApp(r.estudiante)}
+                                                                        onClick={() => handleSendWhatsApp(r.estudiante!)}
                                                                         title="Enviar Autorización WhatsApp"
                                                                         className={`p-1 transition-colors ${r.estudiante.autorizacion_status === 'DIGITAL' ? 'text-emerald-400' : 'text-orange-400 hover:text-orange-300'}`}
                                                                     >
@@ -971,7 +1054,7 @@ export default function Inscripciones() {
                 actions={
                     <>
                         <Button variant="ghost" onClick={() => setInscToDelete(null)}>Cancelar</Button>
-                        <Button onClick={() => handleDelete(inscToDelete.id)} className="bg-red-600 hover:bg-red-700 text-white border-none">Eliminar</Button>
+                        <Button onClick={() => inscToDelete && handleDelete(inscToDelete.id)} className="bg-red-600 hover:bg-red-700 text-white border-none">Eliminar</Button>
                     </>
                 }
             >
