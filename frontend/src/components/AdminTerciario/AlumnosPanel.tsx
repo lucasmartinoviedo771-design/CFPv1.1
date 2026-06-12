@@ -4,15 +4,16 @@ import { Search, Download, Printer, ChevronRight } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
 import { P } from "./AdminUI";
 import { formatDateDisplay } from "../../utils/dateFormat";
+import { Cohorte } from "../../api/types";
 
-const HD_ESTADO_LABELS = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
+const HD_ESTADO_LABELS: Record<string, string> = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
 
-const ESTADO_INSCRIPCION_LABELS = {
+const ESTADO_INSCRIPCION_LABELS: Record<string, string> = {
   PREINSCRIPTO: "Preinscripto", CURSANDO: "Cursando", INACTIVO: "Inactivo",
   LIBRE: "Libre", PAUSADO: "Pausado", EGRESADO: "Egresado",
   APROBADO: "Aprobado", DESAPROBADO: "Desaprobado",
 };
-const ESTADO_INSCRIPCION_COLORS = {
+const ESTADO_INSCRIPCION_COLORS: Record<string, string> = {
   CURSANDO: "bg-blue-100 text-blue-700",
   APROBADO: "bg-green-100 text-green-700",
   DESAPROBADO: "bg-red-100 text-red-700",
@@ -23,17 +24,52 @@ const ESTADO_INSCRIPCION_COLORS = {
   PREINSCRIPTO: "bg-slate-100 text-slate-600",
 };
 
+interface TerciarioAlumno {
+  inscripcion_id: number;
+  cohorte_nombre: string;
+  apellido: string;
+  nombre: string;
+  dni: string;
+  email: string;
+  telefono?: string | null;
+  celular_preinsc?: string | null;
+  sexo?: string | null;
+  fecha_nacimiento?: string | null;
+  domicilio?: string | null;
+  barrio?: string | null;
+  ciudad?: string | null;
+  localidad?: string | null;
+  localidad_nacimiento?: string | null;
+  provincia_nacimiento?: string | null;
+  nacionalidad?: string | null;
+  finalizo_secundaria?: string | null;
+  posee_estudios_superiores?: boolean;
+  carrera_superior?: string | null;
+  nivel_educativo?: string | null;
+  posee_pc?: boolean;
+  posee_conectividad?: boolean;
+  pueblo_originario?: boolean;
+  posee_discapacidad?: boolean;
+  tipo_discapacidad?: string | null;
+  posee_cud?: boolean | null;
+  estado_hd?: string | null;
+  estado: string;
+  estado_preinscripcion?: string | null;
+  observaciones?: string | null;
+  estatus?: string | null;
+}
+
 export function AlumnosPanel() {
-  const [cohortes, setCohortes] = useState([]);
-  const [alumnos, setAlumnos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filtroCohorte, setFiltroCohorte] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("");
-  const [search, setSearch] = useState("");
-  const [expandido, setExpandido] = useState(null);
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [alumnos, setAlumnos] = useState<TerciarioAlumno[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [filtroCohorte, setFiltroCohorte] = useState<string>("");
+  const [filtroEstado, setFiltroEstado] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
+  const [expandido, setExpandido] = useState<number | null>(null);
 
   useEffect(() => {
-    apiClientV2.get("/preinscripcion-terciario-cohortes-hd")
+    apiClientV2.get<Cohorte[]>("/preinscripcion-terciario-cohortes-hd")
       .then(({ data }) => setCohortes(data || []));
   }, []);
 
@@ -43,7 +79,7 @@ export function AlumnosPanel() {
     if (filtroCohorte) params.append("cohorte_id", filtroCohorte);
     if (filtroEstado) params.append("estado", filtroEstado);
     if (search) params.append("q", search);
-    apiClientV2.get(`/terciario-alumnos?${params}`)
+    apiClientV2.get<TerciarioAlumno[]>(`/terciario-alumnos?${params}`)
       .then(({ data }) => setAlumnos(data || []))
       .finally(() => setLoading(false));
   }, [filtroCohorte, filtroEstado, search]);
@@ -77,7 +113,7 @@ export function AlumnosPanel() {
       "Posee Discapacidad": a.posee_discapacidad ? "Sí" : "No",
       "Tipo Discapacidad": a.tipo_discapacidad || "—",
       "Posee CUD": a.posee_cud === true ? "Sí" : a.posee_cud === false ? "No" : "—",
-      "Estado HD": HD_ESTADO_LABELS[a.estado_hd] || a.estado_hd || "—",
+      "Estado HD": HD_ESTADO_LABELS[a.estado_hd || ""] || a.estado_hd || "—",
       "Estado Inscripción": ESTADO_INSCRIPCION_LABELS[a.estado] || a.estado,
       "Estado Preinscripción": a.estado_preinscripcion || "—",
       Observaciones: a.observaciones || "—",
@@ -110,8 +146,10 @@ export function AlumnosPanel() {
       <tbody>${filas}</tbody></table>
       <script>window.onload=()=>window.print()</script></body></html>`;
     const w = window.open("", "_blank");
-    w.document.write(html);
-    w.document.close();
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    }
   };
 
   return (

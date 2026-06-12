@@ -6,22 +6,66 @@ import { listInscripciones } from '../services/inscripcionesService';
 import { listNotas } from '../services/notasService';
 import { Card, Select, Button, Input } from './UI';
 import { Edit2, Trash2, Check, X, PlusCircle, AlertCircle } from 'lucide-react';
+import { Programa, Cohorte, Modulo, Inscripcion, Nota } from '../api/types';
 
 dayjs.extend(utc);
 
+interface ExamenSimple {
+  id: number;
+  tipo_examen: string;
+  modulo_id?: number | null;
+  bloque_id?: number | null;
+}
+
+interface HistorialNota {
+  id: number;
+  examen_programa_nombre?: string;
+  examen_bloque_nombre?: string;
+  examen_modulo_nombre?: string;
+  examen_tipo_examen?: string;
+  intento: number;
+  es_nota_definitiva: boolean;
+  aprobado: boolean;
+  calificacion: number;
+  fecha_calificacion?: string | null;
+  estudiante: number;
+  examen: number;
+}
+
+interface ExtendedNota extends Nota {
+  examen_tipo_examen?: string;
+  examen_modulo_id?: number | null;
+}
+
+interface ExtendedInscripcion extends Omit<Inscripcion, 'cohorte'> {
+  cohorte?: Cohorte & {
+    programa?: Programa;
+    bloque_fechas?: { id: number; nombre: string; descripcion?: string | null };
+    bloque?: { id: number; nombre: string };
+  };
+}
+
 // --- Funciones auxiliares para Carga de Datos (Modal) ---
-async function fetchExamenesByModulo(moduloId) {
-  const { data } = await apiClient.get('/examenes', { params: { modulo_id: moduloId } });
+async function fetchExamenesByModulo(moduloId: number | string): Promise<ExamenSimple[]> {
+  const { data } = await apiClient.get<ExamenSimple[]>('/examenes', { params: { modulo_id: moduloId } });
   return data;
 }
 
-async function fetchExamenesFinalesByBloque(bloqueId) {
-  const { data } = await apiClient.get('/examenes', { params: { bloque_id: bloqueId } });
+async function fetchExamenesFinalesByBloque(bloqueId: number | string): Promise<ExamenSimple[]> {
+  const { data } = await apiClient.get<ExamenSimple[]>('/examenes', { params: { bloque_id: bloqueId } });
   return data;
+}
+
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  actions: React.ReactNode;
 }
 
 // --- Componente Modal (Custom Tailwind) ---
-function Modal({ isOpen, onClose, title, children, actions }) {
+function Modal({ isOpen, onClose, title, children, actions }: ModalProps) {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
@@ -40,9 +84,29 @@ function Modal({ isOpen, onClose, title, children, actions }) {
   );
 }
 
+interface BloqueConModulos {
+  id: number;
+  programa_id: number;
+  nombre: string;
+  orden: number;
+  correlativas_ids: number[];
+  modulos: Modulo[];
+}
+
+interface Estructura {
+  bloques: BloqueConModulos[];
+}
+
+interface CreateNotaModalProps {
+  open: boolean;
+  onClose: () => void;
+  studentId: number | string;
+  cursos: Programa[];
+  onSave: () => void;
+}
+
 // --- CreateNotaModal Re-escrito con Tailwind ---
-function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
-  // ... (Lógica de estado idéntica al original) ...
+function CreateNotaModal({ open, onClose, studentId, cursos, onSave }: CreateNotaModalProps) {
   const [curso, setCurso] = useState('');
   const [bloque, setBloque] = useState('');
   const [modulo, setModulo] = useState('');
@@ -50,23 +114,22 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
   const [calificacion, setCalificacion] = useState('');
   const [fechaCalificacion, setFechaCalificacion] = useState(dayjs().format('YYYY-MM-DD'));
   const [esEquivalencia, setEsEquivalencia] = useState(false);
-  const [estructura, setEstructura] = useState(null);
-  const [examenes, setExamenes] = useState([]);
-  const [existingNote, setExistingNote] = useState(null);
-  const [studentEnrollments, setStudentEnrollments] = useState([]);
-  const [approvedModuleExamTypes, setApprovedModuleExamTypes] = useState(new Set());
-  const [studentApprovedModuleIds, setStudentApprovedModuleIds] = useState(new Set());
+  const [estructura, setEstructura] = useState<Estructura | null>(null);
+  const [examenes, setExamenes] = useState<ExamenSimple[]>([]);
+  const [existingNote, setExistingNote] = useState<HistorialNota | null>(null);
+  const [studentEnrollments, setStudentEnrollments] = useState<ExtendedInscripcion[]>([]);
+  const [approvedModuleExamTypes, setApprovedModuleExamTypes] = useState<Set<string>>(new Set());
+  const [studentApprovedModuleIds, setStudentApprovedModuleIds] = useState<Set<number>>(new Set());
   const [allModulesInBlockApproved, setAllModulesInBlockApproved] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // ... (Effects de carga de datos idénticos al original para mantener lógica) ...
   useEffect(() => {
     if (!studentId) { setStudentEnrollments([]); return; }
     (async () => {
       try {
-        const { results } = await listInscripciones({ estudiante_id: studentId, estado: 'CURSANDO,APROBADO' });
-        setStudentEnrollments(results || []);
-      } catch (error) { setStudentEnrollments([]); }
+        const { results } = await listInscripciones({ estudiante_id: Number(studentId), estado: 'CURSANDO,APROBADO' });
+        setStudentEnrollments(results as ExtendedInscripcion[] || []);
+      } catch (error: unknown) { setStudentEnrollments([]); }
     })();
   }, [studentId]);
 
@@ -74,9 +137,9 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
     if (!studentId || !modulo) { setApprovedModuleExamTypes(new Set()); return; }
     (async () => {
       try {
-        const { results } = await listNotas({ estudiante_id: studentId, modulo_id: modulo, aprobado: true });
-        setApprovedModuleExamTypes(new Set((results || []).map(nota => nota.examen_tipo_examen)));
-      } catch (error) { setApprovedModuleExamTypes(new Set()); }
+        const { results } = await listNotas({ estudiante_id: Number(studentId), modulo_id: Number(modulo), aprobado: true });
+        setApprovedModuleExamTypes(new Set((results as ExtendedNota[] || []).map(nota => nota.examen_tipo_examen || "")));
+      } catch (error: unknown) { setApprovedModuleExamTypes(new Set()); }
     })();
   }, [studentId, modulo]);
 
@@ -84,9 +147,9 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
     if (!studentId) { setStudentApprovedModuleIds(new Set()); return; }
     (async () => {
       try {
-        const { results } = await listNotas({ estudiante_id: studentId, aprobado: true });
-        setStudentApprovedModuleIds(new Set((results || []).map(nota => Number(nota.examen_modulo_id)).filter(Boolean)));
-      } catch (error) { setStudentApprovedModuleIds(new Set()); }
+        const { results } = await listNotas({ estudiante_id: Number(studentId), aprobado: true });
+        setStudentApprovedModuleIds(new Set((results as ExtendedNota[] || []).map(nota => Number(nota.examen_modulo_id)).filter(Boolean)));
+      } catch (error: unknown) { setStudentApprovedModuleIds(new Set()); }
     })();
   }, [studentId]);
 
@@ -102,8 +165,21 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
   useEffect(() => {
     if (!examen || !studentId) { setExistingNote(null); return; }
     (async () => {
-      const { data } = await apiClient.get('/examenes/notas', { params: { estudiante_id: studentId, examen_id: examen, aprobado: true } });
-      setExistingNote((data && data.length > 0) ? data[0] : null);
+      try {
+        const { data } = await apiClient.get<HistorialNota[]>('/examenes/notes-check', {
+          params: { estudiante_id: studentId, examen_id: examen, aprobado: true }
+        });
+        setExistingNote((data && data.length > 0) ? data[0] : null);
+      } catch (error: unknown) {
+        try {
+          const { data } = await apiClient.get<HistorialNota[]>('/examenes/notas', {
+            params: { estudiante_id: studentId, examen_id: examen, aprobado: true }
+          });
+          setExistingNote((data && data.length > 0) ? data[0] : null);
+        } catch (innerErr: unknown) {
+          setExistingNote(null);
+        }
+      }
     })();
   }, [examen, studentId]);
 
@@ -111,13 +187,13 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
     if (!curso) { setEstructura(null); setBloque(''); setModulo(''); setExamen(''); return; }
     (async () => {
       try {
-        const { data: bloquesData } = await apiClient.get('/bloques', { params: { programa_id: curso } });
+        const { data: bloquesData } = await apiClient.get<Omit<BloqueConModulos, "modulos">[]>('/bloques', { params: { programa_id: curso } });
         const bloquesConModulos = await Promise.all((bloquesData || []).map(async (b) => {
-          const { data: modsData } = await apiClient.get('/modulos', { params: { bloque_id: b.id } });
-          return { ...b, modulos: modsData || [] };
+          const { data: modsData } = await apiClient.get<Modulo[]>('/modulos', { params: { bloque_id: b.id } });
+          return { ...b, modulos: modsData || [] } as BloqueConModulos;
         }));
         setEstructura({ bloques: bloquesConModulos });
-      } catch (err) { setEstructura({ bloques: [] }); }
+      } catch (err: unknown) { setEstructura({ bloques: [] }); }
     })();
   }, [curso]);
 
@@ -126,7 +202,7 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
 
   useEffect(() => {
     const fetchAndFilterExams = async () => {
-      let fetchedExams = [];
+      let fetchedExams: ExamenSimple[] = [];
       let isFinal = false;
       if (modulo) fetchedExams = await fetchExamenesByModulo(modulo);
       else if (bloque) {
@@ -166,10 +242,9 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
 
       if (selectedExamen?.tipo_examen === 'FINAL_SINC') {
         await apiClient.post('/examenes/registro/nota-sincronico', payload);
-      } else if (['PARCIAL', 'RECUP'].includes(selectedExamen?.tipo_examen)) {
+      } else if (['PARCIAL', 'RECUP'].includes(selectedExamen?.tipo_examen || "")) {
         await apiClient.post('/examenes/registro/nota-parcial', payload);
       } else {
-        // Fallback a nota genérica para Final Virtual o Equivalencia
         await apiClient.post('/examenes/notas', {
           estudiante: studentId,
           examen,
@@ -181,9 +256,10 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
       }
       onSave();
       onClose();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error saving grade:", err);
-      const errorDetail = err.response?.data?.error || err.response?.data?.detail || "Error al guardar nota";
+      const axiosError = err as { response?: { data?: { error?: string; detail?: string } } };
+      const errorDetail = axiosError.response?.data?.error || axiosError.response?.data?.detail || "Error al guardar nota";
       alert(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
     } finally {
       setLoading(false);
@@ -194,7 +270,7 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
   const enrolledProgramIds = useMemo(() => new Set(studentEnrollments.map(e => e.cohorte?.programa?.id).filter(Boolean)), [studentEnrollments]);
   const filteredCursos = useMemo(() => cursos.filter(c => enrolledProgramIds.has(c.id)), [cursos, enrolledProgramIds]);
   const enrolledBloquesDetailed = useMemo(() => {
-    const map = new Map();
+    const map = new Map<number, { id: number; nombre: string }>();
     studentEnrollments.forEach((e) => {
       const b = e.modulo?.bloque || e.cohorte?.bloque;
       if (b?.id && !map.has(b.id)) map.set(b.id, b);
@@ -207,13 +283,13 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
       .filter(Boolean)
   ), [studentEnrollments]);
   const enrolledModulosByBloque = useMemo(() => {
-    const map = new Map();
+    const map = new Map<number, Map<number, Modulo>>();
     studentEnrollments.forEach((e) => {
       const m = e.modulo;
       const bId = Number(m?.bloque?.id);
       if (!m?.id || !bId) return;
-      if (!map.has(bId)) map.set(bId, new Map());
-      map.get(bId).set(Number(m.id), m);
+      if (!map.has(bId)) map.set(bId, new Map<number, Modulo>());
+      map.get(bId)!.set(Number(m.id), m);
     });
     return map;
   }, [studentEnrollments]);
@@ -227,20 +303,15 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
   const enrolledModuloIds = useMemo(() => new Set(studentEnrollments.map(e => Number(e.modulo?.id)).filter(Boolean)), [studentEnrollments]);
   const filteredModulosOptions = useMemo(() => {
     if (!bloque) return [];
-    // Ensure we handle both string and number IDs
     const bId = Number(bloque);
     const selectedBloque = filteredBloquesOptions.find(b => Number(b.id) === bId);
-    const mods = selectedBloque?.modulos || [];
+    const mods = (selectedBloque as { modulos?: Modulo[] })?.modulos || [];
 
-    // Fallback logic: 
-    // 1. Try to filter by modules where student is actually enrolled
     const filtered = mods.filter(m => enrolledModuloIds.has(Number(m.id)));
     if (filtered.length > 0) return filtered;
 
-    // 2. If no specific enrolling modulos found, show all modules of this block
     if (mods.length > 0) return mods;
 
-    // 3. Last resort: check if enrolledModulosByBloque has anything
     const enrolledMap = enrolledModulosByBloque.get(bId);
     return enrolledMap ? Array.from(enrolledMap.values()) : [];
   }, [bloque, filteredBloquesOptions, enrolledModuloIds, enrolledModulosByBloque]);
@@ -256,7 +327,7 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
         if (ex.tipo_examen === 'FINAL_VIRTUAL') label = 'EXAMEN VIRTUAL';
         if (ex.tipo_examen === 'FINAL_SINC') label = 'EXAMEN FINAL';
         if (ex.tipo_examen === 'EQUIVALENCIA') label = 'EQUIVALENCIA';
-        return { value: ex.id, label };
+        return { value: String(ex.id), label };
       }),
     ];
   }, [bloque, examenes]);
@@ -273,25 +344,25 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
 
   const cursoOptions = useMemo(() => [
     { value: '', label: 'Seleccionar curso...' },
-    ...filteredCursos.map(c => ({ value: c.id, label: c.nombre }))
+    ...filteredCursos.map(c => ({ value: String(c.id), label: c.nombre }))
   ], [filteredCursos]);
 
   const bloqueOptions = useMemo(() => [
     { value: '', label: 'Seleccionar bloque...' },
-    ...filteredBloquesOptions.map(b => ({ value: b.id, label: b.nombre }))
+    ...filteredBloquesOptions.map(b => ({ value: String(b.id), label: b.nombre }))
   ], [filteredBloquesOptions]);
 
   const moduloOptions = useMemo(() => [
     { value: '', label: 'Seleccionar módulo...' },
     ...filteredModulosOptions.map(m => ({
-      value: m.id,
+      value: String(m.id),
       label: m.nombre + (studentApprovedModuleIds.has(Number(m.id)) ? ' (Aprobado)' : '')
     }))
   ], [filteredModulosOptions, studentApprovedModuleIds]);
 
   return (
     <Modal isOpen={open} onClose={onClose} title="Añadir Nueva Nota / Equivalencia"
-      actions={<><Button onClick={onClose} variant="ghost">Cancelar</Button><Button onClick={handleSave} disabled={!examen || !calificacion || existingNote || loading}>Guardar</Button></>}>
+      actions={<><Button onClick={onClose} variant="ghost">Cancelar</Button><Button onClick={handleSave} disabled={!examen || !calificacion || !!existingNote || loading}>Guardar</Button></>}>
 
       <Select label="Curso" value={curso} onChange={e => setCurso(e.target.value)} options={cursoOptions} />
       <div className="flex gap-4">
@@ -321,50 +392,58 @@ function CreateNotaModal({ open, onClose, studentId, cursos, onSave }) {
   );
 }
 
+interface HistorialAcademicoProps {
+  historial: HistorialNota[];
+  setHistorial: React.Dispatch<React.SetStateAction<HistorialNota[]>>;
+  selEstudiante: number | string;
+  cursos: Programa[];
+  readOnly?: boolean;
+}
+
 // --- Main Component: HistorialAcademico ---
-export default function HistorialAcademico({ historial, setHistorial, selEstudiante, cursos, readOnly = false }) {
+export default function HistorialAcademico({ historial, setHistorial, selEstudiante, cursos, readOnly = false }: HistorialAcademicoProps) {
   const [filterPrograma, setFilterPrograma] = useState('');
   const [filterBloque, setFilterBloque] = useState('');
   const [filterModulo, setFilterModulo] = useState('');
-  const [editingNotaId, setEditingNotaId] = useState(null);
-  const [editFormData, setEditFormData] = useState({});
+  const [editingNotaId, setEditingNotaId] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState<{ calificacion?: number | string; fecha_calificacion?: string }>({});
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Handlers for Edit/Delete
-  const handleEditClick = (nota) => {
+  const handleEditClick = (nota: HistorialNota) => {
     setEditingNotaId(nota.id);
     setEditFormData({ calificacion: nota.calificacion, fecha_calificacion: nota.fecha_calificacion ? dayjs(nota.fecha_calificacion).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD') });
   };
   const handleCancelClick = () => setEditingNotaId(null);
-  const handleFormChange = (e) => setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
 
-  const handleUpdate = async (notaId) => {
+  const handleUpdate = async (notaId: number) => {
     setLoading(true);
     try {
       const original = historial.find(n => n.id === notaId);
       if (!original) return;
       const payload = { ...editFormData, estudiante: original.estudiante, examen: original.examen, calificacion: Number(editFormData.calificacion), aprobado: Number(editFormData.calificacion) >= 6 };
-      const { data: updated } = await apiClient.put(`/examenes/notas/${notaId}`, payload);
+      const { data: updated } = await apiClient.put<HistorialNota>(`/examenes/notas/${notaId}`, payload);
       setHistorial(prev => prev.map(n => n.id === notaId ? updated : n));
       setEditingNotaId(null);
-    } catch (e) { console.error(e); alert('Error al actualizar'); } finally { setLoading(false); }
+    } catch (e: unknown) { console.error(e); alert('Error al actualizar'); } finally { setLoading(false); }
   };
 
-  const handleDelete = async (notaId) => {
+  const handleDelete = async (notaId: number) => {
     if (confirm('¿Eliminar nota?')) {
       setLoading(true);
       try {
         await apiClient.delete(`/examenes/notas/${notaId}`);
         setHistorial(prev => prev.filter(n => n.id !== notaId));
-      } catch (e) { console.error(e); } finally { setLoading(false); }
+      } catch (e: unknown) { console.error(e); } finally { setLoading(false); }
     }
   };
 
   // Filter Logic
-  const programasOptions = useMemo(() => Array.from(new Set(historial.map(h => h.examen_programa_nombre).filter(Boolean))), [historial]);
-  const bloquesOptions = useMemo(() => Array.from(new Set(historial.filter(h => !filterPrograma || h.examen_programa_nombre === filterPrograma).map(h => h.examen_bloque_nombre).filter(Boolean))), [historial, filterPrograma]);
-  const modulosOptions = useMemo(() => Array.from(new Set(historial.filter(h => !filterBloque || h.examen_bloque_nombre === filterBloque).map(h => h.examen_modulo_nombre).filter(Boolean))), [historial, filterBloque]);
+  const programasOptions = useMemo(() => Array.from(new Set(historial.map(h => h.examen_programa_nombre).filter(Boolean))) as string[], [historial]);
+  const bloquesOptions = useMemo(() => Array.from(new Set(historial.filter(h => !filterPrograma || h.examen_programa_nombre === filterPrograma).map(h => h.examen_bloque_nombre).filter(Boolean))) as string[], [historial, filterPrograma]);
+  const modulosOptions = useMemo(() => Array.from(new Set(historial.filter(h => !filterBloque || h.examen_bloque_nombre === filterBloque).map(h => h.examen_modulo_nombre).filter(Boolean))) as string[], [historial, filterBloque]);
   const filteredHistorial = useMemo(() => historial.filter(h => (!filterPrograma || h.examen_programa_nombre === filterPrograma) && (!filterBloque || h.examen_bloque_nombre === filterBloque) && (!filterModulo || h.examen_modulo_nombre === filterModulo)), [historial, filterPrograma, filterBloque, filterModulo]);
 
   useEffect(() => { setFilterBloque(''); setFilterModulo(''); }, [filterPrograma]);
@@ -442,7 +521,7 @@ export default function HistorialAcademico({ historial, setHistorial, selEstudia
                         <td className="px-4 py-3 text-gray-300">{row.examen_bloque_nombre} / <span className="text-indigo-300">{row.examen_modulo_nombre}</span></td>
                         <td className="px-4 py-3 text-gray-300">
                           {row.examen_tipo_examen}
-                          {row.intento > 1 && <span className="ml-2 text-[10px] text-indigo-400 font-normal px-1 border border-indigo-500/20 rounded">Intento {row.intento}</span>}
+                          {(row.intento ?? 0) > 1 && <span className="ml-2 text-[10px] text-indigo-400 font-normal px-1 border border-indigo-500/20 rounded">Intento {row.intento}</span>}
                           {row.es_nota_definitiva && (
                             <span className="ml-2 px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">
                               PROMEDIO/FINAL
@@ -482,10 +561,13 @@ export default function HistorialAcademico({ historial, setHistorial, selEstudia
           studentId={selEstudiante}
           cursos={cursos}
           onSave={() => {
-            // Reload logic simplified
             (async () => {
-              const { data } = await apiClient.get('/examenes/notas', { params: { estudiante_id: selEstudiante } });
-              setHistorial(Array.isArray(data) ? data : []);
+              try {
+                const { data } = await apiClient.get<HistorialNota[]>('/examenes/notas', { params: { estudiante_id: selEstudiante } });
+                setHistorial(Array.isArray(data) ? data : []);
+              } catch (e: unknown) {
+                console.error(e);
+              }
             })();
             setCreateModalOpen(false);
           }}

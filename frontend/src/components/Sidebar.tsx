@@ -9,7 +9,6 @@ import {
   CheckSquare,
   ClipboardList,
   GitBranch,
-  BookOpen,
   Calendar,
   Layers,
   UserCog,
@@ -23,20 +22,24 @@ import {
 import { cn } from './UI';
 import { UserContext, ActivePanelContext } from '../App';
 
-const dataItems = [
+interface MenuItem {
+  label: string;
+  icon: React.ReactNode;
+  href: string;
+}
+
+const dataItems: MenuItem[] = [
   { label: 'Dashboard', icon: <LayoutDashboard size={20} />, href: '/dashboard' },
   { label: 'Histórico por Cursos', icon: <BarChart2 size={20} />, href: '/historico-cursos' },
   { label: 'Histórico por Estudiante', icon: <Users size={20} />, href: '/historico-estudiante' },
   { label: 'Egresados', icon: <GraduationCap size={20} />, href: '/egresados' },
 ];
 
-
-
-const calificacionesItems = [
+const calificacionesItems: MenuItem[] = [
   { label: 'Notas / Equivalencias', icon: <ClipboardList size={20} />, href: '/notas' },
 ];
 
-const adminCursosItems = [
+const adminCursosItems: MenuItem[] = [
   { label: 'Estructura Académica', icon: <GitBranch size={20} />, href: '/estructura' },
   { label: 'Calendario Académico', icon: <Calendar size={20} />, href: '/calendario' },
   { label: 'Cohortes', icon: <Layers size={20} />, href: '/cohortes' },
@@ -44,12 +47,21 @@ const adminCursosItems = [
   { label: 'Gráfico de Cursos', icon: <BarChart2 size={20} />, href: '/grafico-cursos' },
 ];
 
-const secretariaItems = [
+const secretariaItems: MenuItem[] = [
   { label: 'Usuarios', icon: <UserCog size={20} />, href: '/usuarios' },
 ];
 
+interface MenuSectionProps {
+  title: string;
+  icon: React.ReactNode;
+  items: MenuItem[];
+  isOpen: boolean;
+  onToggle: () => void;
+  currentPath: string;
+}
+
 // Componente para items de menú
-const MenuSection = ({ title, icon, items, isOpen, onToggle, currentPath }) => {
+const MenuSection = ({ title, icon, items, isOpen, onToggle, currentPath }: MenuSectionProps) => {
   return (
     <div className="mb-2">
       <button
@@ -98,7 +110,7 @@ export default function Sidebar() {
   const location = useLocation();
   const { user } = useContext(UserContext);
   const { activePanel } = useContext(ActivePanelContext);
-  const [openSection, setOpenSection] = useState(null);
+  const [openSection, setOpenSection] = useState<string | null>(null);
 
   const userGroups = user?.groups || [];
   const isSuper = user?.is_superuser || user?.is_staff;
@@ -108,13 +120,13 @@ export default function Sidebar() {
   // Isolation: User exclusively belongs to the "Videojuegos" group
   const isOnlyVideojuegos = !isSuper && userGroups.includes("Videojuegos") && !userGroups.some(g => ['Admin', 'Secretaría', 'Regencia', 'Rector', 'Terciario', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel'].includes(g));
 
-  const cargaDatosItems = [
+  const cargaDatosItems: MenuItem[] = [
     { label: 'Estudiantes', icon: <Users size={20} />, href: '/estudiantes' },
     { label: 'Inscripciones', icon: <FileText size={20} />, href: '/inscripciones' },
     { label: 'Asistencia', icon: <CheckSquare size={20} />, href: '/asistencia' },
   ];
 
-  const preinscripcionesItems = [
+  const preinscripcionesItems: MenuItem[] = [
     { label: 'Preinscripciones CFP', icon: <ClipboardList size={20} />, href: '/gestion-preinscripciones' },
     { label: 'Preinscripciones Terciario', icon: <GraduationCap size={20} />, href: '/preinscripciones-terciario' },
     ...(hasVideojuegos ? [{ label: 'Preinscripciones Video Juegos', icon: <Gamepad2 size={20} />, href: '/admin-videojuegos' }] : []),
@@ -137,7 +149,7 @@ export default function Sidebar() {
     else if (secretariaItems.some(item => item.href === currentPath)) setOpenSection('secretaria');
   }, [location.pathname]);
 
-  const toggleSection = (section) => {
+  const toggleSection = (section: string) => {
     setOpenSection(openSection === section ? null : section);
   };
 

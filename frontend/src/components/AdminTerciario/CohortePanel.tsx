@@ -4,30 +4,54 @@ import { Search, AlertCircle, Download, Printer } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
 import { P } from "./AdminUI";
 import { formatDateDisplay } from "../../utils/dateFormat";
+import { Cohorte } from "../../api/types";
 
-const HD_ESTADO_LABELS = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
-const HD_ESTADO_COLORS = {
+const HD_ESTADO_LABELS: Record<string, string> = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
+const HD_ESTADO_COLORS: Record<string, string> = {
   CURSANDO: "bg-blue-100 text-blue-800", APROBADO: "bg-green-100 text-green-800",
   DESAPROBADO: "bg-red-100 text-red-800", INACTIVO: "bg-gray-100 text-gray-600",
 };
 
-export function CohortePanel({ onGoConfig }) {
-  const [cohortes, setCohortes] = useState([]);
-  const [cohorte, setCohorte] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingCohorte, setLoadingCohorte] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
-  const [filtroAnio, setFiltroAnio] = useState("");
-  const [filtroEstadoHD, setFiltroEstadoHD] = useState("");
-  const [searchAlumno, setSearchAlumno] = useState("");
+interface AlumnoHDInfo {
+  inscripcion_id: number;
+  apellido: string;
+  nombre: string;
+  dni: string;
+  email: string;
+  telefono?: string | null;
+  estado: string;
+}
+
+interface CohorteHDInfo {
+  id: number;
+  nombre: string;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  inscriptos: number;
+  estudiantes: AlumnoHDInfo[];
+}
+
+interface CohortePanelProps {
+  onGoConfig?: () => void;
+}
+
+export function CohortePanel({ onGoConfig }: CohortePanelProps) {
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [cohorte, setCohorte] = useState<CohorteHDInfo | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingCohorte, setLoadingCohorte] = useState<boolean>(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [filtroAnio, setFiltroAnio] = useState<string>("");
+  const [filtroEstadoHD, setFiltroEstadoHD] = useState<string>("");
+  const [searchAlumno, setSearchAlumno] = useState<string>("");
 
   useEffect(() => {
-    apiClientV2.get("/preinscripcion-terciario-cohortes-hd")
+    apiClientV2.get<Cohorte[]>("/preinscripcion-terciario-cohortes-hd")
       .then(({ data }) => {
         setCohortes(data || []);
         if (data?.length) {
           const hoy = new Date().toISOString().slice(0, 10);
-          const activa = data.find(c => c.fecha_inicio <= hoy && c.fecha_fin >= hoy) || data[0];
+          const activa = data.find(c => (c.fecha_inicio || "") <= hoy && (c.fecha_fin || "") >= hoy) || data[0];
           setSelectedId(activa.id);
         }
       })
@@ -38,13 +62,13 @@ export function CohortePanel({ onGoConfig }) {
     if (!selectedId) { setCohorte(null); return; }
     setCohorte(null);
     setLoadingCohorte(true);
-    apiClientV2.get(`/preinscripciones-terciario-cohorte?cohorte_id=${selectedId}`)
+    apiClientV2.get<CohorteHDInfo>(`/preinscripciones-terciario-cohorte?cohorte_id=${selectedId}`)
       .then(({ data }) => setCohorte(data))
       .catch(() => setCohorte(null))
       .finally(() => setLoadingCohorte(false));
   }, [selectedId]);
 
-  const anios = [...new Set(cohortes.map(c => c.fecha_inicio?.slice(0, 4)).filter(Boolean))].sort().reverse();
+  const anios = [...new Set(cohortes.map(c => c.fecha_inicio?.slice(0, 4)).filter(Boolean))].sort().reverse() as string[];
   const cohortesFiltradas = filtroAnio
     ? cohortes.filter(c => c.fecha_inicio?.startsWith(filtroAnio))
     : cohortes;
@@ -92,8 +116,10 @@ export function CohortePanel({ onGoConfig }) {
       <tbody>${filas}</tbody></table>
       <script>window.onload=()=>window.print()</script></body></html>`;
     const w = window.open("", "_blank");
-    w.document.write(html);
-    w.document.close();
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    }
   };
 
   if (loading) return <div className="text-center py-20 text-[#1a1f4e]/40 text-sm">Cargando...</div>;
@@ -118,7 +144,7 @@ export function CohortePanel({ onGoConfig }) {
           </div>
           <div>
             <label className="text-xs font-bold uppercase tracking-wide text-[#1a1f4e]/50 mb-1 block">Cohorte</label>
-            <select value={selectedId || ""} onChange={e => setSelectedId(Number(e.target.value))}
+            <select value={selectedId || ""} onChange={e => setSelectedId(e.target.value ? Number(e.target.value) : null)}
               className="rounded-xl px-3 py-2 border border-[#b8ccd8] text-[#1a1f4e] text-sm focus:outline-none focus:ring-2 focus:ring-[#f5c518] min-w-[220px]">
               <option value="">— Seleccionar —</option>
               {cohortesFiltradas.map(c => (

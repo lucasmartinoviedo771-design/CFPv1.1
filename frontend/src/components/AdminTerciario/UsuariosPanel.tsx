@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Search, X, Save, Pencil, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
 import { P } from "./AdminUI";
+import { User, UserDetails } from "../../api/types";
 
 // Grupos que dan acceso a CFP (tener cualquiera de estos = puede entrar al panel CFP)
 const GRUPOS_CFP = ["Admin", "Secretaría", "Regencia", "Coordinación Docente", "Docente", "Preceptor", "Bedel", "Rector"];
@@ -26,7 +27,11 @@ export const GRUPOS_CONFIG = ROLES_FUNCIONALES.map(r => ({
   terciario: GRUPOS_TERCIARIO.includes(r.nombre) || r.nombre === "Terciario",
 }));
 
-function GrupoBadge({ nombre }) {
+interface GrupoBadgeProps {
+  nombre: string;
+}
+
+function GrupoBadge({ nombre }: GrupoBadgeProps) {
   const cfg = GRUPOS_CONFIG.find(g => g.nombre === nombre);
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${cfg?.color || "bg-gray-100 text-gray-600"}`}>
@@ -35,20 +40,25 @@ function GrupoBadge({ nombre }) {
   );
 }
 
-function AccesoBadge({ tieneAcceso, sistema }) {
+interface AccesoBadgeProps {
+  tieneAcceso: boolean;
+  sistema: string;
+}
+
+function AccesoBadge({ tieneAcceso, sistema }: AccesoBadgeProps) {
   return tieneAcceso
     ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700"><CheckCircle2 size={10} />{sistema}</span>
     : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-400"><XCircle size={10} />{sistema}</span>;
 }
 
-function tieneAccesoCFP(user) {
-  return user.is_superuser || user.is_staff || (user.groups.some(g => GRUPOS_CFP.includes(g)) && !user.groups.includes("Sin CFP"));
+function tieneAccesoCFP(user: User | UserDetails) {
+  return !!(user.is_superuser || user.is_staff || (user.groups && user.groups.some(g => GRUPOS_CFP.includes(g)) && !user.groups.includes("Sin CFP")));
 }
-function tieneAccesoTerciario(user) {
-  return user.is_superuser || user.is_staff || user.groups.some(g => GRUPOS_TERCIARIO.includes(g));
+function tieneAccesoTerciario(user: User | UserDetails) {
+  return !!(user.is_superuser || user.is_staff || (user.groups && user.groups.some(g => GRUPOS_TERCIARIO.includes(g))));
 }
 
-function derivarEstado(grupos, is_superuser) {
+function derivarEstado(grupos: string[], is_superuser: boolean) {
   const rolActual = ROLES_FUNCIONALES.find(r => grupos.includes(r.nombre))?.nombre || "";
 
   let accCFP = is_superuser;
@@ -81,9 +91,9 @@ function derivarEstado(grupos, is_superuser) {
   return { rolActual, accCFP, accTerciario };
 }
 
-function construirGrupos(rol, accCFP, accTerciario, is_superuser) {
+function construirGrupos(rol: string, accCFP: boolean, accTerciario: boolean, is_superuser: boolean): string[] {
   if (is_superuser) return [];
-  const grupos = [];
+  const grupos: string[] = [];
 
   if (rol) {
     if (rol === "Admin" || rol === "Rector" || rol === "Regencia") {
@@ -111,15 +121,21 @@ function construirGrupos(rol, accCFP, accTerciario, is_superuser) {
   return grupos;
 }
 
-function RolYAccesoForm({ grupos, is_superuser, onChange }) {
+interface RolYAccesoFormProps {
+  grupos: string[];
+  is_superuser: boolean;
+  onChange: (grupos: string[]) => void;
+}
+
+function RolYAccesoForm({ grupos, is_superuser, onChange }: RolYAccesoFormProps) {
   const { rolActual: derivedRol, accCFP, accTerciario } = derivarEstado(grupos, is_superuser);
-  const [rolActual, setRolActual] = useState(derivedRol || "");
+  const [rolActual, setRolActual] = useState<string>(derivedRol || "");
 
   useEffect(() => {
     if (derivedRol) setRolActual(derivedRol);
   }, [derivedRol]);
 
-  const setRol = (nuevoRol) => {
+  const setRol = (nuevoRol: string) => {
     setRolActual(nuevoRol);
     let nuevoCFP = false;
     let nuevoTer = false;
@@ -139,7 +155,7 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
     onChange(nuevosGrupos);
   };
 
-  const toggleAcceso = (sistema) => {
+  const toggleAcceso = (sistema: string) => {
     let nuevoCFP = accCFP;
     let nuevoTer = accTerciario;
 
@@ -238,10 +254,16 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }) {
   );
 }
 
-function EditUserModal({ user, onClose, onSaved }) {
-  const [grupos, setGrupos] = useState(user.groups || []);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
+interface EditUserModalProps {
+  user: User;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function EditUserModal({ user, onClose, onSaved }: EditUserModalProps) {
+  const [grupos, setGrupos] = useState<string[]>(user.groups || []);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [msg, setMsg] = useState<string>("");
 
   const save = async () => {
     setSaving(true);
@@ -250,7 +272,7 @@ function EditUserModal({ user, onClose, onSaved }) {
       await apiClientV2.patch(`/users/${user.id}`, { groups: grupos });
       setMsg("Guardado.");
       onSaved();
-    } catch { setMsg("Error al guardar."); }
+    } catch (err: unknown) { setMsg("Error al guardar."); }
     finally { setSaving(false); }
   };
 
@@ -268,7 +290,7 @@ function EditUserModal({ user, onClose, onSaved }) {
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <RolYAccesoForm grupos={grupos} is_superuser={user.is_superuser || user.is_staff} onChange={setGrupos} />
+          <RolYAccesoForm grupos={grupos} is_superuser={!!(user.is_superuser || user.is_staff)} onChange={setGrupos} />
           {msg && <p className={`text-xs font-semibold ${msg.includes("Error") ? "text-red-500" : "text-green-600"}`}>{msg}</p>}
         </div>
 
@@ -287,7 +309,16 @@ function EditUserModal({ user, onClose, onSaved }) {
   );
 }
 
-function ModalField({ label, value, onChange, type = "text", placeholder = "", error = "" }) {
+interface ModalFieldProps {
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  placeholder?: string;
+  error?: string;
+}
+
+function ModalField({ label, value, onChange, type = "text", placeholder = "", error = "" }: ModalFieldProps) {
   return (
     <div>
       <label className="text-xs font-bold uppercase tracking-wide text-[#1a1f4e]/50 mb-1 block">{label}</label>
@@ -298,17 +329,22 @@ function ModalField({ label, value, onChange, type = "text", placeholder = "", e
   );
 }
 
-function NuevoUsuarioModal({ onClose, onSaved }) {
+interface NuevoUsuarioModalProps {
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioModalProps) {
   const [form, setForm] = useState({ username: "", email: "", first_name: "", last_name: "", password: "" });
-  const [grupos, setGrupos] = useState([]);
+  const [grupos, setGrupos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const validate = () => {
-    const e = {};
+    const e: Record<string, string> = {};
     if (!form.username.trim()) e.username = "Requerido";
     if (!form.email.trim()) e.email = "Requerido";
     if (!form.first_name.trim()) e.first_name = "Requerido";
@@ -332,7 +368,7 @@ function NuevoUsuarioModal({ onClose, onSaved }) {
       });
       setMsg("Usuario creado. Se enviaron las credenciales por email.");
       setTimeout(() => { onSaved(); onClose(); }, 1500);
-    } catch (err) {
+    } catch (err: unknown) {
       setMsg("Error al crear usuario.");
     } finally { setSaving(false); }
   };
@@ -383,43 +419,43 @@ function NuevoUsuarioModal({ onClose, onSaved }) {
 
 const GRUPOS_PUEDEN_ASIGNAR = ["Admin", "Rector", "Regencia", "Secretaría"];
 
-function puedeAsignarRoles(currentUser) {
+function puedeAsignarRoles(currentUser: User | UserDetails | null) {
   if (!currentUser) return false;
   if (currentUser.is_superuser || currentUser.is_staff) return true;
   return (currentUser.groups || []).some(g => GRUPOS_PUEDEN_ASIGNAR.includes(g));
 }
 
 export function UsuariosPanel() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filtro, setFiltro] = useState("todos"); 
-  const [editUser, setEditUser] = useState(null);
-  const [resettingId, setResettingId] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [nuevoModal, setNuevoModal] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
+  const [filtro, setFiltro] = useState<string>("todos"); 
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [resettingId, setResettingId] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserDetails | null>(null);
+  const [nuevoModal, setNuevoModal] = useState<boolean>(false);
 
   useEffect(() => {
-    apiClientV2.get("/user").then(({ data }) => setCurrentUser(data)).catch(() => {});
+    apiClientV2.get<UserDetails>("/user").then(({ data }) => setCurrentUser(data)).catch(() => {});
   }, []);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await apiClientV2.get("/users");
+      const { data } = await apiClientV2.get<User[]>("/users");
       setUsers(Array.isArray(data) ? data : []);
-    } catch { setUsers([]); }
+    } catch (err: unknown) { setUsers([]); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  const resetPassword = async (u) => {
+  const resetPassword = async (u: User) => {
     if (!window.confirm(`¿Regenerar contraseña para ${u.username}? Se enviará al email.`)) return;
     setResettingId(u.id);
     try {
       await apiClientV2.post(`/users/${u.id}/regenerate-password`);
-    } catch {}
+    } catch (err: unknown) {}
     finally { setResettingId(null); }
   };
 
@@ -513,7 +549,7 @@ export function UsuariosPanel() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {u.groups.length === 0
+                      {!u.groups || u.groups.length === 0
                         ? <span className="text-[#1a1f4e]/30 text-xs">—</span>
                         : u.groups.map(g => <GrupoBadge key={g} nombre={g} />)
                       }

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
 import { getMediaUrl } from "../../utils/media";
+import { EstudianteDetail, Inscripcion, Cohorte, Programa } from "../../api/types";
 
 const ESTADOS_ALUMNO = [
   { value: "", label: "Todos los Estados" },
@@ -33,7 +34,25 @@ const ESTADOS_ALUMNO = [
   { value: "Libre", label: "Libre" },
 ];
 
-function YesNoIcon({ value, trueIcon, falseIcon }) {
+interface ExtendedInscripcion extends Omit<Inscripcion, 'cohorte'> {
+  cohorte?: Cohorte & {
+    programa?: Programa;
+    bloque_fechas?: { id: number; nombre: string; descripcion?: string | null };
+    bloque?: { id: number; nombre: string };
+  };
+}
+
+interface VideojuegosAlumnoDetail extends EstudianteDetail {
+  inscripciones?: ExtendedInscripcion[];
+}
+
+interface YesNoIconProps {
+  value?: boolean | null;
+  trueIcon: React.ReactNode;
+  falseIcon: React.ReactNode;
+}
+
+function YesNoIcon({ value, trueIcon, falseIcon }: YesNoIconProps) {
   if (value) {
     return (
       <span className="text-emerald-400 flex items-center gap-1 font-bold text-xs" title="Sí">
@@ -48,7 +67,13 @@ function YesNoIcon({ value, trueIcon, falseIcon }) {
   );
 }
 
-function DetailRow({ label, value, icon }) {
+interface DetailRowProps {
+  label: string;
+  value?: string | number | null;
+  icon?: React.ReactNode;
+}
+
+function DetailRow({ label, value, icon }: DetailRowProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 py-2 border-b border-indigo-500/5 last:border-b-0">
       <span className="text-xs font-black uppercase tracking-widest text-indigo-300 sm:w-48 flex-shrink-0 flex items-center gap-1.5">
@@ -60,7 +85,13 @@ function DetailRow({ label, value, icon }) {
   );
 }
 
-function DocumentLink({ url, label, colorClass }) {
+interface DocumentLinkProps {
+  url?: string | null;
+  label: string;
+  colorClass: string;
+}
+
+function DocumentLink({ url, label, colorClass }: DocumentLinkProps) {
   if (!url) return null;
   const fullUrl = getMediaUrl(url);
   return (
@@ -78,28 +109,36 @@ function DocumentLink({ url, label, colorClass }) {
   );
 }
 
+interface EditAlumnoModalProps {
+  student: VideojuegosAlumnoDetail;
+  onClose: () => void;
+  onSave: () => void;
+}
+
 // Modal para editar datos personales del alumno
-function EditAlumnoModal({ student, onClose, onSave }) {
-  const [form, setForm] = useState({ ...student });
+function EditAlumnoModal({ student, onClose, onSave }: EditAlumnoModalProps) {
+  const [form, setForm] = useState<VideojuegosAlumnoDetail>({ ...student });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const target = e.target;
+    const name = target.name;
+    const value = target.type === "checkbox" ? (target as HTMLInputElement).checked : target.value;
     setForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
   };
 
-  const submit = async (e) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError("");
     try {
       await apiClientV2.patch(`/videojuegos/alumnos/${student.id}`, form);
       onSave();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
       setError("Error al actualizar la ficha del alumno.");
     } finally {
@@ -193,8 +232,14 @@ function EditAlumnoModal({ student, onClose, onSave }) {
   );
 }
 
+interface AlumnoDetailModalProps {
+  student: VideojuegosAlumnoDetail;
+  onClose: () => void;
+  onEdit: () => void;
+}
+
 // Modal Detalle del legajo del Alumno
-function AlumnoDetailModal({ student, onClose, onEdit }) {
+function AlumnoDetailModal({ student, onClose, onEdit }: AlumnoDetailModalProps) {
   const edad = useMemo(() => {
     if (!student.fecha_nacimiento) return null;
     try {
@@ -369,22 +414,33 @@ function AlumnoDetailModal({ student, onClose, onEdit }) {
   );
 }
 
+interface OfertaItem {
+  bloques?: {
+    cohorte_id?: number;
+    cohorte_nombre?: string;
+  }[];
+}
+
+interface OfertaResponse {
+  items?: OfertaItem[];
+}
+
 export default function AlumnosTab() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("");
-  const [filtroCohorte, setFiltroCohorte] = useState("");
-  const [cohortes, setCohortes] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [editStudent, setEditStudent] = useState(null);
+  const [data, setData] = useState<VideojuegosAlumnoDetail[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
+  const [filtroEstado, setFiltroEstado] = useState<string>("");
+  const [filtroCohorte, setFiltroCohorte] = useState<string>("");
+  const [cohortes, setCohortes] = useState<{ id: number; nombre: string }[]>([]);
+  const [selected, setSelected] = useState<VideojuegosAlumnoDetail | null>(null);
+  const [editStudent, setEditStudent] = useState<VideojuegosAlumnoDetail | null>(null);
 
   const fetchAlumnos = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: res } = await apiClientV2.get("/videojuegos/alumnos");
+      const { data: res } = await apiClientV2.get<VideojuegosAlumnoDetail[]>("/videojuegos/alumnos");
       setData(Array.isArray(res) ? res : []);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
       setData([]);
     } finally {
@@ -396,16 +452,16 @@ export default function AlumnosTab() {
     fetchAlumnos();
     
     // Cargar cohortes para el filtro
-    apiClientV2.get("/preinscripcion/oferta", { params: { programa_codigo: "VJ" } })
+    apiClientV2.get<OfertaResponse>("/preinscripcion/oferta", { params: { programa_codigo: "VJ" } })
       .then(({ data: res }) => {
         const prog = res?.items?.[0] || null;
         if (prog) {
-          const list = [];
-          const seen = new Set();
+          const list: { id: number; nombre: string }[] = [];
+          const seen = new Set<number>();
           (prog.bloques || []).forEach(b => {
             if (b.cohorte_id && !seen.has(b.cohorte_id)) {
               seen.add(b.cohorte_id);
-              list.push({ id: b.cohorte_id, nombre: b.cohorte_nombre });
+              list.push({ id: b.cohorte_id, nombre: b.cohorte_nombre || "" });
             }
           });
           setCohortes(list);

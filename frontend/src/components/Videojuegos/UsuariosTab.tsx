@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Search, X, Save, Pencil, RefreshCw, CheckCircle2, XCircle, UserPlus, KeyRound, ShieldAlert } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
+import { User } from "../../api/types";
 
 const ROLES_VIDEOJUEGOS = [
   { nombre: "Videojuegos", label: "Coordinador Videojuegos", color: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30" },
@@ -9,7 +10,11 @@ const ROLES_VIDEOJUEGOS = [
   { nombre: "Docente", label: "Docente / Instructor", color: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" },
 ];
 
-function RoleBadge({ nombre }) {
+interface RoleBadgeProps {
+  nombre: string;
+}
+
+function RoleBadge({ nombre }: RoleBadgeProps) {
   const r = ROLES_VIDEOJUEGOS.find(x => x.nombre === nombre);
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${r?.color || "bg-indigo-950 text-indigo-300 border border-indigo-500/20"}`}>
@@ -18,7 +23,18 @@ function RoleBadge({ nombre }) {
   );
 }
 
-function InputField({ label, name, value, onChange, type = "text", placeholder = "", error = "" }) {
+interface InputFieldProps {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+  placeholder?: string;
+  error?: string;
+  required?: boolean;
+}
+
+function InputField({ label, name, value, onChange, type = "text", placeholder = "", error = "", required = false }: InputFieldProps) {
   return (
     <div className="space-y-1">
       <label className="text-[10px] font-black uppercase tracking-widest text-[#00ccff] block">{label}</label>
@@ -28,6 +44,7 @@ function InputField({ label, name, value, onChange, type = "text", placeholder =
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        required={required}
         className={`w-full rounded-2xl px-4 py-2.5 bg-indigo-950/40 border text-white text-sm focus:border-[#00ccff]/70 focus:outline-none transition-all ${
           error ? "border-rose-500/50" : "border-indigo-500/25"
         }`}
@@ -37,8 +54,13 @@ function InputField({ label, name, value, onChange, type = "text", placeholder =
   );
 }
 
-function UserGroupsSelector({ selectedGroups, onChange }) {
-  const toggleGroup = (groupName) => {
+interface UserGroupsSelectorProps {
+  selectedGroups: string[];
+  onChange: (groups: string[]) => void;
+}
+
+function UserGroupsSelector({ selectedGroups, onChange }: UserGroupsSelectorProps) {
+  const toggleGroup = (groupName: string) => {
     if (selectedGroups.includes(groupName)) {
       onChange(selectedGroups.filter((g) => g !== groupName));
     } else {
@@ -78,18 +100,23 @@ function UserGroupsSelector({ selectedGroups, onChange }) {
   );
 }
 
-function NuevoUsuarioModal({ onClose, onSaved }) {
-  const [form, setForm] = useState({ username: "", email: "", first_name: "", last_name: "", password: "" });
-  const [grupos, setGrupos] = useState(["Videojuegos"]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+interface NuevoUsuarioModalProps {
+  onClose: () => void;
+  onSaved: () => void;
+}
 
-  const handleChange = (e) => {
+function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioModalProps) {
+  const [form, setForm] = useState({ username: "", email: "", first_name: "", last_name: "", password: "" });
+  const [grupos, setGrupos] = useState<string[]>(["Videojuegos"]);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const save = async (e) => {
+  const save = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setSaving(true);
     setError("");
@@ -108,9 +135,10 @@ function NuevoUsuarioModal({ onClose, onSaved }) {
         onSaved();
         onClose();
       }, 1500);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.response?.data?.detail || "Ocurrió un error al crear el usuario.");
+      const axiosError = err as { response?: { data?: { detail?: string } } };
+      setError(axiosError.response?.data?.detail || "Ocurrió un error al crear el usuario.");
     } finally {
       setSaving(false);
     }
@@ -165,13 +193,19 @@ function NuevoUsuarioModal({ onClose, onSaved }) {
   );
 }
 
-function EditUsuarioModal({ user, onClose, onSaved }) {
-  const [grupos, setGrupos] = useState(user.groups || []);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+interface EditUsuarioModalProps {
+  user: User;
+  onClose: () => void;
+  onSaved: () => void;
+}
 
-  const save = async (e) => {
+function EditUsuarioModal({ user, onClose, onSaved }: EditUsuarioModalProps) {
+  const [grupos, setGrupos] = useState<string[]>(user.groups || []);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+
+  const save = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setSaving(true);
     setError("");
@@ -183,7 +217,7 @@ function EditUsuarioModal({ user, onClose, onSaved }) {
         onSaved();
         onClose();
       }, 1000);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
       setError("Ocurrió un error al actualizar los grupos.");
     } finally {
@@ -233,19 +267,19 @@ function EditUsuarioModal({ user, onClose, onSaved }) {
 }
 
 export default function UsuariosTab() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [editUser, setEditUser] = useState(null);
-  const [resettingId, setResettingId] = useState(null);
-  const [nuevoModal, setNuevoModal] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [resettingId, setResettingId] = useState<number | null>(null);
+  const [nuevoModal, setNuevoModal] = useState<boolean>(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await apiClientV2.get("/users");
+      const { data } = await apiClientV2.get<User[]>("/users");
       setUsers(Array.isArray(data) ? data : []);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
       setUsers([]);
     } finally {
@@ -257,13 +291,13 @@ export default function UsuariosTab() {
     fetchUsers();
   }, [fetchUsers]);
 
-  const resetPassword = async (u) => {
+  const resetPassword = async (u: User) => {
     if (!window.confirm(`¿Regenerar contraseña para ${u.username}? Se enviará al correo.`)) return;
     setResettingId(u.id);
     try {
       await apiClientV2.post(`/users/${u.id}/regenerate-password`);
       alert("Contraseña regenerada correctamente.");
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
       alert("Error al regenerar contraseña.");
     } finally {
