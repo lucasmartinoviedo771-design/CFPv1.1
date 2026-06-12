@@ -2,9 +2,18 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/client';
 import { Button, Input } from './UI';
 import { Shield, AlertCircle } from 'lucide-react';
+import type { User } from '../api/types';
 
 // Custom Modal Component (Reused logic pattern)
-const Modal = ({ isOpen, onClose, title, children, actions }) => {
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  actions: React.ReactNode;
+}
+
+const Modal = ({ isOpen, onClose, title, children, actions }: ModalProps) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 pt-8 bg-black/70 backdrop-blur-sm animate-fade-in">
@@ -17,12 +26,24 @@ const Modal = ({ isOpen, onClose, title, children, actions }) => {
   );
 };
 
-export default function UserFormDialog({ open, onClose, user, onSave }) {
+interface UserFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  user?: User | null;
+  onSave: () => void;
+}
+
+interface GroupInfo {
+  id: number;
+  name: string;
+}
+
+export default function UserFormDialog({ open, onClose, user, onSave }: UserFormDialogProps) {
   const [formData, setFormData] = useState({
-    username: '', email: '', first_name: '', last_name: '', password: '', password2: '', groups: [],
+    username: '', email: '', first_name: '', last_name: '', password: '', password2: '', groups: [] as string[],
   });
-  const [availableGroups, setAvailableGroups] = useState([]);
-  const [errors, setErrors] = useState({});
+  const [availableGroups, setAvailableGroups] = useState<GroupInfo[]>([]);
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     if (user) {
@@ -46,7 +67,7 @@ export default function UserFormDialog({ open, onClose, user, onSave }) {
     fetchGroups();
   }, []);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => {
       const next = { ...prev, [name]: value };
@@ -58,7 +79,7 @@ export default function UserFormDialog({ open, onClose, user, onSave }) {
     setErrors(prev => ({ ...prev, [name]: null }));
   };
 
-  const handleGroupToggle = (groupName) => {
+  const handleGroupToggle = (groupName: string) => {
     setFormData(prev => {
       const groups = prev.groups.includes(groupName)
         ? prev.groups.filter(g => g !== groupName)
@@ -68,7 +89,7 @@ export default function UserFormDialog({ open, onClose, user, onSave }) {
   };
 
   const validateForm = () => {
-    let newErrors = {};
+    let newErrors: Record<string, string | null> = {};
     if (!formData.username) newErrors.username = 'El usuario es requerido';
     if (!formData.email) newErrors.email = 'El email es requerido';
     // Password is now optional for new users (auto-generated)
@@ -80,7 +101,7 @@ export default function UserFormDialog({ open, onClose, user, onSave }) {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    const dataToSave = { ...formData };
+    const dataToSave: Partial<typeof formData> & { password?: string; password2?: string } = { ...formData };
     if (!dataToSave.password) { delete dataToSave.password; delete dataToSave.password2; }
 
     try {
@@ -89,8 +110,13 @@ export default function UserFormDialog({ open, onClose, user, onSave }) {
       onSave();
       onClose();
     } catch (err) {
-      if (err.response?.data) {
-        setErrors({ ...err.response.data, general: JSON.stringify(err.response.data) });
+      const errorObj = err as {
+        response?: {
+          data?: Record<string, string>;
+        };
+      };
+      if (errorObj.response?.data) {
+        setErrors({ ...errorObj.response.data, general: JSON.stringify(errorObj.response.data) });
       } else {
         setErrors({ general: 'Error al guardar.' });
       }

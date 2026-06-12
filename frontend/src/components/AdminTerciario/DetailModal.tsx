@@ -2,33 +2,47 @@ import React, { useState } from "react";
 import { X, BookCheck, AlertCircle } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
 import { P, Section, Row, DocRow } from "./AdminUI";
+import type { PreinscripcionTerciario } from "../../api/types";
 
-const LOCALIDAD_LABELS = {
+const LOCALIDAD_LABELS: Record<string, string> = {
   ushuaia: "Ushuaia", rg_sur: "Río Grande Sur", rg_norte: "Río Grande Norte",
   tolhuin: "Tolhuin", zona_rural: "Zona Rural", otras: "Otras",
 };
-const SECUNDARIA_LABELS = { si: "Sí", no: "No", cursando: "Cursando" };
-const HD_ESTADO_LABELS = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
-const HD_ESTADO_COLORS = {
+const SECUNDARIA_LABELS: Record<string, string> = { si: "Sí", no: "No", cursando: "Cursando" };
+const HD_ESTADO_LABELS: Record<string, string> = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
+const HD_ESTADO_COLORS: Record<string, string> = {
   CURSANDO: "bg-blue-100 text-blue-800", APROBADO: "bg-green-100 text-green-800",
   DESAPROBADO: "bg-red-100 text-red-800", INACTIVO: "bg-gray-100 text-gray-600",
 };
 
-export function YesNo({ v }) {
+interface YesNoProps {
+  v?: boolean | null;
+}
+
+export function YesNo({ v }: YesNoProps) {
   if (v === true) return <span className="text-green-600 font-semibold text-xs">Sí</span>;
   if (v === false) return <span className="text-red-500 font-semibold text-xs">No</span>;
   return <span className="text-gray-400 text-xs">—</span>;
 }
 
-export function DetailModal({ p, onClose, onSaved }) {
-  const [estado, setEstado] = useState(p.estado);
-  const [obs, setObs] = useState(p.observaciones || "");
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [urls, setUrls] = useState({ dni: p.url_dni, titulo: p.url_titulo });
-  const [uploadingDoc, setUploadingDoc] = useState(false);
+interface DetailModalProps {
+  p: PreinscripcionTerciario;
+  onClose: () => void;
+  onSaved: () => void;
+}
 
-  const handleDocUpload = async (field, file) => {
+export function DetailModal({ p, onClose, onSaved }: DetailModalProps) {
+  const [estado, setEstado] = useState<string>(p.estado);
+  const [obs, setObs] = useState<string>(p.observaciones || "");
+  const [saving, setSaving] = useState<boolean>(false);
+  const [msg, setMsg] = useState<string>("");
+  const [urls, setUrls] = useState<{ dni: string | null | undefined; titulo: string | null | undefined }>({
+    dni: p.url_dni,
+    titulo: p.url_titulo
+  });
+  const [uploadingDoc, setUploadingDoc] = useState<boolean>(false);
+
+  const handleDocUpload = async (field: string, file: File | undefined) => {
     if (!file) return;
     setUploadingDoc(true);
     try {
@@ -88,11 +102,11 @@ export function DetailModal({ p, onClose, onSaved }) {
             <Row label="Nacionalidad" value={p.nacionalidad} />
             <Row label="CUIL" value={p.cuil} />
             <Row label="Domicilio" value={p.domicilio} />
-            <Row label="Localidad residencia" value={LOCALIDAD_LABELS[p.localidad] || p.localidad} />
+            <Row label="Localidad residencia" value={p.localidad ? (LOCALIDAD_LABELS[p.localidad] || p.localidad) : ""} />
           </Section>
 
           <Section title="Datos Académicos">
-            <Row label="Finalizó secundaria" value={SECUNDARIA_LABELS[p.finalizo_secundaria] || p.finalizo_secundaria} />
+            <Row label="Finalizó secundaria" value={p.finalizo_secundaria ? (SECUNDARIA_LABELS[p.finalizo_secundaria] || p.finalizo_secundaria) : ""} />
             <Row label="Estudios superiores" value={<YesNo v={p.posee_estudios_superiores} />} />
             {p.posee_estudios_superiores && (
               <>
@@ -147,7 +161,7 @@ export function DetailModal({ p, onClose, onSaved }) {
                   placeholder="Agregar observaciones..." />
               </div>
             </div>
-            {msg && <p className={`text-xs font-semibold mt-1 ${msg.includes("Error") ? "text-red-500" : "text-green-600"}`}>{msg}</p>}
+            {msg && !msg.includes("Documento") && <p className={`text-xs font-semibold mt-1 ${msg.includes("Error") ? "text-red-500" : "text-green-600"}`}>{msg}</p>}
             <button onClick={save} disabled={saving}
               className="px-6 py-2 rounded-xl font-bold text-sm transition-colors disabled:opacity-60"
               style={{ background: P.navy, color: P.yellow }}>

@@ -3,13 +3,33 @@ import { ToggleRight, ToggleLeft, AlertCircle, CheckCircle2 } from "lucide-react
 import { apiClientV2 } from "../../api/client";
 import { formatDateDisplay } from "../../utils/dateFormat";
 
+interface ConfigData {
+  abierta: boolean;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  mensaje_cierre?: string | null;
+}
+
+interface CohorteActivaData {
+  id: number;
+  nombre: string;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+}
+
+interface FormState {
+  fecha_inicio: string;
+  fecha_fin: string;
+  mensaje_cierre: string;
+}
+
 export function ConfiguracionPanel() {
-  const [cfg, setCfg] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [cohorteActiva, setCohorteActiva] = useState(null);
-  const [form, setForm] = useState({ fecha_inicio: "", fecha_fin: "", mensaje_cierre: "" });
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [cfg, setCfg] = useState<ConfigData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [cohorteActiva, setCohorteActiva] = useState<CohorteActivaData | null>(null);
+  const [form, setForm] = useState<FormState>({ fecha_inicio: "", fecha_fin: "", mensaje_cierre: "" });
+  const [saving, setSaving] = useState<boolean>(false);
+  const [msg, setMsg] = useState<string>("");
 
   const fetchCfg = useCallback(async () => {
     setLoading(true);
@@ -32,6 +52,7 @@ export function ConfiguracionPanel() {
   useEffect(() => { fetchCfg(); }, [fetchCfg]);
 
   const toggleAbierta = async () => {
+    if (!cfg) return;
     const next = !cfg.abierta;
     try {
       const { data } = await apiClientV2.patch("/preinscripcion-terciario-config", null, {
@@ -46,7 +67,7 @@ export function ConfiguracionPanel() {
     setSaving(true);
     setMsg("");
     try {
-      const params = {};
+      const params: Record<string, string> = {};
       if (form.fecha_inicio) params.fecha_inicio = form.fecha_inicio;
       if (form.fecha_fin) params.fecha_fin = form.fecha_fin;
       if (form.mensaje_cierre) params.mensaje_cierre = form.mensaje_cierre;
@@ -60,6 +81,7 @@ export function ConfiguracionPanel() {
   const hasFechas = cfg?.fecha_inicio || cfg?.fecha_fin;
 
   if (loading) return <div className="text-center py-20 text-[#1a1f4e]/40 text-sm">Cargando...</div>;
+  if (!cfg) return <div className="text-center py-20 text-[#1a1f4e]/40 text-sm">Error al cargar la configuración.</div>;
 
   return (
     <div className="space-y-6 max-w-xl">
@@ -84,7 +106,7 @@ export function ConfiguracionPanel() {
           <p className={`text-sm mt-0.5 ${cfg.abierta ? "text-green-700" : "text-red-600"}`}>
             {hasFechas
               ? cfg.abierta
-                ? `El formulario acepta inscripciones hasta el ${formatDateDisplay(cfg.fecha_fin)}.`
+                ? `El formulario acepta inscripciones hasta el ${formatDateDisplay(cfg.fecha_fin || "")}.`
                 : `Fuera del período configurado. ${cfg.fecha_inicio ? `Abre el ${formatDateDisplay(cfg.fecha_inicio)}.` : ""}`
               : cfg.abierta
                 ? "Habilitado manualmente — sin período configurado."
@@ -175,7 +197,7 @@ export function ConfiguracionPanel() {
             <CheckCircle2 size={18} className="flex-shrink-0" />
             <div>
               <p>{cohorteActiva.nombre}</p>
-              <p className="text-xs font-normal text-green-700 mt-0.5">{formatDateDisplay(cohorteActiva.fecha_inicio)} → {formatDateDisplay(cohorteActiva.fecha_fin)}</p>
+              <p className="text-xs font-normal text-green-700 mt-0.5">{formatDateDisplay(cohorteActiva.fecha_inicio || "")} → {formatDateDisplay(cohorteActiva.fecha_fin || "")}</p>
             </div>
           </div>
         ) : (

@@ -1,14 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { Save, ShieldAlert, CheckCircle2, Gamepad2, Clock } from "lucide-react";
+import { Save, ShieldAlert, CheckCircle2, Gamepad2 } from "lucide-react";
 import { apiClientV2 } from "../../api/client";
 
+interface CohorteItem {
+  id: number;
+  nombre: string;
+}
+
+interface ConfigVJData {
+  preinscripcion_abierta: boolean;
+  fecha_inicio: string;
+  fecha_fin: string;
+  mensaje_cierre: string;
+  cohorte_activa_id: string | number;
+}
+
 export default function ConfigTab() {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [cohortes, setCohortes] = useState([]);
-  const [config, setConfig] = useState({
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+  const [cohortes, setCohortes] = useState<CohorteItem[]>([]);
+  const [config, setConfig] = useState<ConfigVJData>({
     preinscripcion_abierta: false,
     fecha_inicio: "",
     fecha_fin: "",
@@ -38,9 +51,14 @@ export default function ConfigTab() {
         const program = oferta?.items?.[0] || null;
         if (program) {
           // Obtener cohortes únicas
-          const cohList = [];
-          const seen = new Set();
-          (program.bloques || []).forEach((b) => {
+          const cohList: CohorteItem[] = [];
+          const seen = new Set<number>();
+          interface BloqueItem {
+            cohorte_id?: number;
+            cohorte_nombre?: string;
+            bloque_nombre?: string;
+          }
+          (program.bloques || []).forEach((b: BloqueItem) => {
             if (b.cohorte_id && !seen.has(b.cohorte_id)) {
               seen.add(b.cohorte_id);
               const suffix = b.bloque_nombre ? ` - ${b.bloque_nombre}` : "";
@@ -62,7 +80,7 @@ export default function ConfigTab() {
     load();
   }, []);
 
-  const save = async (e) => {
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError("");
@@ -70,10 +88,10 @@ export default function ConfigTab() {
     try {
       const payload = {
         preinscripcion_abierta: config.preinscripcion_abierta,
-        fecha_inicio: config.fecha_inicio || "",
-        fecha_fin: config.fecha_fin || "",
+        fecha_inicio: config.fecha_inicio || null,
+        fecha_fin: config.fecha_fin || null,
         mensaje_cierre: config.mensaje_cierre || "",
-        cohorte_activa_id: config.cohorte_activa_id ? parseInt(config.cohorte_activa_id) : 0,
+        cohorte_activa_id: config.cohorte_activa_id ? parseInt(config.cohorte_activa_id as string, 10) : null,
       };
       await apiClientV2.patch("/videojuegos/config", payload);
       setSuccess("Configuración guardada correctamente.");
@@ -85,7 +103,7 @@ export default function ConfigTab() {
     }
   };
 
-  const set = (k, v) => setConfig((prev) => ({ ...prev, [k]: v }));
+  const set = (k: keyof ConfigVJData, v: string | boolean) => setConfig((prev) => ({ ...prev, [k]: v }));
 
   if (loading) {
     return (

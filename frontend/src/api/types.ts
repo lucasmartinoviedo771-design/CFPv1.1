@@ -96,9 +96,56 @@ export type UserDetails = {
   username: string;
   email?: string;
   is_superuser: boolean;
+  is_staff?: boolean;
   groups: string[];
   must_change_password: boolean;
 };
+
+export type User = {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  groups: string[];
+  is_superuser?: boolean;
+  is_staff?: boolean;
+};
+
+export type PreinscripcionTerciario = {
+  id: number;
+  apellido_nombre: string;
+  dni: string;
+  email: string;
+  estado: string;
+  observaciones?: string | null;
+  url_dni?: string | null;
+  url_titulo?: string | null;
+  hd_estado?: string | null;
+  celular?: string | null;
+  sexo?: string | null;
+  fecha_nacimiento?: string | null;
+  localidad_nacimiento?: string | null;
+  provincia_nacimiento?: string | null;
+  nacionalidad?: string | null;
+  cuil?: string | null;
+  domicilio?: string | null;
+  localidad?: string | null;
+  finalizo_secundaria?: string | null;
+  posee_estudios_superiores?: boolean;
+  estudios_superiores_finalizado?: boolean;
+  estudios_superiores_carrera?: string | null;
+  posee_pc?: boolean;
+  posee_internet?: boolean;
+  pueblo_originario?: boolean;
+  posee_discapacidad?: boolean;
+  tipo_discapacidad?: string | null;
+  posee_cud?: boolean;
+  apoyo_inclusion?: string | null;
+  requiere_apoyo_especifico?: boolean;
+  descripcion_apoyo?: string | null;
+};
+
 
 // Filtros del listado de estudiantes (GET /estudiantes).
 export type EstudianteListParams = {

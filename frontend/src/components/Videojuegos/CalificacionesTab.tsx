@@ -87,7 +87,7 @@ export default function CalificacionesTab() {
       if (!exObj) return;
 
       // 1. Fetch students eligible for this examen (enrolled in the modulo or program)
-      const params: Record<string, any> = {};
+      const params: Record<string, string | number> = {};
       if (exObj.modulo_id) {
         params.modulo_id = exObj.modulo_id;
       } else if (exObj.bloque_id) {
@@ -211,9 +211,10 @@ export default function CalificacionesTab() {
       setSuccess("Calificaciones guardadas correctamente.");
       loadData();
       setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Error al guardar planilla de calificaciones.");
+      const errorObj = err as { message?: string };
+      setError(errorObj.message || "Error al guardar planilla de calificaciones.");
     } finally {
       setSaving(false);
     }

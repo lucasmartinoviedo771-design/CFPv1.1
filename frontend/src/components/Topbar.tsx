@@ -3,15 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, KeyRound, Moon, Sun } from 'lucide-react';
 import authService from '../services/authService';
 import { ThemeModeContext, UserContext, ActivePanelContext } from '../App';
+import type { UserDetails } from '../api/types';
 
 const GRUPOS_CFP = ['Admin', 'Secretaría', 'Regencia', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel', 'Rector'];
 const GRUPOS_TERCIARIO = ['Admin', 'Terciario', 'Rector'];
 
-export default function Topbar({ title }) {
+interface TopbarProps {
+  title?: string;
+}
+
+export default function Topbar({ title }: TopbarProps) {
   const navigate = useNavigate();
-  const { user } = useContext(UserContext);
-  const { mode, toggleMode } = useContext(ThemeModeContext);
-  const { activePanel } = useContext(ActivePanelContext);
+  const { user } = useContext(UserContext) as { user: UserDetails | null };
+  const { mode, toggleMode } = useContext(ThemeModeContext) as { mode: 'light' | 'dark'; toggleMode: () => void };
+  const { activePanel } = useContext(ActivePanelContext) as { activePanel: 'cfp' | 'terciario' | 'videojuegos'; setActivePanel: (panel: string) => void };
 
   const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
   const tieneTerciario = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_TERCIARIO.includes(g)));
