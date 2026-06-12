@@ -2,6 +2,31 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, FormControl, InputLabel, Button
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
+import type { Programa, Cohorte, Bloque } from '../api/types';
+
+interface CalendarioConfig {
+  id: number;
+  nombre: string;
+  semanas_config?: unknown[];
+}
+
+interface CohorteFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (form: {
+    nombre: string;
+    programa: string | number;
+    bloque: string | number;
+    bloque_fechas: string | number;
+    fecha_inicio: string;
+  }) => void;
+  programas: Programa[];
+  calendarios: CalendarioConfig[];
+  bloquesPrograma: Bloque[];
+  existingNames?: string[];
+  cohorte?: Cohorte | null;
+}
 
 export default function CohorteFormDialog({
   open,
@@ -12,8 +37,14 @@ export default function CohorteFormDialog({
   bloquesPrograma,
   existingNames = [],
   cohorte,
-}) {
-  const [form, setForm] = useState({ nombre: '', programa: '', bloque: '', bloque_fechas: '', fecha_inicio: '' });
+}: CohorteFormDialogProps) {
+  const [form, setForm] = useState({
+    nombre: '',
+    programa: '' as string | number,
+    bloque: '' as string | number,
+    bloque_fechas: '' as string | number,
+    fecha_inicio: ''
+  });
 
   useEffect(() => {
     if (open) {
@@ -27,7 +58,7 @@ export default function CohorteFormDialog({
     }
   }, [open, cohorte]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string | number>) => {
     const { name, value } = e.target;
     setForm(prev => {
       if (name === "programa") {

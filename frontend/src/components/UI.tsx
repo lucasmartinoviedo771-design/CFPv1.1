@@ -1,14 +1,21 @@
 import React from 'react';
-import { clsx } from 'clsx';
+import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 // Utility for merging tailwind classes
-export function cn(...inputs) {
+export function cn(...inputs: ClassValue[]): string {
     return twMerge(clsx(inputs));
 }
 
 // --- Button ---
-export const Button = ({
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+    variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
+    size?: 'sm' | 'md' | 'lg';
+    isLoading?: boolean;
+    startIcon?: React.ReactNode;
+}
+
+export const Button: React.FC<ButtonProps> = ({
     className,
     variant = 'primary',
     size = 'md',
@@ -58,7 +65,13 @@ export const Button = ({
 };
 
 // --- Input ---
-export const Input = ({ className, label, error, id, labelClassName, ...props }) => {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+    label?: string;
+    error?: string;
+    labelClassName?: string;
+}
+
+export const Input: React.FC<InputProps> = ({ className, label, error, id, labelClassName, ...props }) => {
     return (
         <div className="w-full">
             {label && <label htmlFor={id} className={cn("block text-sm font-medium text-gray-200 mb-1", labelClassName)}>{label}</label>}
@@ -77,14 +90,25 @@ export const Input = ({ className, label, error, id, labelClassName, ...props })
 };
 
 // --- Select ---
-export const Select = ({ className, label, options, id, labelClassName, ...props }) => {
+export interface SelectOption {
+    value: string | number;
+    label: string;
+}
+
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+    label?: string;
+    options: SelectOption[];
+    labelClassName?: string;
+}
+
+export const Select: React.FC<SelectProps> = ({ className, label, options, id, labelClassName, ...props }) => {
     return (
         <div className="w-full">
             {label && <label htmlFor={id} className={cn("block text-sm font-medium text-gray-200 mb-1", labelClassName)}>{label}</label>}
             <select
                 id={id}
                 className={cn(
-                    'block w-full rounded-md border-indigo-500/30 bg-indigo-950/50 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2 px-3 border transition-colors appearance-none', // appearance-none helps styling but removes arrow, usually need custom arrow or keep default. Kept default for robustness unless requested.
+                    'block w-full rounded-md border-indigo-500/30 bg-indigo-950/50 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2 px-3 border transition-colors appearance-none',
                     className
                 )}
                 {...props}
@@ -100,7 +124,13 @@ export const Select = ({ className, label, options, id, labelClassName, ...props
 };
 
 // --- Card ---
-export const Card = ({ children, className, title }) => (
+export interface CardProps {
+    children: React.ReactNode;
+    className?: string;
+    title?: string;
+}
+
+export const Card: React.FC<CardProps> = ({ children, className, title }) => (
     <div className={cn("bg-indigo-900/20 shadow-lg rounded-xl border border-indigo-500/20 backdrop-blur-sm", className)}>
         {title && (
             <div className="px-6 py-4 border-b border-indigo-500/20 bg-indigo-950/30">
@@ -112,7 +142,12 @@ export const Card = ({ children, className, title }) => (
 );
 
 // --- Table ---
-export const Table = ({ headers, children }) => (
+export interface TableProps {
+    headers: string[];
+    children: React.ReactNode;
+}
+
+export const Table: React.FC<TableProps> = ({ headers, children }) => (
     <div className="overflow-x-auto rounded-lg border border-indigo-500/20">
         <table className="min-w-full divide-y divide-indigo-500/20">
             <thead className="bg-indigo-950 text-indigo-200">
@@ -131,16 +166,29 @@ export const Table = ({ headers, children }) => (
     </div>
 );
 
-export const TableRow = ({ children, className }) => (
-    <tr className={cn("hover:bg-indigo-500/10 transition-colors", className)}>{children}</tr>
+export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
+    children: React.ReactNode;
+}
+
+export const TableRow: React.FC<TableRowProps> = ({ children, className, ...props }) => (
+    <tr className={cn("hover:bg-indigo-500/10 transition-colors", className)} {...props}>{children}</tr>
 );
 
-export const TableCell = ({ children, className, ...props }) => (
+export interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
+    children?: React.ReactNode;
+}
+
+export const TableCell: React.FC<TableCellProps> = ({ children, className, ...props }) => (
     <td className={cn("px-6 py-4 whitespace-nowrap text-sm text-gray-300", className)} {...props}>{children}</td>
 );
 
 // --- Badge ---
-export const Badge = ({ children, variant = 'neutral' }) => {
+export interface BadgeProps {
+    children: React.ReactNode;
+    variant?: 'success' | 'warning' | 'error' | 'neutral' | 'primary';
+}
+
+export const Badge: React.FC<BadgeProps> = ({ children, variant = 'neutral' }) => {
     const variants = {
         success: 'bg-green-500/20 text-green-400 border border-green-500/30',
         warning: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',

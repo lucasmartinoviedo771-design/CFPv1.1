@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, IconButton, List, ListItem,
   ListItemText, Select, MenuItem, FormControl, InputLabel, Button, CircularProgress
-} from '@mui/material'; import {
+} from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
+import {
   AddRounded as AddRoundedIcon,
   DeleteOutlineRounded as DeleteOutlineRoundedIcon,
   ArrowUpward as ArrowUpwardIcon,
@@ -18,9 +20,21 @@ const SEMANA_TIPOS = [
   { id: 'SIN_ACTIVIDADES', label: 'Sin Actividades' },
 ];
 
-export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSuccess }) {
-  const [semanas, setSemanas] = useState([]);
-  const [loading, setLoading] = useState(false);
+interface SemanaConfig {
+  tipo: string;
+  orden: number;
+}
+
+interface SecuenciaFormDialogProps {
+  open: boolean;
+  onClose: () => void;
+  bloque?: { id: number; nombre: string } | null;
+  onSaveSuccess: () => void;
+}
+
+export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSuccess }: SecuenciaFormDialogProps) {
+  const [semanas, setSemanas] = useState<SemanaConfig[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (bloque) {
@@ -36,18 +50,18 @@ export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSucce
     setSemanas([...semanas, { tipo: 'CLASE', orden: semanas.length + 1 }]);
   };
 
-  const handleRemoveSemana = (index) => {
+  const handleRemoveSemana = (index: number) => {
     setSemanas(semanas.filter((_, i) => i !== index));
   };
 
-  const handleMove = (index, direction) => {
+  const handleMove = (index: number, direction: number) => {
     const newSemanas = [...semanas];
     const item = newSemanas.splice(index, 1)[0];
     newSemanas.splice(index + direction, 0, item);
     setSemanas(newSemanas);
   };
 
-  const handleTipoChange = (index, newTipo) => {
+  const handleTipoChange = (index: number, newTipo: string) => {
     const newSemanas = [...semanas];
     newSemanas[index].tipo = newTipo;
     setSemanas(newSemanas);
@@ -64,7 +78,13 @@ export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSucce
       onClose();
     } catch (error) {
       console.error("Error guardando la secuencia", error);
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      const errorObj = error as {
+        response?: {
+          data?: unknown;
+        };
+        message?: string;
+      };
+      const errorMsg = errorObj.response?.data ? JSON.stringify(errorObj.response.data) : errorObj.message;
       alert(`Error al guardar secuencia: ${errorMsg}`);
     } finally {
       setLoading(false);
@@ -88,7 +108,7 @@ export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSucce
                 <ListItemText primary={`Semana ${index + 1}`} />
                 <FormControl size="small" sx={{ minWidth: 150 }}>
                   <InputLabel>Tipo</InputLabel>
-                  <Select value={semana.tipo} label="Tipo" onChange={(e) => handleTipoChange(index, e.target.value)}>
+                  <Select value={semana.tipo} label="Tipo" onChange={(e: SelectChangeEvent<string>) => handleTipoChange(index, e.target.value)}>
                     {SEMANA_TIPOS.map(tipo => <MenuItem key={tipo.id} value={tipo.id}>{tipo.label}</MenuItem>)}
                   </Select>
                 </FormControl>

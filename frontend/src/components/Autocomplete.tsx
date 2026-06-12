@@ -2,7 +2,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
 import { cn } from './UI';
 
-export const Autocomplete = ({ 
+interface Option<T = string | number> {
+  value: T;
+  label: string;
+  sublabel?: string;
+}
+
+interface AutocompleteProps<T = string | number> {
+  options: Option<T>[];
+  value: T | null | undefined;
+  onChange: (value: T | "") => void;
+  placeholder?: string;
+  label?: string;
+  className?: string;
+  containerClassName?: string;
+  isLoading?: boolean;
+}
+
+export const Autocomplete = <T extends string | number>({ 
     options, 
     value, 
     onChange, 
@@ -11,12 +28,12 @@ export const Autocomplete = ({
     className,
     containerClassName,
     isLoading = false
-}) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [filteredOptions, setFilteredOptions] = useState([]);
-    const containerRef = useRef(null);
-    const inputRef = useRef(null);
+}: AutocompleteProps<T>) => {
+    const [isOpen, setIsOpen] = useState<boolean>(false);
+    const [searchTerm, setSearchTerm] = useState<string>("");
+    const [filteredOptions, setFilteredOptions] = useState<Option<T>[]>([]);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
 
     // Sincronizar el término de búsqueda con el valor inicial
     useEffect(() => {
@@ -32,7 +49,8 @@ export const Autocomplete = ({
 
     // Lógica de filtrado
     useEffect(() => {
-        if (!searchTerm || (value && options.find(o => o.value === value)?.label === searchTerm)) {
+        const selectedOpt = value ? options.find(o => o.value === value) : null;
+        if (!searchTerm || (selectedOpt && selectedOpt.label === searchTerm)) {
             setFilteredOptions(options);
             return;
         }
@@ -45,8 +63,8 @@ export const Autocomplete = ({
 
     // Cerrar al hacer clic afuera
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (containerRef.current && !containerRef.current.contains(event.target)) {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
                 const selected = options.find(opt => opt.value === value);
                 if (selected) {
@@ -60,13 +78,13 @@ export const Autocomplete = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [value, options]);
 
-    const handleSelect = (option) => {
+    const handleSelect = (option: Option<T>) => {
         onChange(option.value);
         setSearchTerm(option.label);
         setIsOpen(false);
     };
 
-    const handleClear = (e) => {
+    const handleClear = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
         onChange("");
         setSearchTerm("");
@@ -137,7 +155,6 @@ export const Autocomplete = ({
                                         ? "bg-indigo-600 text-white font-bold" 
                                         : "text-white hover:bg-indigo-500 bg-slate-800"
                                 )}
-                                onClick={() => {}} 
                                 onMouseDown={(e) => {
                                     e.preventDefault(); 
                                     handleSelect(opt);
