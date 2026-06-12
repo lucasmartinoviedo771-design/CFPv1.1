@@ -557,3 +557,47 @@ class UserSerializer(serializers.ModelSerializer):
             instance.groups.set(groups_data)
 
         return instance
+
+
+class EstudianteSlimSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Estudiante
+        fields = ['id', 'apellido', 'nombre', 'dni', 'fecha_nacimiento', 'autorizacion_status']
+
+
+class ProgramaSlimSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Programa
+        fields = ['id', 'nombre']
+
+
+class BloqueSlimSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bloque
+        fields = ['id', 'nombre']
+
+
+class CohorteSlimSerializer(serializers.ModelSerializer):
+    programa = ProgramaSlimSerializer(read_only=True)
+    bloque = BloqueSlimSerializer(read_only=True)
+
+    class Meta:
+        model = Cohorte
+        fields = ['id', 'nombre', 'fecha_inicio', 'fecha_fin', 'programa', 'bloque']
+
+
+class ModuloSlimSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Modulo
+        fields = ['id', 'nombre']
+
+
+class InscripcionListSerializer(serializers.ModelSerializer):
+    """Serializer liviano para el listado de inscripciones."""
+    estudiante = EstudianteSlimSerializer(read_only=True)
+    cohorte = CohorteSlimSerializer(read_only=True)
+    modulo = ModuloSlimSerializer(read_only=True, allow_null=True)
+
+    class Meta:
+        model = Inscripcion
+        fields = ['id', 'estudiante', 'cohorte', 'modulo', 'estado', 'created_at']

@@ -7,7 +7,7 @@ from django.utils import timezone
 from ninja import Router
 
 from core.models import Cohorte, Inscripcion, SemanaConfig, Bloque
-from core.serializers import InscripcionSerializer
+from core.serializers import InscripcionSerializer, InscripcionListSerializer
 from .schemas import CohorteOut, InscripcionIn, CohorteIn
 from core.api.permissions import require_authenticated_group
 
@@ -64,16 +64,10 @@ def listar_inscripciones(
     modulo_id: Optional[int] = None,
 ):
     qs = Inscripcion.objects.select_related(
-        "cohorte__programa__resolucion",
+        "cohorte__programa",
         "cohorte__bloque",
-        "cohorte__bloque_fechas",
         "estudiante",
         "modulo__bloque",
-    ).prefetch_related(
-        "cohorte__bloque_fechas__semanas_config",
-        "estudiante__inscripciones__cohorte__programa",
-        "estudiante__inscripciones__modulo__bloque",
-        "estudiante__inscripciones__cohorte__bloque",
     ).order_by("-created_at")
     if cohorte_id:
         qs = qs.filter(cohorte_id=cohorte_id)
@@ -89,7 +83,7 @@ def listar_inscripciones(
         qs = qs.filter(Q(modulo__bloque_id=bloque_id) | Q(cohorte__bloque_id=bloque_id))
     if modulo_id:
         qs = qs.filter(modulo_id=modulo_id)
-    return InscripcionSerializer(qs, many=True).data
+    return InscripcionListSerializer(qs, many=True).data
 
 
 @router.get("/{inscripcion_id}", response=dict)

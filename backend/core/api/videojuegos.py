@@ -16,7 +16,7 @@ from core.api.schemas import (
     InscripcionIn, AsistenciaIn, NotaIn, CohorteOut
 )
 from core.serializers import (
-    InscripcionSerializer, AsistenciaSerializer, NotaSerializer, ExamenSerializer
+    InscripcionSerializer, AsistenciaSerializer, NotaSerializer, ExamenSerializer, InscripcionListSerializer
 )
 from functools import wraps
 
@@ -409,16 +409,10 @@ def listar_inscripciones_videojuegos(
     Lista las inscripciones filtrando exclusivamente por cohortes del programa VJ.
     """
     qs = Inscripcion.objects.select_related(
-        "cohorte__programa__resolucion",
+        "cohorte__programa",
         "cohorte__bloque",
-        "cohorte__bloque_fechas",
         "estudiante",
         "modulo__bloque",
-    ).prefetch_related(
-        "cohorte__bloque_fechas__semanas_config",
-        "estudiante__inscripciones__cohorte__programa",
-        "estudiante__inscripciones__modulo__bloque",
-        "estudiante__inscripciones__cohorte__bloque",
     ).order_by("-created_at")
     qs = aplicar_filtro_vj(qs)
     if cohorte_id:
@@ -427,7 +421,7 @@ def listar_inscripciones_videojuegos(
         qs = qs.filter(estudiante_id=estudiante_id)
     if estado:
         qs = qs.filter(estado=estado)
-    return InscripcionSerializer(qs, many=True).data
+    return InscripcionListSerializer(qs, many=True).data
 
 
 @router.post("/inscripciones", response=dict)
