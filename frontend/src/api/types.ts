@@ -84,3 +84,25 @@ export type Inscripcion = {
   };
   modulo?: (Modulo & { bloque?: { id: number; nombre: string } | null }) | null;
 };
+
+// Respuesta del login (POST /token).
+export type LoginResponse = {
+  detail?: string;
+};
+
+// Datos del usuario (GET /user).
+export type UserDetails = {
+  username: string;
+  email?: string;
+  is_superuser: boolean;
+  groups: string[];
+  must_change_password: boolean;
+};
+
+// Filtros del listado de estudiantes (GET /estudiantes).
+export type EstudianteListParams = {
+  anio?: number;
+  estatus?: string;
+  search?: string;
+};
+
