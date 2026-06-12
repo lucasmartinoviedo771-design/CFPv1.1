@@ -6,6 +6,7 @@ import { ModalRespuestas } from "../components/Estudiantes/ModalRespuestas";
 import { ModalExport } from "../components/Estudiantes/ModalExport";
 import { ModalDetalle } from "../components/Estudiantes/ModalDetalle";
 import { EstudiantesTable } from "../components/Estudiantes/EstudiantesTable";
+import { EstudiantesFilters } from "../components/Estudiantes/EstudiantesFilters";
 import { useEstudiantes, useSaveEstudiante, useProgramas, useBloques, useModulos, useCohortes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
 import { formatDateDisplay, formatDateTimeDisplay } from "../utils/dateFormat";
@@ -153,8 +154,21 @@ export interface ExportConfigState {
     cohorte_id: string;
 }
 
+export interface FiltersState {
+    dni: string;
+    nombre_apellido: string;
+    telefono: string;
+    estatus: string;
+    anio: string;
+    programa_id: string;
+    bloque_id: string;
+    modulo_id: string;
+    cohorte_id: string;
+    rango_edad: string;
+}
+
 export default function Estudiantes() {
-    const [filters, setFilters] = useState({ 
+    const [filters, setFilters] = useState<FiltersState>({ 
         dni: "", 
         nombre_apellido: "", 
         telefono: "", 
@@ -258,6 +272,11 @@ export default function Estudiantes() {
     const paginatedRows = useMemo(() => sortedRows.slice(page * rowsPerPage, (page + 1) * rowsPerPage), [sortedRows, page, rowsPerPage]);
 
     const handleSort = (field: string) => setOrdering({ field, direction: ordering.field === field && ordering.direction === "asc" ? "desc" : "asc" });
+
+    const handleFilterChange = (updates: Partial<FiltersState>) => {
+        setFilters(prev => ({ ...prev, ...updates }));
+        setPage(0);
+    };
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -693,115 +712,21 @@ export default function Estudiantes() {
                 /* Listado y Filtros (Solapa 1) */
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="space-y-4 mb-6">
-                        {/* Panel de Búsqueda de Estudiante */}
-                        <div className="bg-white/5 border border-white/5 p-4 rounded-2xl">
-                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                <Search size={14} /> Búsqueda de Estudiante
-                            </p>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                <div className="col-span-1 md:col-span-1">
-                                    <Input placeholder="Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/30" />
-                                </div>
-                                <Input placeholder="DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/30" />
-                                <Input placeholder="Teléfono" value={filters.telefono} name="telefono" onChange={(e) => { setFilters({ ...filters, telefono: e.target.value }); setPage(0); }} className="bg-indigo-950/30" />
-                                <Select 
-                                    value={filters.anio} 
-                                    onChange={(e) => { setFilters({ ...filters, anio: e.target.value }); setPage(0); }} 
-                                    options={[
-                                        { value: '', label: 'Cualquier Año' },
-                                        { value: '2023', label: '2023' },
-                                        { value: '2024', label: '2024' },
-                                        { value: '2025', label: '2025' },
-                                        { value: '2026', label: '2026' },
-                                    ]} 
-                                    className="bg-indigo-950/30" 
-                                />
-                            </div>
-                        </div>
-
-                        {/* Panel de Filtros Académicos / Reportes */}
-                        <div className="bg-brand-accent/5 border border-brand-accent/20 p-4 rounded-2xl shadow-lg shadow-brand-accent/5">
-                            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-3">
-                                <p className="text-[10px] font-bold text-brand-accent uppercase tracking-widest flex items-center gap-2">
-                                    <Briefcase size={14} /> Filtros de Cursada / Reportes
-                                </p>
-                                <div className="flex gap-2">
-                                    <Button onClick={() => refetch()} size="sm" startIcon={<Search size={16} />} className="bg-indigo-600 hover:bg-indigo-500 border-none px-4">Filtrar</Button>
-                                    <Button 
-                                        onClick={() => setExportModalOpen(true)} 
-                                        size="sm"
-                                        startIcon={<Download size={16} />} 
-                                        variant="outline" 
-                                        className="border-brand-accent/50 text-brand-accent hover:bg-brand-accent/10 px-4"
-                                    >
-                                        Exportar Listado
-                                    </Button>
-                                    <Button 
-                                        onClick={() => {
-                                            setEditId(null);
-                                            setForm(initialFormState);
-                                            setActiveTab("add");
-                                        }}
-                                        size="sm"
-                                        startIcon={<Plus size={16} />}
-                                        className="bg-brand-accent hover:bg-orange-600 border-none px-4"
-                                    >
-                                        Nuevo Estudiante
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                                <Select 
-                                    value={filters.estatus} 
-                                    onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} 
-                                    options={[
-                                        { value: '', label: 'Estatus: Todos' }, 
-                                        { value: 'Regular', label: 'Regular' }, 
-                                        { value: 'Baja', label: 'Baja' }, 
-                                        { value: 'Condicional', label: 'Condicional' }, 
-                                        { value: 'Preinscripto', label: 'Preinscripto' }
-                                    ]} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.rango_edad} 
-                                    onChange={(e) => { setFilters({ ...filters, rango_edad: e.target.value }); setPage(0); }} 
-                                    options={[
-                                        { value: '', label: 'Cualquier Edad' }, 
-                                        { value: 'MENORES', label: 'Menores (< 18 años)' }, 
-                                        { value: 'MAYORES', label: 'Adultos (>= 18 años)' }
-                                    ]} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.programa_id} 
-                                    onChange={(e) => { setFilters({ ...filters, programa_id: e.target.value, bloque_id: "", modulo_id: "", cohorte_id: "" }); setPage(0); }} 
-                                    options={[{ value: '', label: 'Cualquier Trayecto' }, ...programas.map(p => ({ value: p.id, label: p.nombre }))]} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.bloque_id} 
-                                    onChange={(e) => { setFilters({ ...filters, bloque_id: e.target.value, modulo_id: "", cohorte_id: "" }); setPage(0); }} 
-                                    options={[{ value: '', label: 'Cualquier Módulo' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]} 
-                                    disabled={!filters.programa_id} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.modulo_id} 
-                                    onChange={(e) => { setFilters({ ...filters, modulo_id: e.target.value }); setPage(0); }} 
-                                    options={[{ value: '', label: 'Cualquier Materia' }, ...modulos.map(m => ({ value: m.id, label: m.nombre }))]} 
-                                    disabled={!filters.bloque_id} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.cohorte_id} 
-                                    onChange={(e) => { setFilters({ ...filters, cohorte_id: e.target.value }); setPage(0); }} 
-                                    options={[{ value: '', label: 'Cualquier Cohorte' }, ...filteredCohortes.map(c => ({ value: c.id, label: c.nombre }))]} 
-                                    disabled={!filters.programa_id} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                            </div>
-                        </div>
+                        <EstudiantesFilters
+                            filters={filters}
+                            onFilterChange={handleFilterChange}
+                            programas={programas}
+                            bloques={bloques}
+                            modulos={modulos}
+                            cohortes={filteredCohortes}
+                            onRefetch={refetch}
+                            onExport={() => setExportModalOpen(true)}
+                            onNewStudent={() => {
+                                setEditId(null);
+                                setForm(initialFormState);
+                                setActiveTab("add");
+                            }}
+                        />
                     </div>
 
                     <EstudiantesTable
