@@ -18,6 +18,7 @@ export const useEstudiantes = (params?: {
   search?: string; 
   dni?: string; 
   estatus?: string; 
+  programa_id?: number;
   cohorte_id?: number; 
   bloque_id?: number; 
   modulo_id?: number;

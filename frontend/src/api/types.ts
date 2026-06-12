@@ -29,6 +29,7 @@ export type EstudianteDetail = Estudiante & {
   titulo_secundario_digitalizado?: string | null;
   tutor_nombre?: string | null;
   tutor_dni?: string | null;
+  tutor_telefono?: string | null;
   dni_tutor_digitalizado?: string | null;
   nota_parental_firmada?: string | null;
 };
@@ -177,6 +178,8 @@ export type Nota = {
   intento: number;
   es_nota_definitiva: boolean;
   habilitado_por_id?: number | null;
+  examen_modulo_id?: number | null;
+  examen_tipo_examen?: string | null;
 };
 
 export type Asistencia = {

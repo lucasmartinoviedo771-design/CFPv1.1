@@ -9,9 +9,15 @@ import {
     Check, Eye, User, MapPin, Briefcase, FileText, Download, Plus, Baby, Cpu, Send
 } from 'lucide-react';
 import { getMediaUrl } from '../utils/media';
+import type { Estudiante, EstudianteDetail, Programa, Bloque, Modulo, Cohorte, Inscripcion, Nota } from "../api/types";
 
 // Section Header Helper
-const SectionDivider = ({ title, icon: Icon }) => (
+interface SectionDividerProps {
+    title: string;
+    icon?: React.ComponentType<{ size?: number | string; className?: string }>;
+}
+
+const SectionDivider: React.FC<SectionDividerProps> = ({ title, icon: Icon }) => (
     <div className="flex items-center gap-2 text-indigo-300 border-b border-indigo-500/20 pb-2 mb-4 mt-6">
         {Icon && <Icon size={16} />}
         <span className="text-sm font-bold uppercase tracking-wider">{title}</span>
@@ -19,7 +25,16 @@ const SectionDivider = ({ title, icon: Icon }) => (
 );
 
 // Modal Custom
-const Modal = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max-w-lg" }) => {
+interface ModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    children: React.ReactNode;
+    actions: React.ReactNode;
+    maxWidthClass?: string;
+}
+
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max-w-lg" }) => {
     if (!isOpen) return null;
     if (typeof document === "undefined") return null;
     return createPortal((
@@ -33,7 +48,14 @@ const Modal = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max
     ), document.body);
 };
 
-const NIVELACION_QUESTIONS = [
+interface NivelacionQuestion {
+    id: number;
+    text: string;
+    options: string[];
+    correct: number;
+}
+
+const NIVELACION_QUESTIONS: NivelacionQuestion[] = [
     { id: 1, text: '¿Qué es un "enlace" o "hipervínculo" en una página web?', options: ["Una imagen decorativa", "Un texto o imagen que al hacer clic te lleva a otra página o sección", "Un anuncio publicitario", "El título principal de la página"], correct: 1 },
     { id: 2, text: '¿Qué significa "descargar" un archivo de internet?', options: ["Subir un archivo a una página web", "Guardar una copia del archivo en tu dispositivo", "Eliminar el archivo de internet", "Compartir el archivo con otros usuarios en línea"], correct: 1 },
     { id: 3, text: '¿Cuál es la función principal de un explorador web (navegador)?', options: ["Escribir y editar documentos de texto.", "Mostrar páginas web y permitir la navegación por internet.", "Enviar y recibir correos electrónicos.", "Reproducir música y videos."], correct: 1 },
@@ -46,7 +68,41 @@ const NIVELACION_QUESTIONS = [
     { id: 10, text: '¿Qué unidad se utiliza comúnmente para medir la capacidad de almacenamiento?', options: ["Hertz (Hz)", "Watts (W)", "Gigabytes (GB) o Terabytes (TB)", "Pixeles"], correct: 2 }
 ];
 
-const initialFormState = {
+interface FormState {
+    apellido: string;
+    nombre: string;
+    email: string;
+    dni: string;
+    cuit: string;
+    sexo: string;
+    fecha_nacimiento: string;
+    pais_nacimiento: string;
+    pais_nacimiento_otro: string;
+    nacionalidad: string;
+    nacionalidad_otra: string;
+    lugar_nacimiento: string;
+    domicilio: string;
+    barrio: string;
+    ciudad: string;
+    telefono: string;
+    nivel_educativo: string;
+    estatus: string;
+    posee_pc: boolean;
+    posee_conectividad: boolean;
+    puede_traer_pc: boolean;
+    trabaja: boolean;
+    lugar_trabajo: string;
+    dni_digitalizado: string;
+    titulo_secundario_digitalizado: string;
+    tutor_nombre: string;
+    tutor_dni: string;
+    tutor_telefono: string;
+    dni_tutor_digitalizado: string;
+    nota_parental_firmada: string;
+    [key: string]: string | boolean;
+}
+
+const initialFormState: FormState = {
     apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "M", fecha_nacimiento: "",
     pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
     nacionalidad: "Argentina", nacionalidad_otra: "",
@@ -61,7 +117,7 @@ const initialFormState = {
     dni_tutor_digitalizado: "", nota_parental_firmada: ""
 };
 
-const calculateAge = (birthDate) => {
+const calculateAge = (birthDate: string | null | undefined): number | null => {
     if (!birthDate) return null;
     const today = new Date();
     const birth = new Date(birthDate);
@@ -73,11 +129,51 @@ const calculateAge = (birthDate) => {
     return age;
 };
 
+type LocalEstudiante = Estudiante & {
+    fecha_nacimiento?: string | null;
+};
+
+interface LocalNivelacionDigital {
+    completado: boolean;
+    puntaje: number;
+    respuestas_json?: {
+        wants_module1?: boolean;
+        answers?: Record<string, string>;
+    } | null;
+}
+
+type LocalEstudianteDetail = EstudianteDetail & {
+    nivelacion_digital?: LocalNivelacionDigital | null;
+    autorizacion_fecha?: string | null;
+    autorizacion_selfie?: string | null;
+    autorizacion_status?: string | null;
+    autorizacion_token?: string | null;
+};
+
+interface ViewDataState {
+    loading: boolean;
+    error: string;
+    student: LocalEstudianteDetail | null;
+    inscripciones: Inscripcion[];
+    notas: Nota[];
+}
+
+interface ExportConfigState {
+    columns: string[];
+    format: "excel" | "pdf";
+    anio: string;
+    estatus: string;
+    programa_id: string;
+    bloque_id: string;
+    modulo_id: string;
+    cohorte_id: string;
+}
+
 export default function Estudiantes() {
     const [filters, setFilters] = useState({ 
         dni: "", 
         nombre_apellido: "", 
-        telefono: "", // <--- Added this line
+        telefono: "", 
         estatus: "", 
         anio: "2026",
         programa_id: "",
@@ -86,20 +182,26 @@ export default function Estudiantes() {
         cohorte_id: "",
         rango_edad: ""
     });
-    const [ordering, setOrdering] = useState({ field: "apellido", direction: "asc" });
-    const [qrModal, setQrModal] = useState({ open: false, url: "", studentName: "" });
-    const [deleteTarget, setDeleteTarget] = useState(null);
-    const [editId, setEditId] = useState(null);
-    const [form, setForm] = useState(initialFormState);
-    const [fileData, setFileData] = useState({ dniFile: null, tituloFile: null, dniTutorFile: null, notaParentalFile: null });
-    const [feedback, setFeedback] = useState({ open: false, message: "", severity: "success" });
-    const [viewStudentId, setViewStudentId] = useState(null);
-    const [viewData, setViewData] = useState({ loading: false, error: "", student: null, inscripciones: [], notas: [] });
+    const [ordering, setOrdering] = useState<{ field: string; direction: "asc" | "desc" }>({ field: "apellido", direction: "asc" });
+    const [qrModal, setQrModal] = useState<{ open: boolean; url: string; studentName: string }>({ open: false, url: "", studentName: "" });
+    const [deleteTarget, setDeleteTarget] = useState<LocalEstudiante | null>(null);
+    const [editId, setEditId] = useState<number | null>(null);
+    const [form, setForm] = useState<FormState>(initialFormState);
+    interface FileDataState {
+        dniFile: File | null;
+        tituloFile: File | null;
+        dniTutorFile: File | null;
+        notaParentalFile: File | null;
+    }
+    const [fileData, setFileData] = useState<FileDataState>({ dniFile: null, tituloFile: null, dniTutorFile: null, notaParentalFile: null });
+    const [feedback, setFeedback] = useState<{ open: boolean; message: string; severity: "success" | "warning" | "error" }>({ open: false, message: "", severity: "success" });
+    const [viewStudentId, setViewStudentId] = useState<number | null>(null);
+    const [viewData, setViewData] = useState<ViewDataState>({ loading: false, error: "", student: null, inscripciones: [], notas: [] });
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(25);
-    const [loadingEditId, setLoadingEditId] = useState(null);
+    const [loadingEditId, setLoadingEditId] = useState<number | null>(null);
     const [exportModalOpen, setExportModalOpen] = useState(false);
-    const [exportConfig, setExportConfig] = useState({
+    const [exportConfig, setExportConfig] = useState<ExportConfigState>({
         columns: ["apellido", "nombre", "dni", "sexo", "email", "estatus", "materias_aprobadas", "materias_cursando", "materias_pendientes"],
         format: "excel",
         anio: "",
@@ -112,9 +214,9 @@ export default function Estudiantes() {
     const [exportLoading, setExportLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("list"); // "list" or "add"
     const [showRespuestasModal, setShowRespuestasModal] = useState(false);
-    const formCardRef = useRef(null);
+    const formCardRef = useRef<HTMLDivElement>(null);
 
-    const { data: estudiantes = [], isLoading, refetch } = useEstudiantes({
+    const { data: rawEstudiantes = [], isLoading, refetch } = useEstudiantes({
         search: filters.nombre_apellido || undefined,
         dni: filters.dni || undefined,
         estatus: filters.estatus || undefined,
@@ -126,6 +228,7 @@ export default function Estudiantes() {
         telefono: filters.telefono || undefined,
         rango_edad: filters.rango_edad || undefined,
     });
+    const estudiantes = useMemo(() => rawEstudiantes as LocalEstudiante[], [rawEstudiantes]);
     
     const { data: programas = [] } = useProgramas();
     const { data: bloques = [] } = useBloques(filters.programa_id ? parseInt(filters.programa_id) : undefined);
@@ -152,14 +255,17 @@ export default function Estudiantes() {
             return a.nombre.localeCompare(b.nombre);
         });
     }, [cohortes, filters.bloque_id]);
+    
     const saveEstudiante = useSaveEstudiante();
 
     const sortedRows = useMemo(() => {
         const arr = [...estudiantes];
         arr.sort((a, b) => {
             const dir = ordering.direction === "asc" ? 1 : -1;
-            const fieldA = (a[ordering.field] || "").toLowerCase();
-            const fieldB = (b[ordering.field] || "").toLowerCase();
+            const valA = (a as Record<string, unknown>)[ordering.field];
+            const valB = (b as Record<string, unknown>)[ordering.field];
+            const fieldA = String(valA || "").toLowerCase();
+            const fieldB = String(valB || "").toLowerCase();
             return fieldA > fieldB ? dir : fieldA < fieldB ? -dir : 0;
         });
         return arr;
@@ -167,10 +273,11 @@ export default function Estudiantes() {
 
     const paginatedRows = useMemo(() => sortedRows.slice(page * rowsPerPage, (page + 1) * rowsPerPage), [sortedRows, page, rowsPerPage]);
 
-    const handleSort = (field) => setOrdering({ field, direction: ordering.field === field && ordering.direction === "asc" ? "desc" : "asc" });
+    const handleSort = (field: string) => setOrdering({ field, direction: ordering.field === field && ordering.direction === "asc" ? "desc" : "asc" });
 
-    const onChange = (e) => {
-        const { name, value, type, checked } = e.target;
+    const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target;
+        const checked = (e.target as HTMLInputElement).checked;
         setForm(f => ({ ...f, [name]: type === "checkbox" ? checked : value }));
     };
 
@@ -191,33 +298,37 @@ export default function Estudiantes() {
             setFeedback({ open: true, message: `Estudiante ${editId ? "actualizado" : "creado"} con éxito`, severity: "success" });
             setForm(initialFormState);
             setFileData({ dniFile: null, tituloFile: null, dniTutorFile: null, notaParentalFile: null });
-            const isEdit = !!editId;
             setEditId(null);
             refetch();
             setActiveTab("list");
         } catch (error) {
-            const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+            const errObj = error as { response?: { data?: unknown }; message?: string };
+            const errorMsg = errObj.response?.data ? JSON.stringify(errObj.response.data) : errObj.message;
             setFeedback({ open: true, message: `Error: ${errorMsg} `, severity: "error" });
         }
     };
 
-    const handleStartEdit = async (student) => {
+    const handleStartEdit = async (student: LocalEstudiante) => {
         setLoadingEditId(student.id);
         try {
-            const { data } = await apiClientV2.get(`/estudiantes/${student.id}`);
+            const { data } = await apiClientV2.get<Record<string, unknown>>(`/estudiantes/${student.id}`);
             setEditId(student.id);
 
             // Clean data: replace nulls with empty strings to prevent controlled input issues and data loss
             const cleanedData = { ...initialFormState };
-            Object.keys(data).forEach(key => {
-                if (data[key] !== null && data[key] !== undefined && data[key] !== "") {
-                    cleanedData[key] = data[key];
+            Object.keys(cleanedData).forEach(key => {
+                const val = data[key];
+                if (val !== null && val !== undefined && val !== "") {
+                    if (typeof cleanedData[key] === 'boolean') {
+                        cleanedData[key] = !!val;
+                    } else {
+                        cleanedData[key] = String(val);
+                    }
                 } else if (typeof cleanedData[key] === 'boolean') {
-                    cleanedData[key] = data[key] ?? false;
-                } else if (cleanedData[key] === "") {
-                    cleanedData[key] = data[key] ?? "";
+                    cleanedData[key] = false;
+                } else {
+                    cleanedData[key] = "";
                 }
-                // If cleanedData already has a non-empty default (from initialFormState) and data is null/empty, we keep the default.
             });
 
             setForm(cleanedData);
@@ -252,20 +363,20 @@ export default function Estudiantes() {
             }
             setDeleteTarget(null);
             refetch();
-        } catch (error) {
+        } catch {
             setDeleteTarget(null);
             setFeedback({ open: true, message: "Error al procesar la baja.", severity: "error" });
         }
     };
 
-    const handleOpenDetail = async (student) => {
+    const handleOpenDetail = async (student: LocalEstudiante) => {
         setViewStudentId(student.id);
         setViewData({ loading: true, error: "", student: null, inscripciones: [], notas: [] });
         try {
             const [studentRes, inscripcionesRes, notasRes] = await Promise.all([
-                apiClientV2.get(`/estudiantes/${student.id}`),
-                apiClientV2.get(`/inscripciones`, { params: { estudiante_id: student.id } }),
-                apiClientV2.get(`/examenes/notas`, { params: { estudiante_id: student.id } }),
+                apiClientV2.get<LocalEstudianteDetail>(`/estudiantes/${student.id}`),
+                apiClientV2.get<Inscripcion[]>(`/inscripciones`, { params: { estudiante_id: student.id } }),
+                apiClientV2.get<Nota[]>(`/examenes/notas`, { params: { estudiante_id: student.id } }),
             ]);
             setViewData({
                 loading: false,
@@ -274,7 +385,7 @@ export default function Estudiantes() {
                 inscripciones: Array.isArray(inscripcionesRes.data) ? inscripcionesRes.data : [],
                 notas: Array.isArray(notasRes.data) ? notasRes.data : [],
             });
-        } catch (error) {
+        } catch {
             setViewData({ loading: false, error: "No se pudo cargar la información del estudiante.", student: null, inscripciones: [], notas: [] });
         }
     };
@@ -296,12 +407,15 @@ export default function Estudiantes() {
                 format: exportConfig.format
             }, { responseType: 'blob' });
 
-            // Detectar si el servidor devolvió un error en formato JSON a pesar de responseType 'blob'
             if (response.data.type === 'application/json') {
                 const reader = new FileReader();
                 reader.onload = () => {
-                    const errorData = JSON.parse(reader.result);
-                    setFeedback({ open: true, message: `Error: ${errorData.detail || 'No se pudo generar el archivo'}`, severity: "error" });
+                    try {
+                        const errorData = JSON.parse(reader.result as string);
+                        setFeedback({ open: true, message: `Error: ${errorData.detail || 'No se pudo generar el archivo'}`, severity: "error" });
+                    } catch {
+                        setFeedback({ open: true, message: 'No se pudo generar el archivo', severity: "error" });
+                    }
                 };
                 reader.readAsText(response.data);
                 setExportLoading(false);
@@ -320,22 +434,20 @@ export default function Estudiantes() {
             document.body.appendChild(link);
             link.click();
             
-            // Limpieza diferida
             setTimeout(() => {
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
             }, 100);
             
             setExportModalOpen(false);
-        } catch (error) {
-            console.error("Export error:", error);
+        } catch {
             setFeedback({ open: true, message: "Error al generar el reporte. Verifique su conexión.", severity: "error" });
         } finally {
             setExportLoading(false);
         }
     };
 
-    const toggleColumn = (col) => {
+    const toggleColumn = (col: string) => {
         setExportConfig(prev => ({
             ...prev,
             columns: prev.columns.includes(col) 
@@ -349,13 +461,17 @@ export default function Estudiantes() {
         const notas = viewData.notas || [];
 
         const inscripcionesActivas = inscripciones.filter(i => i.estado === "CURSANDO");
-        const modulosMap = new Map();
+        interface MapValue extends Modulo {
+            _programa_nombre?: string | null;
+            _bloque_nombre?: string | null;
+        }
+        const modulosMap = new Map<number, MapValue>();
         inscripcionesActivas.forEach(i => {
             if (i?.modulo?.id && !modulosMap.has(i.modulo.id)) {
                 modulosMap.set(i.modulo.id, {
                     ...i.modulo,
                     _programa_nombre: i?.cohorte?.programa?.nombre,
-                    _bloque_nombre: i?.modulo?.bloque?.nombre || i?.cohorte?.bloque?.nombre
+                    _bloque_nombre: i?.modulo?.bloque?.nombre || i?.cohorte?.bloque_fechas?.nombre
                 });
             }
         });
@@ -536,7 +652,7 @@ export default function Estudiantes() {
                             <div>
                                 <label className="block text-sm font-medium text-indigo-300 mb-1">DNI Digitalizado (PDF/Imagen)</label>
                                 <div className="flex flex-col gap-2">
-                                    <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                    <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniFile: e.target.files?.[0] || null })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
                                     {editId && form.dni_digitalizado && (
                                         <div className="flex items-center gap-2">
                                             <a href={getMediaUrl(form.dni_digitalizado)} target="_blank" rel="noreferrer" className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 underline decoration-dotted">
@@ -550,7 +666,7 @@ export default function Estudiantes() {
                             <div>
                                 <label className="block text-sm font-medium text-emerald-300 mb-1">Título Secundario (PDF/Imagen)</label>
                                 <div className="flex flex-col gap-2">
-                                    <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, tituloFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                    <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, tituloFile: e.target.files?.[0] || null })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
                                     {editId && form.titulo_secundario_digitalizado && (
                                         <div className="flex items-center gap-2">
                                             <a href={getMediaUrl(form.titulo_secundario_digitalizado)} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline decoration-dotted">
@@ -587,7 +703,7 @@ export default function Estudiantes() {
                                     <div>
                                         <label className="block text-sm font-medium text-orange-300 mb-1">DNI del Padre/Madre o Tutor (PDF/Imagen)</label>
                                         <div className="flex flex-col gap-2">
-                                            <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniTutorFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                            <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, dniTutorFile: e.target.files?.[0] || null })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
                                             {editId && form.dni_tutor_digitalizado && (
                                                 <a href={getMediaUrl(form.dni_tutor_digitalizado)} target="_blank" rel="noreferrer" className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 underline decoration-dotted">
                                                     <Eye size={12} /> Ver archivo actual
@@ -598,7 +714,7 @@ export default function Estudiantes() {
                                     <div>
                                         <label className="block text-sm font-medium text-emerald-300 mb-1">Nota Autorización Parental (PDF/Imagen)</label>
                                         <div className="flex flex-col gap-2">
-                                            <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, notaParentalFile: e.target.files[0] })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
+                                            <input type="file" accept=".pdf,image/*" onChange={(e) => setFileData({ ...fileData, notaParentalFile: e.target.files?.[0] || null })} className="w-full text-indigo-200 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-900 file:text-indigo-300 hover:file:bg-indigo-800" />
                                             {editId && form.nota_parental_firmada && (
                                                 <a href={getMediaUrl(form.nota_parental_firmada)} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline decoration-dotted">
                                                     <Eye size={12} /> Ver archivo actual
@@ -704,133 +820,121 @@ export default function Estudiantes() {
                                     onChange={(e) => { setFilters({ ...filters, rango_edad: e.target.value }); setPage(0); }} 
                                     options={[
                                         { value: '', label: 'Cualquier Edad' }, 
-                                        { value: 'mayores', label: 'Mayores (>= 18)' }, 
-                                        { value: 'menores', label: 'Menores (< 18)' }
+                                        { value: 'MENORES', label: 'Menores (< 18 años)' }, 
+                                        { value: 'MAYORES', label: 'Adultos (>= 18 años)' }
                                     ]} 
                                     className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
                                 />
-                                <Select
-                                    value={filters.programa_id}
-                                    onChange={(e) => { setFilters({ ...filters, programa_id: e.target.value, bloque_id: "", modulo_id: "", cohorte_id: "" }); setPage(0); }}
-                                    options={[{ value: '', label: 'Todos los Programas' }, ...programas.map(p => ({ value: p.id, label: p.nombre }))]}
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs"
+                                <Select 
+                                    value={filters.programa_id} 
+                                    onChange={(e) => { setFilters({ ...filters, programa_id: e.target.value, bloque_id: "", modulo_id: "", cohorte_id: "" }); setPage(0); }} 
+                                    options={[{ value: '', label: 'Cualquier Trayecto' }, ...programas.map(p => ({ value: p.id, label: p.nombre }))]} 
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
                                 />
-                                <Select
-                                    value={filters.bloque_id}
-                                    onChange={(e) => { setFilters({ ...filters, bloque_id: e.target.value, modulo_id: "", cohorte_id: "" }); setPage(0); }}
-                                    options={[{ value: '', label: 'Todos los Bloques' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]}
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs"
-                                    disabled={!filters.programa_id}
+                                <Select 
+                                    value={filters.bloque_id} 
+                                    onChange={(e) => { setFilters({ ...filters, bloque_id: e.target.value, modulo_id: "", cohorte_id: "" }); setPage(0); }} 
+                                    options={[{ value: '', label: 'Cualquier Módulo' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]} 
+                                    disabled={!filters.programa_id} 
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
                                 />
-                                <Select
-                                    value={filters.modulo_id}
-                                    onChange={(e) => { setFilters({ ...filters, modulo_id: e.target.value, cohorte_id: "" }); setPage(0); }}
-                                    options={[{ value: '', label: 'Todos los Módulos' }, ...modulos.map(m => ({ value: m.id, label: m.nombre }))]}
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs"
-                                    disabled={!filters.bloque_id}
+                                <Select 
+                                    value={filters.modulo_id} 
+                                    onChange={(e) => { setFilters({ ...filters, modulo_id: e.target.value }); setPage(0); }} 
+                                    options={[{ value: '', label: 'Cualquier Materia' }, ...modulos.map(m => ({ value: m.id, label: m.nombre }))]} 
+                                    disabled={!filters.bloque_id} 
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
                                 />
-                                <Select
-                                    value={filters.cohorte_id}
-                                    onChange={(e) => { setFilters({ ...filters, cohorte_id: e.target.value }); setPage(0); }}
-                                    options={[{ value: '', label: 'Todas las Cohortes' }, ...filteredCohortes.map(c => ({ value: c.id, label: c.nombre }))]}
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs"
-                                    disabled={!filters.programa_id}
+                                <Select 
+                                    value={filters.cohorte_id} 
+                                    onChange={(e) => { setFilters({ ...filters, cohorte_id: e.target.value }); setPage(0); }} 
+                                    options={[{ value: '', label: 'Cualquier Cohorte' }, ...filteredCohortes.map(c => ({ value: c.id, label: c.nombre }))]} 
+                                    disabled={!filters.programa_id} 
+                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
                                 />
                             </div>
                         </div>
                     </div>
 
-                <Card className="bg-indigo-900/10 border-indigo-500/20 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-[#1e1b4b] text-indigo-300 uppercase text-xs">
-                                <tr>
-                                    <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('dni')}>
-                                        <div className="flex items-center gap-1">DNI {ordering.field === 'dni' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                    </th>
-                                    <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('apellido')}>
-                                        <div className="flex items-center gap-1">Estudiante {ordering.field === 'apellido' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                    </th>
-                                    <th className="px-6 py-3 cursor-pointer hover:text-white group hidden md:table-cell" onClick={() => handleSort('email')}>
-                                        <div className="flex items-center gap-1">Email {ordering.field === 'email' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                    </th>
-                                    <th className="px-6 py-3 cursor-pointer hover:text-white group hidden md:table-cell" onClick={() => handleSort('telefono')}>
-                                        <div className="flex items-center gap-1">Teléfono {ordering.field === 'telefono' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                    </th>
-                                    <th className="px-6 py-3 cursor-pointer hover:text-white group hidden md:table-cell" onClick={() => handleSort('ciudad')}>
-                                        <div className="flex items-center gap-1">Ciudad {ordering.field === 'ciudad' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                    </th>
-                                    <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('estatus')}>
-                                        <div className="flex items-center gap-1">Estatus {ordering.field === 'estatus' ? (ordering.direction === 'asc' ? '↑' : '↓') : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                    </th>
-                                    <th className="px-6 py-3 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-indigo-500/10">
-                                {paginatedRows.map(r => (
-                                    <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                                        <td className="px-6 py-3 font-mono text-indigo-200">{r.dni}</td>
-                                        <td className="px-6 py-3 font-medium">
-                                            {(() => {
-                                                const age = calculateAge(r.fecha_nacimiento);
-                                                const isMinor = age !== null && age < 18;
-                                                return (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={isMinor ? "text-orange-400 font-bold" : "text-white"}>
-                                                            {r.apellido}, {r.nombre}
-                                                        </span>
-                                                        {age !== null && (
-                                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "bg-indigo-500/20 text-indigo-300"}`}>
-                                                                {age} años {isMinor && <Baby size={10} className="inline ml-1" />}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })()}
-                                        </td>
-                                        <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.email}</td>
-                                        <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.telefono || "-"}</td>
-                                        <td className="px-6 py-3 hidden md:table-cell text-gray-400">{r.ciudad}</td>
-                                        <td className="px-6 py-3">
-                                            <span className={`px-2 py-1 rounded text-xs font-bold ${r.estatus === 'Baja' ? 'bg-red-500/20 text-red-400' :
-                                                r.estatus === 'Condicional' ? 'bg-yellow-500/20 text-yellow-500' :
-                                                    r.estatus === 'Preinscripto' ? 'bg-blue-500/20 text-blue-400' :
-                                                        'bg-green-500/20 text-green-400'
-                                                }`}>
-                                                {r.estatus}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-3 text-right flex justify-end gap-2">
-                                            <button onClick={() => handleOpenDetail(r)} className="p-1 text-cyan-400 hover:text-cyan-200" title="Ver detalle"><Eye size={16} /></button>
-                                            <button
-                                                onClick={() => handleStartEdit(r)}
-                                                className="p-1 text-indigo-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                                disabled={loadingEditId === r.id}
-                                                title={loadingEditId === r.id ? "Cargando datos completos..." : "Editar"}
-                                            >
-                                                <Edit2 size={16} />
-                                            </button>
-                                            <button onClick={() => setDeleteTarget(r)} className="p-1 text-red-400 hover:text-red-200"><Trash2 size={16} /></button>
-                                        </td>
+                    <Card className="bg-indigo-900/10 border-indigo-500/20 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-indigo-950/40 text-indigo-300 uppercase text-xs">
+                                    <tr>
+                                        <th className="px-6 py-3 cursor-pointer select-none hover:text-white" onClick={() => handleSort("apellido")}>Apellido, Nombre {ordering.field === "apellido" && (ordering.direction === "asc" ? "▲" : "▼")}</th>
+                                        <th className="px-6 py-3 cursor-pointer select-none hover:text-white" onClick={() => handleSort("dni")}>DNI {ordering.field === "dni" && (ordering.direction === "asc" ? "▲" : "▼")}</th>
+                                        <th className="px-6 py-3 cursor-pointer select-none hover:text-white flex items-center gap-1">Fecha Nac. / Edad</th>
+                                        <th className="px-6 py-3">Email</th>
+                                        <th className="px-6 py-3 cursor-pointer select-none hover:text-white" onClick={() => handleSort("estatus")}>Estatus {ordering.field === "estatus" && (ordering.direction === "asc" ? "▲" : "▼")}</th>
+                                        <th className="px-6 py-3 text-right">Acciones</th>
                                     </tr>
-                                ))}
-                                {paginatedRows.length === 0 && (
-                                    <tr><td colSpan={6} className="text-center py-8 text-white">No se encontraron estudiantes.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    {/* Paginación simple manual */}
-                    <div className="p-4 border-t border-indigo-500/20 flex items-center justify-between text-indigo-300 text-sm">
-                        <span>Mostrando {page * rowsPerPage + 1} - {Math.min((page + 1) * rowsPerPage, sortedRows.length)} de {sortedRows.length}</span>
-                        <div className="flex gap-2">
-                            <button disabled={page === 0} onClick={() => setPage(page - 1)} className="px-3 py-1 bg-indigo-950 hover:bg-indigo-900 rounded disabled:opacity-50">Anterior</button>
-                            <button disabled={(page + 1) * rowsPerPage >= sortedRows.length} onClick={() => setPage(page + 1)} className="px-3 py-1 bg-indigo-950 hover:bg-indigo-900 rounded disabled:opacity-50">Siguiente</button>
+                                </thead>
+                                <tbody className="divide-y divide-indigo-500/10">
+                                    {isLoading ? (
+                                        <tr><td colSpan={6} className="text-center py-8 text-white">Cargando estudiantes...</td></tr>
+                                    ) : paginatedRows.map((r) => (
+                                        <tr key={r.id} className="hover:bg-white/5 transition-colors">
+                                            <td className="px-6 py-3 font-medium text-white">{r.apellido}, {r.nombre}</td>
+                                            <td className="px-6 py-3">{r.dni}</td>
+                                            <td className="px-6 py-3">
+                                                {(() => {
+                                                    const age = calculateAge(r.fecha_nacimiento);
+                                                    const isMinor = age !== null && age < 18;
+                                                    return (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={isMinor ? "text-orange-400 font-bold" : ""}>
+                                                                {formatDateDisplay(r.fecha_nacimiento)}
+                                                            </span>
+                                                            {age !== null && (
+                                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold" : "bg-indigo-500/20 text-indigo-300"}`}>
+                                                                    {age} años {isMinor && <Baby size={10} className="inline ml-0.5" />}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+                                            <td className="px-6 py-3 text-gray-300">{r.email}</td>
+                                            <td className="px-6 py-3">
+                                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                                    r.estatus === "Regular" ? "bg-emerald-500/20 text-emerald-400" :
+                                                    r.estatus === "Baja" ? "bg-red-500/20 text-red-400" :
+                                                    r.estatus === "Condicional" ? "bg-yellow-500/20 text-yellow-500" :
+                                                    "bg-indigo-500/20 text-indigo-300"
+                                                }`}>
+                                                    {r.estatus}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-3 text-right flex justify-end gap-2">
+                                                <button onClick={() => handleOpenDetail(r)} className="p-1 text-cyan-400 hover:text-cyan-200" title="Ver detalle"><Eye size={16} /></button>
+                                                <button
+                                                    onClick={() => handleStartEdit(r)}
+                                                    className="p-1 text-indigo-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    disabled={loadingEditId === r.id}
+                                                    title={loadingEditId === r.id ? "Cargando datos completos..." : "Editar"}
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button onClick={() => setDeleteTarget(r)} className="p-1 text-red-400 hover:text-red-200"><Trash2 size={16} /></button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {paginatedRows.length === 0 && (
+                                        <tr><td colSpan={6} className="text-center py-8 text-white">No se encontraron estudiantes.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                </Card>
-            </div>
-
+                        {/* Paginación simple manual */}
+                        <div className="p-4 border-t border-indigo-500/20 flex items-center justify-between text-indigo-300 text-sm">
+                            <span>Mostrando {page * rowsPerPage + 1} - {Math.min((page + 1) * rowsPerPage, sortedRows.length)} de {sortedRows.length}</span>
+                            <div className="flex gap-2">
+                                <button disabled={page === 0} onClick={() => setPage(page - 1)} className="px-3 py-1 bg-indigo-950 hover:bg-indigo-900 rounded disabled:opacity-50">Anterior</button>
+                                <button disabled={(page + 1) * rowsPerPage >= sortedRows.length} onClick={() => setPage(page + 1)} className="px-3 py-1 bg-indigo-950 hover:bg-indigo-900 rounded disabled:opacity-50">Siguiente</button>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
             )}
 
             {/* Modal Confirmación Delete */}
@@ -916,7 +1020,7 @@ export default function Estudiantes() {
 
                             {(() => {
                                 const hoy = new Date();
-                                const nac = viewData.student.fecha_nacimiento ? new Date(viewData.student.fecha_nacimiento) : null;
+                                const nac = viewData.student!.fecha_nacimiento ? new Date(viewData.student!.fecha_nacimiento) : null;
                                 let edad = 18;
                                 if (nac) {
                                     edad = hoy.getFullYear() - nac.getFullYear();
@@ -929,15 +1033,15 @@ export default function Estudiantes() {
                                     <>
                                         <SectionDivider title="Información del Padre/Madre o Tutor (Menor de Edad)" icon={User} />
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-4">
-                                            <p><span className="text-indigo-300">Responsable:</span> <span className="text-white font-bold">{viewData.student.tutor_nombre || "No cargado"}</span></p>
-                                            <p><span className="text-indigo-300">DNI Responsable:</span> <span className="text-white font-bold">{viewData.student.tutor_dni || "No cargado"}</span></p>
-                                            <p><span className="text-indigo-300">WhatsApp Tutor:</span> <span className="text-emerald-400 font-bold">{viewData.student.tutor_telefono || "No cargado"}</span></p>
+                                            <p><span className="text-indigo-300">Responsable:</span> <span className="text-white font-bold">{viewData.student!.tutor_nombre || "No cargado"}</span></p>
+                                            <p><span className="text-indigo-300">DNI Responsable:</span> <span className="text-white font-bold">{viewData.student!.tutor_dni || "No cargado"}</span></p>
+                                            <p><span className="text-indigo-300">WhatsApp Tutor:</span> <span className="text-emerald-400 font-bold">{viewData.student!.tutor_telefono || "No cargado"}</span></p>
                                         </div>
                                         <div className="flex flex-wrap gap-4">
                                             <div className="flex flex-col gap-2">
-                                                {viewData.student.dni_tutor_digitalizado ? (
+                                                {viewData.student!.dni_tutor_digitalizado ? (
                                                     <a
-                                                        href={getMediaUrl(viewData.student.dni_tutor_digitalizado)}
+                                                        href={getMediaUrl(viewData.student!.dni_tutor_digitalizado)}
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="flex items-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 px-4 py-2 rounded-lg text-orange-300 transition-all border border-orange-500/30"
@@ -950,7 +1054,7 @@ export default function Estudiantes() {
                                                     </div>
                                                 )}
                                                 <label className="cursor-pointer bg-orange-600/80 hover:bg-orange-500 text-white text-[10px] px-3 py-1.5 rounded-full text-center transition-all flex items-center justify-center gap-1">
-                                                    <Download size={12} className="rotate-180" /> {viewData.student.dni_tutor_digitalizado ? "REEMPLAZAR DNI TUTOR" : "SUBIR DNI TUTOR"}
+                                                    <Download size={12} className="rotate-180" /> {viewData.student!.dni_tutor_digitalizado ? "REEMPLAZAR DNI TUTOR" : "SUBIR DNI TUTOR"}
                                                     <input
                                                         type="file"
                                                         accept="image/*,application/pdf"
@@ -961,9 +1065,9 @@ export default function Estudiantes() {
                                                             try {
                                                                 const fd = new FormData();
                                                                 fd.append('dni_tutor_digitalizado', f);
-                                                                await apiClientV2.post(`/estudiantes/${viewData.student.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                                                await apiClientV2.post(`/estudiantes/${viewData.student!.id}/documentos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
                                                                 setFeedback({ open: true, message: "DNI del tutor actualizado correctamente.", severity: "success" });
-                                                                handleOpenDetail(viewData.student);
+                                                                handleOpenDetail(viewData.student!);
                                                             } catch {
                                                                 setFeedback({ open: true, message: "Error al subir el DNI.", severity: "error" });
                                                             }
@@ -972,9 +1076,9 @@ export default function Estudiantes() {
                                                 </label>
                                             </div>
 
-                                            {viewData.student.nota_parental_firmada ? (
+                                            {viewData.student!.nota_parental_firmada ? (
                                                 <a
-                                                    href={getMediaUrl(viewData.student.nota_parental_firmada)}
+                                                    href={getMediaUrl(viewData.student!.nota_parental_firmada)}
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 px-4 py-2 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
@@ -987,19 +1091,19 @@ export default function Estudiantes() {
                                                 </div>
                                             )}
 
-                                            {viewData.student.autorizacion_status === 'DIGITAL' && (
+                                            {viewData.student!.autorizacion_status === 'DIGITAL' && (
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex flex-col gap-1 items-center bg-emerald-500/10 px-4 py-2 rounded-lg border border-emerald-500/20 text-xs shadow-sm">
                                                         <span className="text-emerald-400 font-bold flex items-center gap-2">
                                                             <Check size={14} /> Firma Digital Validada
                                                         </span>
                                                         <span className="text-[10px] text-emerald-300 opacity-80">
-                                                            {formatDateTimeDisplay(viewData.student.autorizacion_fecha)}
+                                                            {formatDateTimeDisplay(viewData.student!.autorizacion_fecha)}
                                                         </span>
                                                     </div>
-                                                    {viewData.student.autorizacion_selfie && (
+                                                    {viewData.student!.autorizacion_selfie && (
                                                         <a
-                                                            href={getMediaUrl(viewData.student.autorizacion_selfie)}
+                                                            href={getMediaUrl(viewData.student!.autorizacion_selfie)}
                                                             target="_blank"
                                                             rel="noreferrer"
                                                             className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] px-3 py-1.5 rounded-full transition-all"
@@ -1010,7 +1114,7 @@ export default function Estudiantes() {
                                                 </div>
                                             )}
 
-                                            {viewData.student.autorizacion_status === 'PENDIENTE' && (
+                                            {viewData.student!.autorizacion_status === 'PENDIENTE' && (
                                                 <div className="flex flex-col gap-2 p-3 bg-indigo-950/50 border border-indigo-500/20 rounded-xl">
                                                     <p className="text-[10px] font-bold text-indigo-300 uppercase mb-1">Firma Presencial</p>
                                                     <div className="flex gap-2">
@@ -1018,9 +1122,9 @@ export default function Estudiantes() {
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={async () => {
-                                                                let token = viewData.student.autorizacion_token;
+                                                                let token = viewData.student!.autorizacion_token;
                                                                 if (!token) {
-                                                                    const { data } = await apiClientV2.post(`/autorizaciones/generate/${viewData.student.id}`);
+                                                                    const { data } = await apiClientV2.post<{ token: string }>(`/autorizaciones/generate/${viewData.student!.id}`);
                                                                     token = data.token;
                                                                 }
                                                                 const url = `https://politecnico.ar/cfp/autorizar.html?token=${token}`;
@@ -1035,13 +1139,13 @@ export default function Estudiantes() {
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={async () => {
-                                                                let token = viewData.student.autorizacion_token;
+                                                                let token = viewData.student!.autorizacion_token;
                                                                 if (!token) {
-                                                                    const { data } = await apiClientV2.post(`/autorizaciones/generate/${viewData.student.id}`);
+                                                                    const { data } = await apiClientV2.post<{ token: string }>(`/autorizaciones/generate/${viewData.student!.id}`);
                                                                     token = data.token;
                                                                 }
                                                                 const url = `https://politecnico.ar/cfp/autorizar.html?token=${token}`;
-                                                                setQrModal({ open: true, url, studentName: `${viewData.student.nombre} ${viewData.student.apellido}` });
+                                                                setQrModal({ open: true, url, studentName: `${viewData.student!.nombre} ${viewData.student!.apellido}` });
                                                             }}
                                                             className="text-[10px] py-1 h-auto"
                                                         >
@@ -1105,14 +1209,14 @@ export default function Estudiantes() {
                                         <Button
                                             onClick={async () => {
                                                 try {
-                                                    const { data } = await apiClientV2.post(`/nivelacion/generate/${viewData.student.id}`);
+                                                    const { data } = await apiClientV2.post<{ token: string }>(`/nivelacion/generate/${viewData.student!.id}`);
                                                     const url = `https://politecnico.ar/cfp/nivelacion.html?token=${data.token}`;
                                                     setQrModal({ 
                                                         open: true, 
                                                         url, 
-                                                        studentName: `${viewData.student.nombre} ${viewData.student.apellido} (Test Nivelación)` 
+                                                        studentName: `${viewData.student!.nombre} ${viewData.student!.apellido} (Test Nivelación)` 
                                                     });
-                                                } catch (err) {
+                                                } catch {
                                                     alert("Error al generar el test.");
                                                 }
                                             }}
@@ -1155,7 +1259,7 @@ export default function Estudiantes() {
                                             <div key={i.id} className="border-b border-indigo-500/10 pb-3 mb-2 last:border-0 last:mb-0">
                                                 <div className="flex flex-col">
                                                     <p className="text-indigo-100 font-bold">{i?.cohorte?.programa?.nombre || "Programa"}</p>
-                                                    <p className="text-indigo-300 text-xs">{i?.modulo?.bloque?.nombre || i?.cohorte?.bloque?.nombre || "-"}</p>
+                                                    <p className="text-indigo-300 text-xs">{i?.modulo?.bloque?.nombre || i?.cohorte?.bloque_fechas?.nombre || "-"}</p>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-200 text-[10px] border border-indigo-500/20">
                                                             {i?.modulo?.nombre || "Inscripción"}
@@ -1217,79 +1321,52 @@ export default function Estudiantes() {
                 </div>
             </Modal>
 
-            {qrModal.open && (
+            {showRespuestasModal && (
                 <Modal
-                    isOpen={qrModal.open}
-                    onClose={() => setQrModal({ open: false, url: "", studentName: "" })}
-                    title={`Link para Test: ${qrModal.studentName}`}
+                    isOpen={showRespuestasModal}
+                    onClose={() => setShowRespuestasModal(false)}
+                    title={`Respuestas de ${viewData.student?.nombre} ${viewData.student?.apellido}`}
+                    maxWidthClass="max-w-2xl"
                     actions={
-                        <Button onClick={() => setQrModal({ open: false, url: "", studentName: "" })} className="bg-indigo-600 hover:bg-indigo-500 text-white">
+                        <Button onClick={() => setShowRespuestasModal(false)} className="bg-indigo-600 hover:bg-indigo-500 text-white">
                             Cerrar
                         </Button>
                     }
                 >
-                    <div className="flex flex-col items-center gap-4 text-center">
-                        <p className="text-indigo-200">Envía este enlace al estudiante para que pueda realizar su test:</p>
-                        <div className="bg-indigo-950/40 border border-indigo-500/30 p-3 rounded w-full overflow-hidden text-ellipsis whitespace-nowrap text-indigo-300">
-                            {qrModal.url}
-                        </div>
-                        <Button 
-                            onClick={() => {
-                                navigator.clipboard.writeText(qrModal.url);
-                                alert("Enlace copiado al portapapeles.");
-                            }}
-                            className="bg-brand-accent hover:bg-orange-600 border-none text-white w-full"
-                        >
-                            Copiar Enlace
-                        </Button>
+                    <div className="space-y-4">
+                        {NIVELACION_QUESTIONS.map(q => {
+                            const answerStr = viewData.student?.nivelacion_digital?.respuestas_json?.answers?.[q.id];
+                            const answerInt = answerStr !== undefined ? parseInt(answerStr) : -1;
+                            return (
+                                <div key={q.id} className="p-3 bg-indigo-950/40 rounded-lg border border-indigo-500/20">
+                                    <p className="font-bold text-sm text-indigo-100 mb-2">{q.id}. {q.text}</p>
+                                    <div className="space-y-1 pl-2">
+                                        {q.options.map((opt, idx) => {
+                                            let style = "text-indigo-300 text-xs";
+                                            let icon = null;
+                                            if (idx === q.correct && idx === answerInt) {
+                                                style = "text-emerald-400 font-bold";
+                                                icon = "✓";
+                                            } else if (idx === answerInt && idx !== q.correct) {
+                                                style = "text-red-400 font-bold";
+                                                icon = "✗";
+                                            } else if (idx === q.correct) {
+                                                style = "text-emerald-400/70";
+                                            }
+                                            return (
+                                                <div key={idx} className={`flex items-start gap-2 ${style}`}>
+                                                    <span className="mt-0.5">{icon || "•"}</span>
+                                                    <span>{opt}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </Modal>
             )}
-
-            <Modal
-                isOpen={showRespuestasModal}
-                onClose={() => setShowRespuestasModal(false)}
-                title={`Respuestas de ${viewData.student?.nombre} ${viewData.student?.apellido}`}
-                maxWidthClass="max-w-2xl"
-                actions={
-                    <Button onClick={() => setShowRespuestasModal(false)} className="bg-indigo-600 hover:bg-indigo-500 text-white">
-                        Cerrar
-                    </Button>
-                }
-            >
-                <div className="space-y-4">
-                    {NIVELACION_QUESTIONS.map(q => {
-                        const answerStr = viewData.student?.nivelacion_digital?.respuestas_json?.answers?.[q.id];
-                        const answerInt = answerStr !== undefined ? parseInt(answerStr) : -1;
-                        return (
-                            <div key={q.id} className="p-3 bg-indigo-950/40 rounded-lg border border-indigo-500/20">
-                                <p className="font-bold text-sm text-indigo-100 mb-2">{q.id}. {q.text}</p>
-                                <div className="space-y-1 pl-2">
-                                    {q.options.map((opt, idx) => {
-                                        let style = "text-indigo-300 text-xs";
-                                        let icon = null;
-                                        if (idx === q.correct && idx === answerInt) {
-                                            style = "text-emerald-400 font-bold";
-                                            icon = "✓";
-                                        } else if (idx === answerInt && idx !== q.correct) {
-                                            style = "text-red-400 font-bold";
-                                            icon = "✗";
-                                        } else if (idx === q.correct) {
-                                            style = "text-emerald-400/70";
-                                        }
-                                        return (
-                                            <div key={idx} className={`flex items-start gap-2 ${style}`}>
-                                                <span className="mt-0.5">{icon || "•"}</span>
-                                                <span>{opt}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </Modal>
 
             {/* Modal Exportación */}
             <Modal

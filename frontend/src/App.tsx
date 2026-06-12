@@ -7,7 +7,7 @@ import AppLayout from "./layout/AppLayout";
 // Page Components
 import Landing from "./pages/Landing";
 import Asistencia from "./pages/Asistencia";
-import Estudiantes from "./pages/Estudiantes.jsx";
+import Estudiantes from "./pages/Estudiantes";
 import Notas from "./pages/Notas.jsx";
 import CursoDetail from "./pages/CursoDetail";
 import DashboardPage from "./pages/Dashboard"; // Check extension if needed, safe to add .jsx if it is jsx
