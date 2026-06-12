@@ -7,6 +7,9 @@ import { apiClientV2 } from "../api/client";
 import { Card, Select, Button, Input } from '../components/UI';
 import { formatDateDisplay } from '../utils/dateFormat';
 import type { Estudiante, Cohorte, Programa, Bloque, Modulo, Inscripcion, EstudianteDetail } from "../api/types";
+import { ModalConfirmDelete } from "../components/Inscripciones/ModalConfirmDelete";
+import { InscripcionesTable } from "../components/Inscripciones/InscripcionesTable";
+import { InscripcionesFilters } from "../components/Inscripciones/InscripcionesFilters";
 
 // Custom Accordion Component
 interface AccordionProps {
@@ -51,31 +54,9 @@ const Checkbox: React.FC<CheckboxProps> = ({ checked, onChange, disabled, label 
     </label>
 );
 
-// Modal Custom
-interface ModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    title: string;
-    children: React.ReactNode;
-    actions: React.ReactNode;
-    maxWidthClass?: string;
-}
+// Modal defined in Estudiantes/Modal.tsx
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, actions, maxWidthClass = "max-w-lg" }) => {
-    if (!isOpen) return null;
-    if (typeof document === "undefined") return null;
-    return createPortal((
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-            <div className={`bg-[#1e1b4b] border border-indigo-500/30 rounded-xl shadow-2xl w-full ${maxWidthClass}`}>
-                <div className="p-6 border-b border-indigo-500/20"><h3 className="text-xl font-bold text-white">{title}</h3></div>
-                <div className="p-6 text-gray-200 max-h-[75vh] overflow-y-auto">{children}</div>
-                <div className="p-4 border-t border-indigo-500/20 flex justify-end gap-3 bg-indigo-950/30 rounded-b-xl">{actions}</div>
-            </div>
-        </div>
-    ), document.body);
-};
-
-const calculateAge = (birthDate: string | null | undefined): number | null => {
+export const calculateAge = (birthDate: string | null | undefined): number | null => {
     if (!birthDate) return null;
     const today = new Date();
     const birth = new Date(birthDate);
@@ -98,7 +79,7 @@ interface LocalBloque {
     modulos: LocalModulo[];
 }
 
-type ExtendedEstudiante = Estudiante & {
+export type ExtendedEstudiante = Estudiante & {
     tutor_nombre?: string | null;
     tutor_dni?: string | null;
     tutor_telefono?: string | null;
@@ -107,13 +88,13 @@ type ExtendedEstudiante = Estudiante & {
     fecha_nacimiento?: string | null;
 };
 
-type ExtendedCohorte = Cohorte & {
+export type ExtendedCohorte = Cohorte & {
     programa?: Programa;
     bloque?: { id: number; nombre: string } | null;
     bloque_fechas?: { id: number; nombre: string; descripcion?: string | null };
 };
 
-type ExtendedInscripcion = Omit<Inscripcion, "estudiante" | "cohorte"> & {
+export type ExtendedInscripcion = Omit<Inscripcion, "estudiante" | "cohorte"> & {
     estudiante?: ExtendedEstudiante;
     cohorte?: ExtendedCohorte;
 };
@@ -128,8 +109,6 @@ export default function Inscripciones() {
     const [page, setPage] = useState<number>(0);
     const [rowsPerPage, setRowsPerPage] = useState<number>(25);
     const [inscripcionSearch, setInscripcionSearch] = useState<string>("");
-    const [editingInscripcionId, setEditingInscripcionId] = useState<number | null>(null);
-    const [editingEstado, setEditingEstado] = useState<string>("");
     const [inscToDelete, setInscToDelete] = useState<ExtendedInscripcion | null>(null);
     const [feedback, setFeedback] = useState<{ open: boolean; message: string; severity: "success" | "warning" | "error" }>({ open: false, message: "", severity: "success" });
     const [loadingBloques, setLoadingBloques] = useState<Record<number, boolean>>({});
@@ -364,6 +343,51 @@ export default function Inscripciones() {
             const msg = errObj.response?.data ? JSON.stringify(errObj.response.data) : errObj.message || "Error";
             setFeedback({ open: true, message: `No se pudo eliminar: ${msg}`, severity: "error" });
         }
+    };
+
+    const handleUpdateEstado = async (r: ExtendedInscripcion, nuevoEstado: string) => {
+        try {
+            await saveInscripcion.mutateAsync({
+                id: r.id,
+                estado: nuevoEstado,
+                estudiante_id: r.estudiante?.id ?? r.estudiante_id,
+                cohorte_id: r.cohorte?.id ?? r.cohorte_id,
+                modulo_id: r.modulo?.id ?? r.modulo_id,
+            });
+            setFeedback({ open: true, message: "Estado actualizado", severity: "success" });
+            refetchInscripciones();
+        } catch (err) {
+            setFeedback({ open: true, message: "Error al actualizar estado", severity: "error" });
+            throw err;
+        }
+    };
+
+    const handleListFilterChange = (updates: Partial<{
+        filterListProgramaName: string;
+        filterListBloqueName: string;
+        filterListModuloName: string;
+        filterListCohorteName: string;
+        filterListEstado: string;
+        inscripcionSearch: string;
+    }>) => {
+        if (updates.hasOwnProperty("filterListProgramaName")) {
+            setFilterListProgramaName(updates.filterListProgramaName!);
+            setFilterListBloqueName("");
+            setFilterListModuloName("");
+            setFilterListCohorteName("");
+        } else if (updates.hasOwnProperty("filterListBloqueName")) {
+            setFilterListBloqueName(updates.filterListBloqueName!);
+            setFilterListModuloName("");
+            setFilterListCohorteName("");
+        } else if (updates.hasOwnProperty("filterListModuloName")) {
+            setFilterListModuloName(updates.filterListModuloName!);
+            setFilterListCohorteName("");
+        } else {
+            if (updates.hasOwnProperty("filterListCohorteName")) setFilterListCohorteName(updates.filterListCohorteName!);
+            if (updates.hasOwnProperty("filterListEstado")) setFilterListEstado(updates.filterListEstado!);
+            if (updates.hasOwnProperty("inscripcionSearch")) setInscripcionSearch(updates.inscripcionSearch!);
+        }
+        setPage(0);
     };
 
     const filteredInscripciones = useMemo(() => {
@@ -753,314 +777,54 @@ export default function Inscripciones() {
 
             {/* Tabla de Inscripciones */}
             <div className="space-y-4 pt-4 border-t border-indigo-500/20">
-                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                    <h2 className="text-xl font-bold text-white whitespace-nowrap">Inscripciones Existentes</h2>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto overflow-x-auto text-sm">
-                        <select
-                            value={filterListProgramaName}
-                            onChange={(e) => { 
-                                setFilterListProgramaName(e.target.value); 
-                                setFilterListBloqueName(""); 
-                                setFilterListModuloName(""); 
-                                setFilterListCohorteName(""); 
-                                setPage(0); 
-                            }}
-                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
-                        >
-                            <option value="">Todos los Programas</option>
-                            {tableProgramaOpts.map(name => <option key={name} value={name}>{name}</option>)}
-                        </select>
-                        <select
-                            value={filterListBloqueName}
-                            onChange={(e) => { 
-                                setFilterListBloqueName(e.target.value); 
-                                setFilterListModuloName(""); 
-                                setFilterListCohorteName(""); 
-                                setPage(0); 
-                            }}
-                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
-                        >
-                            <option value="">Todos los Bloques</option>
-                            {tableBloqueOpts.map(name => <option key={name} value={name}>{name}</option>)}
-                        </select>
-                        <select
-                            value={filterListModuloName}
-                            onChange={(e) => { 
-                                setFilterListModuloName(e.target.value); 
-                                setFilterListCohorteName(""); 
-                                setPage(0); 
-                            }}
-                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
-                        >
-                            <option value="">Todos los Módulos</option>
-                            {tableModuloOpts.map(name => <option key={name} value={name}>{name}</option>)}
-                        </select>
-                        <select
-                            value={filterListCohorteName}
-                            onChange={(e) => { 
-                                setFilterListCohorteName(e.target.value); 
-                                setPage(0); 
-                            }}
-                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
-                        >
-                            <option value="">Todas las Cohortes</option>
-                            {tableCohorteOpts.map(name => <option key={name} value={name}>{name}</option>)}
-                        </select>
-                        <select
-                            value={filterListEstado}
-                            onChange={(e) => { setFilterListEstado(e.target.value); setPage(0); }}
-                            className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded px-2 py-1.5 focus:outline-none focus:border-brand-accent transition-colors min-w-[120px]"
-                        >
-                            <option value="">Todos los Estados</option>
-                            {["PREINSCRIPTO","CURSANDO","INACTIVO","LIBRE","PAUSADO","EGRESADO","APROBADO","DESAPROBADO"].map(e => (
-                                <option key={e} value={e}>{e}</option>
-                            ))}
-                        </select>
-                        <div className="relative min-w-[150px]">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-400">
-                                <Search size={16} />
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Buscar inscripción..."
-                                value={inscripcionSearch}
-                                onChange={(e) => { setInscripcionSearch(e.target.value); setPage(0); }}
-                                className="bg-indigo-950/50 border border-indigo-500/30 text-white rounded w-full pl-9 pr-3 py-1.5 focus:outline-none focus:border-brand-accent transition-colors"
-                            />
-                        </div>
-                    </div>
-                </div>
+                <InscripcionesFilters
+                    filterListProgramaName={filterListProgramaName}
+                    filterListBloqueName={filterListBloqueName}
+                    filterListModuloName={filterListModuloName}
+                    filterListCohorteName={filterListCohorteName}
+                    filterListEstado={filterListEstado}
+                    inscripcionSearch={inscripcionSearch}
+                    tableProgramaOpts={tableProgramaOpts}
+                    tableBloqueOpts={tableBloqueOpts}
+                    tableModuloOpts={tableModuloOpts}
+                    tableCohorteOpts={tableCohorteOpts}
+                    onFilterChange={handleListFilterChange}
+                />
 
                 <Card className="bg-indigo-900/10 border-indigo-500/20 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        {loadingInscripciones ? (
-                            <div className="p-8 flex justify-center"><Loader className="animate-spin text-brand-accent" /></div>
-                        ) : (
-                            <>
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-indigo-950/40 text-indigo-300 uppercase text-xs">
-                                        <tr>
-                                            <th className="px-6 py-3">Estudiante</th>
-                                            <th className="px-6 py-3">Detalle Inscripción</th>
-                                            <th className="px-6 py-3">Módulo</th>
-                                            <th className="px-6 py-3">Estado</th>
-                                            <th className="px-6 py-3 text-right">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-indigo-500/10">
-                                        {paginatedInscripciones.map((r) => (
-                                            <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                                                <td className="px-6 py-3 font-medium">
-                                                    {r.estudiante ? (() => {
-                                                        const age = calculateAge(r.estudiante.fecha_nacimiento);
-                                                        const isMinor = age !== null && age < 18;
-                                                        return (
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={isMinor ? "text-orange-400 font-bold" : "text-white"}>
-                                                                    {r.estudiante.apellido}, {r.estudiante.nombre}
-                                                                </span>
-                                                                {age !== null && (
-                                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "bg-indigo-500/20 text-indigo-300"}`}>
-                                                                        {age} {isMinor && <Baby size={10} className="inline ml-0.5" />}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })() : (
-                                                        <span className="text-white">{r.estudiante_id}</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-3 text-gray-300">
-                                                    {r.cohorte ? (
-                                                        <div className="space-y-1">
-                                                            <div>
-                                                                <span className="text-indigo-200">Programa:</span>{" "}
-                                                                <span>{r.cohorte.programa?.nombre || "-"}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-indigo-200">Bloque:</span>{" "}
-                                                                <span>{r.cohorte.bloque?.nombre || "-"}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-indigo-200">Cohorte:</span>{" "}
-                                                                <span>{r.cohorte.nombre || "-"}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span className="text-indigo-200">Periodo:</span>{" "}
-                                                                <span>{formatDateDisplay(r.cohorte.fecha_inicio)} a {formatDateDisplay(r.cohorte.fecha_fin)}</span>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        r.cohorte_id
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-3 text-gray-300">{r.modulo?.nombre || r.modulo_id || "N/A"}</td>
-                                                <td className="px-6 py-3">
-                                                    {editingInscripcionId === r.id ? (
-                                                        <select
-                                                            value={editingEstado}
-                                                            onChange={(e) => setEditingEstado(e.target.value)}
-                                                            className="bg-indigo-900 border border-indigo-500/50 text-white text-sm rounded px-2 py-1 w-full"
-                                                        >
-                                                            <option value="PREINSCRIPTO">PREINSCRIPTO</option>
-                                                            <option value="CURSANDO">CURSANDO</option>
-                                                            <option value="INACTIVO">INACTIVO</option>
-                                                            <option value="LIBRE">LIBRE</option>
-                                                            <option value="PAUSADO">PAUSADO</option>
-                                                            <option value="EGRESADO">EGRESADO</option>
-                                                            <option value="APROBADO">APROBADO</option>
-                                                            <option value="DESAPROBADO">DESAPROBADO</option>
-                                                        </select>
-                                                    ) : (
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${r.estado === 'CURSANDO' ? 'bg-green-500/20 text-green-400' :
-                                                            r.estado === 'INACTIVO' ? 'bg-red-500/20 text-red-400' :
-                                                                r.estado === 'LIBRE' ? 'bg-yellow-500/20 text-yellow-500' :
-                                                                    r.estado === 'PREINSCRIPTO' ? 'bg-blue-500/20 text-blue-400' :
-                                                                        r.estado === 'EGRESADO' ? 'bg-purple-500/20 text-purple-400' :
-                                                                            r.estado === 'PAUSADO' ? 'bg-orange-500/20 text-orange-400' :
-                                                                                r.estado === 'APROBADO' ? 'bg-teal-500/20 text-teal-400' :
-                                                                                    r.estado === 'DESAPROBADO' ? 'bg-rose-500/20 text-rose-400' :
-                                                                                        'bg-indigo-500/20 text-indigo-400'}`}>
-                                                            {r.estado}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-3 text-right">
-                                                    <div className="flex justify-end gap-3 text-indigo-300">
-                                                        {editingInscripcionId === r.id ? (
-                                                            <>
-                                                                <button
-                                                                    onClick={async () => {
-                                                                        try {
-                                                                            await saveInscripcion.mutateAsync({ id: r.id, estado: editingEstado, estudiante_id: r.estudiante?.id ?? r.estudiante_id, cohorte_id: r.cohorte?.id ?? r.cohorte_id, modulo_id: r.modulo?.id ?? r.modulo_id });
-                                                                            setEditingInscripcionId(null);
-                                                                            setFeedback({ open: true, message: "Estado actualizado", severity: "success" });
-                                                                            refetchInscripciones();
-                                                                        } catch (err) {
-                                                                            setFeedback({ open: true, message: "Error al actualizar estado", severity: "error" });
-                                                                        }
-                                                                    }}
-                                                                    className="text-green-400 hover:text-green-300 transition-colors"
-                                                                    title="Guardar"
-                                                                >
-                                                                    <Save size={18} />
-                                                                </button>
-                                                                <button onClick={() => setEditingInscripcionId(null)} className="text-gray-400 hover:text-gray-300 transition-colors" title="Cancelar">
-                                                                    <X size={18} />
-                                                                </button>
-                                                            </>
-                                                        ) : (
-                                                            <div className="flex justify-end gap-2">
-                                                                {r.estudiante && (() => {
-                                                                    const age = calculateAge(r.estudiante.fecha_nacimiento);
-                                                                    return age !== null && age < 18;
-                                                                })() && (
-                                                                    <button
-                                                                        onClick={() => handleSendWhatsApp(r.estudiante!)}
-                                                                        title="Enviar Autorización WhatsApp"
-                                                                        className={`p-1 transition-colors ${r.estudiante.autorizacion_status === 'DIGITAL' ? 'text-emerald-400' : 'text-orange-400 hover:text-orange-300'}`}
-                                                                    >
-                                                                        <MessageCircle size={18} />
-                                                                    </button>
-                                                                )}
-                                                                <button
-                                                                onClick={() => { setEditingInscripcionId(r.id); setEditingEstado(r.estado || 'CURSANDO'); }}
-                                                                    className="p-1 hover:text-blue-400 transition-colors"
-                                                                    title="Editar estado"
-                                                                >
-                                                                    <Edit2 size={18} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setInscToDelete(r)}
-                                                                    className="p-1 text-red-500 hover:text-red-400 transition-colors"
-                                                                    title="Eliminar inscripción"
-                                                                >
-                                                                    <Trash2 size={18} />
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {!paginatedInscripciones.length && (
-                                            <tr><td colSpan={5} className="text-center py-6 text-gray-500">No hay inscripciones para mostrar.</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                                {filteredInscripciones.length > 0 && (
-                                    <div className="p-4 border-t border-indigo-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 bg-indigo-950/20">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-indigo-300">Mostrar</span>
-                                            <select
-                                                value={rowsPerPage}
-                                                onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
-                                                className="bg-indigo-900 border border-indigo-500/30 text-white text-sm rounded px-2 py-1 outline-none"
-                                            >
-                                                <option value={10}>10</option>
-                                                <option value={25}>25</option>
-                                                <option value={50}>50</option>
-                                                <option value={100}>100</option>
-                                            </select>
-                                            <span className="text-sm text-indigo-300">por página (Total: {filteredInscripciones.length})</span>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                type="button"
-                                                onClick={() => setPage(p => Math.max(0, p - 1))}
-                                                disabled={page === 0}
-                                                className={`text-xs px-3 py-1 ${page === 0 ? 'bg-indigo-900 text-gray-500 opacity-50 cursor-not-allowed border-none' : 'bg-indigo-800 hover:bg-indigo-700 border-none'}`}
-                                            >
-                                                Anterior
-                                            </Button>
-                                            <span className="text-sm text-white py-1 px-3 border border-indigo-500/30 rounded bg-indigo-950">
-                                                {page + 1} de {totalPages || 1}
-                                            </span>
-                                            <Button
-                                                type="button"
-                                                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                                                disabled={page >= totalPages - 1}
-                                                className={`text-xs px-3 py-1 ${page >= totalPages - 1 ? 'bg-indigo-900 text-gray-500 opacity-50 cursor-not-allowed border-none' : 'bg-indigo-800 hover:bg-indigo-700 border-none'}`}
-                                            >
-                                                Siguiente
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
+                    <InscripcionesTable
+                        rows={paginatedInscripciones}
+                        isLoading={loadingInscripciones}
+                        page={page}
+                        rowsPerPage={rowsPerPage}
+                        totalRows={filteredInscripciones.length}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                        onRowsPerPageChange={(rows) => { setRowsPerPage(rows); setPage(0); }}
+                        onUpdateEstado={handleUpdateEstado}
+                        onSendWhatsApp={handleSendWhatsApp}
+                        onDelete={setInscToDelete}
+                    />
                 </Card>
             </div >
 
-            {
-                feedback.open && (
-                    <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' :
-                        feedback.severity === 'warning' ? 'bg-amber-600/90 border-amber-400 text-white' :
-                            'bg-green-900/90 border-green-500 text-white'
-                        }`}>
-                        {feedback.severity === 'error' ? <AlertCircle /> : <CheckCircle />}
-                        {feedback.message}
-                        <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
-                    </div>
-                )
-            }
+            {feedback.open && (
+                <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl border flex items-center gap-2 animate-fade-in ${feedback.severity === 'error' ? 'bg-red-900/90 border-red-500 text-white' :
+                    feedback.severity === 'warning' ? 'bg-amber-600/90 border-amber-400 text-white' :
+                        'bg-green-900/90 border-green-500 text-white'
+                    }`}>
+                    {feedback.severity === 'error' ? <AlertCircle /> : <CheckCircle />}
+                    {feedback.message}
+                    <button onClick={() => setFeedback({ ...feedback, open: false })} className="ml-4 hover:text-gray-300"><X size={14} /></button>
+                </div>
+            )}
 
-            {/* Modal Confirmación Delete */}
-            <Modal
+            <ModalConfirmDelete
                 isOpen={!!inscToDelete}
                 onClose={() => setInscToDelete(null)}
-                title="Confirmar eliminación"
-                actions={
-                    <>
-                        <Button variant="ghost" onClick={() => setInscToDelete(null)}>Cancelar</Button>
-                        <Button onClick={() => inscToDelete && handleDelete(inscToDelete.id)} className="bg-red-600 hover:bg-red-700 text-white border-none">Eliminar</Button>
-                    </>
-                }
-            >
-                <p>¿Estás seguro de que deseas eliminar la inscripción de <strong>{inscToDelete?.estudiante?.apellido}, {inscToDelete?.estudiante?.nombre}</strong> al módulo <strong>{inscToDelete?.modulo?.nombre || "N/A"}</strong>?</p>
-                <p className="text-sm text-gray-400 mt-2">Esta acción no se puede deshacer.</p>
-            </Modal>
+                inscToDelete={inscToDelete}
+                onConfirm={handleDelete}
+            />
         </div >
     );
 }
