@@ -540,11 +540,8 @@ export default function PreinscripcionVideojuegos() {
           
           {/* Header */}
           <header className="text-center space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-accent/30 bg-brand-accent/10 text-brand-accent text-xs font-black tracking-widest uppercase">
-              <Gamepad2 size={14} className="animate-pulse" /> Certificación Profesional
-            </div>
-            <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-none">
-              Desarrollo de <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent via-[#ff6600] to-brand-cyan">Videojuegos</span>
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight max-w-3xl mx-auto">
+              Certificación Profesional en <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent via-[#ff6600] to-brand-cyan">Desarrollo de Videojuegos</span>
             </h1>
             <p className="text-indigo-200 text-lg font-medium max-w-2xl mx-auto">
               Sumate a una capacitación integral que combina creatividad, tecnología y trabajo en equipo para crear los juegos del futuro.

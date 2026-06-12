@@ -773,6 +773,34 @@ export default function GestionPreinscripcionesVideojuegos() {
                   {user?.groups?.[0] || 'Coordinador'}
                 </span>
               </div>
+
+              {/* Theme toggle */}
+              <button
+                onClick={toggleMode}
+                className="p-2 text-indigo-300 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                title={mode === 'dark' ? 'Cambiar a vista clara' : 'Cambiar a vista oscura'}
+              >
+                {mode === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+
+              {/* Change Password */}
+              <button
+                onClick={() => navigate('/set-password')}
+                className="p-2 text-indigo-300 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                title="Cambiar contraseña"
+              >
+                <KeyRound size={20} />
+              </button>
+
+              {/* Logout */}
+              <button
+                onClick={handleLogout}
+                className="p-2 text-red-400 hover:text-red-200 hover:bg-red-500/10 rounded-full transition-colors"
+                title="Cerrar Sessión"
+              >
+                <LogOut size={20} />
+              </button>
+
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#00ccff] to-[#FF6600] flex items-center justify-center text-[#050814] font-black shadow-lg">
                 {(user?.username || 'C').charAt(0).toUpperCase()}
               </div>

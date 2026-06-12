@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserContext } from "../App";
+import { UserContext, ThemeModeContext } from "../App";
 import authService from "../services/authService";
 import { apiClientV2 } from "../api/client";
 
 import {
   Search, Eye, LogOut, Users, BookCheck, MapPin, 
   BarChart3, CalendarDays, ChevronRight, Settings, 
-  UserCog, CheckCircle2, Clock, ExternalLink
+  UserCog, CheckCircle2, Clock, ExternalLink,
+  Sun, Moon, KeyRound
 } from "lucide-react";
 
 import { P, StatCard, Badge } from "../components/AdminTerciario/AdminUI";
@@ -51,6 +52,7 @@ const GRUPOS_TERCIARIO = ["Admin", "Terciario", "Rector"];
 export default function AdminTerciario() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
+  const { mode, toggleMode } = useContext(ThemeModeContext);
   const [tab, setTab] = useState("dashboard");
   const [stats, setStats] = useState(null);
   const [data, setData] = useState([]);
@@ -204,6 +206,34 @@ export default function AdminTerciario() {
                   {user?.groups?.[0] || 'Terciario'}
                 </span>
               </div>
+
+              {/* Theme toggle */}
+              <button
+                onClick={toggleMode}
+                className="p-2 text-[#1a1f4e]/60 hover:text-[#1a1f4e] hover:bg-[#1a1f4e]/5 rounded-full transition-colors"
+                title={mode === 'dark' ? 'Cambiar a vista clara' : 'Cambiar a vista oscura'}
+              >
+                {mode === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+
+              {/* Change Password */}
+              <button
+                onClick={() => navigate('/set-password')}
+                className="p-2 text-[#1a1f4e]/60 hover:text-[#1a1f4e] hover:bg-[#1a1f4e]/5 rounded-full transition-colors"
+                title="Cambiar contraseña"
+              >
+                <KeyRound size={20} />
+              </button>
+
+              {/* Logout */}
+              <button
+                onClick={handleLogout}
+                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded-full transition-colors"
+                title="Cerrar Sessión"
+              >
+                <LogOut size={20} />
+              </button>
+
               <div className="h-9 w-9 rounded-xl flex items-center justify-center font-bold text-white shadow-sm transition-all"
                 style={{ background: P.navy }}>
                 {(user?.username || 'U').charAt(0).toUpperCase()}
