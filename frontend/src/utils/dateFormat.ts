@@ -1,4 +1,4 @@
-export function formatDateDisplay(value) {
+export function formatDateDisplay(value: Date | string | number | null | undefined): string {
   if (!value) return "-";
 
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
@@ -22,9 +22,9 @@ export function formatDateDisplay(value) {
   return text;
 }
 
-export function formatDateTimeDisplay(value) {
+export function formatDateTimeDisplay(value: Date | string | number | null | undefined): string {
   if (!value) return "-";
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
+  if (Number.isNaN(parsed.getTime())) return String(value);
   return parsed.toLocaleString("es-AR");
 }
