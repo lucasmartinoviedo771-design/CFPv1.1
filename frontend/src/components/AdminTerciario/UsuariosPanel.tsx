@@ -3,14 +3,18 @@ import { Search, X, Save, Pencil, RefreshCw, CheckCircle2, XCircle } from "lucid
 import { apiClientV2 } from "../../api/client";
 import { P } from "./AdminUI";
 import { User, UserDetails } from "../../api/types";
+import { EditUserModal } from "./EditUserModal";
+import { NuevoUsuarioModal } from "./NuevoUsuarioModal";
+import { UsuariosTable } from "./UsuariosTable";
+import { UsuariosFilters } from "./UsuariosFilters";
 
 // Grupos que dan acceso a CFP (tener cualquiera de estos = puede entrar al panel CFP)
-const GRUPOS_CFP = ["Admin", "Secretaría", "Regencia", "Coordinación Docente", "Docente", "Preceptor", "Bedel", "Rector"];
+export const GRUPOS_CFP = ["Admin", "Secretaría", "Regencia", "Coordinación Docente", "Docente", "Preceptor", "Bedel", "Rector"];
 // Grupos que dan acceso a Terciario (Admin/Rector siempre tienen ambos; "Terciario" es el flag para el resto)
-const GRUPOS_TERCIARIO = ["Admin", "Terciario", "Rector"];
+export const GRUPOS_TERCIARIO = ["Admin", "Terciario", "Rector"];
 
 // Roles funcionales (definen qué puede hacer el usuario, sin determinar el sistema por sí solos)
-const ROLES_FUNCIONALES = [
+export const ROLES_FUNCIONALES = [
   { nombre: "Admin",                color: "bg-purple-100 text-purple-800" },
   { nombre: "Rector",               color: "bg-blue-100 text-blue-800" },
   { nombre: "Regencia",             color: "bg-indigo-100 text-indigo-800" },
@@ -27,11 +31,11 @@ export const GRUPOS_CONFIG = ROLES_FUNCIONALES.map(r => ({
   terciario: GRUPOS_TERCIARIO.includes(r.nombre) || r.nombre === "Terciario",
 }));
 
-interface GrupoBadgeProps {
+export interface GrupoBadgeProps {
   nombre: string;
 }
 
-function GrupoBadge({ nombre }: GrupoBadgeProps) {
+export function GrupoBadge({ nombre }: GrupoBadgeProps) {
   const cfg = GRUPOS_CONFIG.find(g => g.nombre === nombre);
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${cfg?.color || "bg-gray-100 text-gray-600"}`}>
@@ -40,25 +44,25 @@ function GrupoBadge({ nombre }: GrupoBadgeProps) {
   );
 }
 
-interface AccesoBadgeProps {
+export interface AccesoBadgeProps {
   tieneAcceso: boolean;
   sistema: string;
 }
 
-function AccesoBadge({ tieneAcceso, sistema }: AccesoBadgeProps) {
+export function AccesoBadge({ tieneAcceso, sistema }: AccesoBadgeProps) {
   return tieneAcceso
     ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700"><CheckCircle2 size={10} />{sistema}</span>
     : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-400"><XCircle size={10} />{sistema}</span>;
 }
 
-function tieneAccesoCFP(user: User | UserDetails) {
+export function tieneAccesoCFP(user: User | UserDetails) {
   return !!(user.is_superuser || user.is_staff || (user.groups && user.groups.some(g => GRUPOS_CFP.includes(g)) && !user.groups.includes("Sin CFP")));
 }
-function tieneAccesoTerciario(user: User | UserDetails) {
+export function tieneAccesoTerciario(user: User | UserDetails) {
   return !!(user.is_superuser || user.is_staff || (user.groups && user.groups.some(g => GRUPOS_TERCIARIO.includes(g))));
 }
 
-function derivarEstado(grupos: string[], is_superuser: boolean) {
+export function derivarEstado(grupos: string[], is_superuser: boolean) {
   const rolActual = ROLES_FUNCIONALES.find(r => grupos.includes(r.nombre))?.nombre || "";
 
   let accCFP = is_superuser;
@@ -91,7 +95,7 @@ function derivarEstado(grupos: string[], is_superuser: boolean) {
   return { rolActual, accCFP, accTerciario };
 }
 
-function construirGrupos(rol: string, accCFP: boolean, accTerciario: boolean, is_superuser: boolean): string[] {
+export function construirGrupos(rol: string, accCFP: boolean, accTerciario: boolean, is_superuser: boolean): string[] {
   if (is_superuser) return [];
   const grupos: string[] = [];
 
@@ -121,13 +125,13 @@ function construirGrupos(rol: string, accCFP: boolean, accTerciario: boolean, is
   return grupos;
 }
 
-interface RolYAccesoFormProps {
+export interface RolYAccesoFormProps {
   grupos: string[];
   is_superuser: boolean;
   onChange: (grupos: string[]) => void;
 }
 
-function RolYAccesoForm({ grupos, is_superuser, onChange }: RolYAccesoFormProps) {
+export function RolYAccesoForm({ grupos, is_superuser, onChange }: RolYAccesoFormProps) {
   const { rolActual: derivedRol, accCFP, accTerciario } = derivarEstado(grupos, is_superuser);
   const [rolActual, setRolActual] = useState<string>(derivedRol || "");
 
@@ -254,172 +258,9 @@ function RolYAccesoForm({ grupos, is_superuser, onChange }: RolYAccesoFormProps)
   );
 }
 
-interface EditUserModalProps {
-  user: User;
-  onClose: () => void;
-  onSaved: () => void;
-}
+export const GRUPOS_PUEDEN_ASIGNAR = ["Admin", "Rector", "Regencia", "Secretaría"];
 
-function EditUserModal({ user, onClose, onSaved }: EditUserModalProps) {
-  const [grupos, setGrupos] = useState<string[]>(user.groups || []);
-  const [saving, setSaving] = useState<boolean>(false);
-  const [msg, setMsg] = useState<string>("");
-
-  const save = async () => {
-    setSaving(true);
-    setMsg("");
-    try {
-      await apiClientV2.patch(`/users/${user.id}`, { groups: grupos });
-      setMsg("Guardado.");
-      onSaved();
-    } catch (err: unknown) { setMsg("Error al guardar."); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#b8ccd8] max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-5 border-b border-[#b8ccd8] rounded-t-3xl" style={{ background: P.navy }}>
-          <div>
-            <p className="text-white font-black">{user.last_name} {user.first_name}</p>
-            <p className="text-[#f5c518] text-xs">{user.username} · {user.email}</p>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <RolYAccesoForm grupos={grupos} is_superuser={!!(user.is_superuser || user.is_staff)} onChange={setGrupos} />
-          {msg && <p className={`text-xs font-semibold ${msg.includes("Error") ? "text-red-500" : "text-green-600"}`}>{msg}</p>}
-        </div>
-
-        <div className="p-5 border-t border-[#b8ccd8] flex gap-3">
-          <button onClick={save} disabled={saving}
-            className="flex-1 py-2.5 rounded-xl font-bold text-sm disabled:opacity-60 hover:opacity-80 transition-opacity flex items-center justify-center gap-2"
-            style={{ background: P.navy, color: P.yellow }}>
-            <Save size={15} /> {saving ? "Guardando..." : "Guardar cambios"}
-          </button>
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-bold text-sm border border-[#b8ccd8] text-[#1a1f4e] hover:bg-[#b8ccd8]/20 transition-colors">
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface ModalFieldProps {
-  label: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  type?: string;
-  placeholder?: string;
-  error?: string;
-}
-
-function ModalField({ label, value, onChange, type = "text", placeholder = "", error = "" }: ModalFieldProps) {
-  return (
-    <div>
-      <label className="text-xs font-bold uppercase tracking-wide text-[#1a1f4e]/50 mb-1 block">{label}</label>
-      <input type={type} value={value} onChange={onChange} placeholder={placeholder}
-        className={`w-full rounded-xl px-3 py-2 border text-[#1a1f4e] text-sm focus:outline-none focus:ring-2 focus:ring-[#f5c518] ${error ? "border-red-400" : "border-[#b8ccd8]"}`} />
-      {error && <p className="text-red-500 text-xs mt-0.5">{error}</p>}
-    </div>
-  );
-}
-
-interface NuevoUsuarioModalProps {
-  onClose: () => void;
-  onSaved: () => void;
-}
-
-function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioModalProps) {
-  const [form, setForm] = useState({ username: "", email: "", first_name: "", last_name: "", password: "" });
-  const [grupos, setGrupos] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
-
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!form.username.trim()) e.username = "Requerido";
-    if (!form.email.trim()) e.email = "Requerido";
-    if (!form.first_name.trim()) e.first_name = "Requerido";
-    if (!form.last_name.trim()) e.last_name = "Requerido";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const save = async () => {
-    if (!validate()) return;
-    setSaving(true);
-    setMsg("");
-    try {
-      await apiClientV2.post("/users", {
-        username: form.username.trim(),
-        email: form.email.trim(),
-        first_name: form.first_name.trim(),
-        last_name: form.last_name.trim(),
-        password: form.password.trim() || undefined,
-        groups: grupos,
-      });
-      setMsg("Usuario creado. Se enviaron las credenciales por email.");
-      setTimeout(() => { onSaved(); onClose(); }, 1500);
-    } catch (err: unknown) {
-      setMsg("Error al crear usuario.");
-    } finally { setSaving(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-[#b8ccd8] max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-5 border-b border-[#b8ccd8] rounded-t-3xl" style={{ background: P.navy }}>
-          <div>
-            <p className="text-white font-black text-base">Nuevo Usuario</p>
-            <p className="text-[#f5c518] text-xs mt-0.5">Se enviará un email con las credenciales generadas</p>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 text-white/60 hover:text-white transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <div className="grid grid-cols-2 gap-3">
-            <ModalField label="Apellido" value={form.last_name} onChange={e => set("last_name", e.target.value)} error={errors.last_name} />
-            <ModalField label="Nombre" value={form.first_name} onChange={e => set("first_name", e.target.value)} error={errors.first_name} />
-          </div>
-          <ModalField label="Usuario (DNI)" value={form.username} onChange={e => set("username", e.target.value)} placeholder="ej: 28126358" error={errors.username} />
-          <ModalField label="Email" value={form.email} onChange={e => set("email", e.target.value)} type="email" placeholder="docente@institución.edu.ar" error={errors.email} />
-          <ModalField label="Contraseña (opcional — se genera automáticamente si se deja vacío)" value={form.password} onChange={e => set("password", e.target.value)} type="password" />
-          <RolYAccesoForm grupos={grupos} is_superuser={false} onChange={setGrupos} />
-          {msg && (
-            <p className={`text-xs font-semibold px-3 py-2 rounded-xl ${msg.includes("Error") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"}`}>
-              {msg}
-            </p>
-          )}
-        </div>
-
-        <div className="p-5 border-t border-[#b8ccd8] flex gap-3">
-          <button onClick={save} disabled={saving}
-            className="flex-1 py-2.5 rounded-xl font-bold text-sm disabled:opacity-60 hover:opacity-80 transition-opacity flex items-center justify-center gap-2"
-            style={{ background: P.navy, color: P.yellow }}>
-            <Save size={15} /> {saving ? "Creando..." : "Crear usuario"}
-          </button>
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-bold text-sm border border-[#b8ccd8] text-[#1a1f4e] hover:bg-[#b8ccd8]/20 transition-colors">
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const GRUPOS_PUEDEN_ASIGNAR = ["Admin", "Rector", "Regencia", "Secretaría"];
-
-function puedeAsignarRoles(currentUser: User | UserDetails | null) {
+export function puedeAsignarRoles(currentUser: User | UserDetails | null) {
   if (!currentUser) return false;
   if (currentUser.is_superuser || currentUser.is_staff) return true;
   return (currentUser.groups || []).some(g => GRUPOS_PUEDEN_ASIGNAR.includes(g));
@@ -498,93 +339,21 @@ export function UsuariosPanel() {
       </div>
       {nuevoModal && <NuevoUsuarioModal onClose={() => setNuevoModal(false)} onSaved={fetchUsers} />}
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-grow">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1a1f4e]/40" />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, usuario o email..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#b8ccd8] bg-white text-[#1a1f4e] text-sm focus:outline-none focus:ring-2 focus:ring-[#f5c518]" />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {[
-            { key: "terciario", label: "Con acceso Terciario" },
-            { key: "ambos", label: "CFP + Terciario" },
-            { key: "todos", label: "Todos los usuarios" },
-          ].map(f => (
-            <button key={f.key} onClick={() => setFiltro(f.key)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${filtro === f.key ? "text-[#1a1f4e] border-[#f5c518]" : "border-[#b8ccd8] text-[#1a1f4e]/60 hover:border-[#1a1f4e]/40"}`}
-              style={filtro === f.key ? { background: P.yellow } : { background: "white" }}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <UsuariosFilters
+        search={search}
+        onSearchChange={setSearch}
+        filtro={filtro}
+        onFiltroChange={setFiltro}
+      />
 
-      {loading ? (
-        <div className="text-center py-16 text-[#1a1f4e]/40 text-sm">Cargando...</div>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#b8ccd8] bg-white shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ background: P.navy }} className="text-[#b8ccd8] text-xs uppercase tracking-wider">
-                <th className="px-4 py-3 text-left font-bold">Usuario</th>
-                <th className="px-4 py-3 text-left font-bold">Nombre</th>
-                <th className="px-4 py-3 text-left font-bold">Grupos</th>
-                <th className="px-4 py-3 text-left font-bold">Acceso</th>
-                <th className="px-4 py-3 text-left font-bold"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#b8ccd8]/30">
-              {filtered.map(u => (
-                <tr key={u.id} className="hover:bg-[#b8ccd8]/10 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-[#1a1f4e]">{u.username}</p>
-                    <p className="text-xs text-[#1a1f4e]/50">{u.email}</p>
-                  </td>
-                  <td className="px-4 py-3 text-[#1a1f4e]/80">
-                    {u.last_name} {u.first_name}
-                    {(u.is_superuser || u.is_staff) && (
-                      <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">SuperAdmin</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {!u.groups || u.groups.length === 0
-                        ? <span className="text-[#1a1f4e]/30 text-xs">—</span>
-                        : u.groups.map(g => <GrupoBadge key={g} nombre={g} />)
-                      }
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1 flex-wrap">
-                      <AccesoBadge tieneAcceso={tieneAccesoCFP(u)} sistema="CFP" />
-                      <AccesoBadge tieneAcceso={tieneAccesoTerciario(u)} sistema="Terciario" />
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {puedeAsignarRoles(currentUser) && (
-                        <button onClick={() => setEditUser(u)} title="Editar grupos"
-                          className="p-1.5 rounded-lg hover:bg-[#1a1f4e]/10 text-[#1a1f4e]/50 hover:text-[#1a1f4e] transition-colors">
-                          <Pencil size={14} />
-                        </button>
-                      )}
-                      <button onClick={() => resetPassword(u)} title="Regenerar contraseña"
-                        disabled={resettingId === u.id}
-                        className="p-1.5 rounded-lg hover:bg-[#1a1f4e]/10 text-[#1a1f4e]/50 hover:text-[#1a1f4e] transition-colors disabled:opacity-40">
-                        <RefreshCw size={14} className={resettingId === u.id ? "animate-spin" : ""} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <div className="text-center py-12 text-[#1a1f4e]/40 text-sm">No hay usuarios que coincidan.</div>
-          )}
-        </div>
-      )}
+      <UsuariosTable
+        rows={filtered}
+        isLoading={loading}
+        currentUser={currentUser}
+        resettingId={resettingId}
+        onEdit={setEditUser}
+        onResetPassword={resetPassword}
+      />
 
       {editUser && (
         <EditUserModal user={editUser} onClose={() => setEditUser(null)} onSaved={() => { fetchUsers(); setEditUser(null); }} />
