@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Modal } from "../components/Estudiantes/Modal";
+import { ModalQR } from "../components/Estudiantes/ModalQR";
 import { useEstudiantes, useSaveEstudiante, useProgramas, useBloques, useModulos, useCohortes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
 import { formatDateDisplay, formatDateTimeDisplay } from "../utils/dateFormat";
@@ -1273,31 +1274,12 @@ export default function Estudiantes() {
                 )}
             </Modal >
 
-            {/* Modal QR */}
-            <Modal
-                isOpen={qrModal.open}
+            <ModalQR
+                open={qrModal.open}
+                url={qrModal.url}
+                studentName={qrModal.studentName}
                 onClose={() => setQrModal({ ...qrModal, open: false })}
-                title="Autorización Presencial"
-                maxWidthClass="max-w-sm"
-                actions={<Button onClick={() => setQrModal({ ...qrModal, open: false })}>Cerrar</Button>}
-            >
-                <div className="flex flex-col items-center text-center space-y-4">
-                    <p className="text-sm text-indigo-200">
-                        Pedile al <b>Padre/Madre o Tutor</b> que escanee este código para firmar la autorización de <b>{qrModal.studentName}</b>
-                    </p>
-                    <div className="p-4 bg-white rounded-2xl shadow-xl">
-                        <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrModal.url)}`}
-                            alt="QR de Autorización"
-                            className="w-48 h-48"
-                        />
-                    </div>
-                    <div className="w-full p-3 bg-black/40 rounded-lg border border-white/5 overflow-hidden">
-                        <p className="text-[10px] text-indigo-400 uppercase font-bold mb-1">Link Directo</p>
-                        <p className="text-[10px] text-gray-400 break-all select-all cursor-pointer font-mono">{qrModal.url}</p>
-                    </div>
-                </div>
-            </Modal>
+            />
 
             {showRespuestasModal && (
                 <Modal
