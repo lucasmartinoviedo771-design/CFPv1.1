@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { Modal } from "../components/Estudiantes/Modal";
 import { ModalQR } from "../components/Estudiantes/ModalQR";
 import { ModalConfirmDelete } from "../components/Estudiantes/ModalConfirmDelete";
+import { ModalRespuestas } from "../components/Estudiantes/ModalRespuestas";
 import { useEstudiantes, useSaveEstudiante, useProgramas, useBloques, useModulos, useCohortes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
 import { formatDateDisplay, formatDateTimeDisplay } from "../utils/dateFormat";
@@ -28,20 +29,20 @@ const SectionDivider: React.FC<SectionDividerProps> = ({ title, icon: Icon }) =>
 
 
 
-interface NivelacionQuestion {
+export interface NivelacionQuestion {
     id: number;
     text: string;
     options: string[];
     correct: number;
 }
 
-const NIVELACION_QUESTIONS: NivelacionQuestion[] = [
+export const NIVELACION_QUESTIONS: NivelacionQuestion[] = [
     { id: 1, text: '¿Qué es un "enlace" o "hipervínculo" en una página web?', options: ["Una imagen decorativa", "Un texto o imagen que al hacer clic te lleva a otra página o sección", "Un anuncio publicitario", "El título principal de la página"], correct: 1 },
     { id: 2, text: '¿Qué significa "descargar" un archivo de internet?', options: ["Subir un archivo a una página web", "Guardar una copia del archivo en tu dispositivo", "Eliminar el archivo de internet", "Compartir el archivo con otros usuarios en línea"], correct: 1 },
     { id: 3, text: '¿Cuál es la función principal de un explorador web (navegador)?', options: ["Escribir y editar documentos de texto.", "Mostrar páginas web y permitir la navegación por internet.", "Enviar y recibir correos electrónicos.", "Reproducir música y videos."], correct: 1 },
     { id: 4, text: '¿Qué es una "contraseña" o "clave" en el contexto de internet?', options: ["Un programa para proteger la computadora de virus", "Una secuencia secreta de caracteres para acceder a una cuenta o servicio en línea", "El nombre de usuario para iniciar sesión en una página web", "Un código de descuento para compras en línea"], correct: 1 },
     { id: 5, text: '¿Qué significa "cerrar sesión" o "salir" de una cuenta en línea?', options: ["Eliminar la cuenta permanentemente", "Desactivar temporalmente la cuenta", "Finalizar la sesión activa y requerir volver a ingresar las credenciales para acceder", "Guardar la información de la sesión para un acceso más rápido la próxima vez"], correct: 2 },
-    { id: 6, text: '¿Qué es el "correo electrónico" o "e-mail"?', options: ["Un programa para crear presentaciones", "Un servicio para enviar y recibir mensajes a través de internet", "Una red social para compartir mensajes cortos", "Un sistema para realizar videollamadas"], correct: 1 },
+    { id: 6, text: '¿Qué es el "correo electrónico" o "e-mail"?', options: ["Un programa para crear presentations", "Un servicio para enviar y recibir mensajes a través de internet", "Una red social para compartir mensajes cortos", "Un sistema para realizar videollamadas"], correct: 1 },
     { id: 7, text: '¿Qué precaución básica se debe tener al navegar por internet?', options: ["Compartir contraseñas con amigos cercanos", "Hacer clic en todos los enlaces que aparezcan", "Evitar ingresar información personal en sitios web no seguros (sin \"https://\")", "Descargar archivos de fuentes desconocidas sin analizarlos"], correct: 2 },
     { id: 8, text: '¿Cuál de los siguientes dispositivos se utiliza principalmente para almacenar información de forma permanente en una computadora?', options: ["Memoria RAM", "Unidad Central de Procesamiento (CPU)", "Disco duro o unidad de estado sólido (SSD)", "Una marca de computadoras"], correct: 2 },
     { id: 9, text: '¿Cuál de los siguientes iconos suele representar una conexión Wi-Fi en un dispositivo electrónico?', options: ["Un enchufe", "Unas ondas o barras curvas que se expanden hacia arriba", "Un círculo con una flecha", "Un candado cerrado para navegar por internet", "Una marca de computadoras"], correct: 1 },
@@ -122,7 +123,7 @@ interface LocalNivelacionDigital {
     } | null;
 }
 
-type LocalEstudianteDetail = EstudianteDetail & {
+export type LocalEstudianteDetail = EstudianteDetail & {
     nivelacion_digital?: LocalNivelacionDigital | null;
     autorizacion_fecha?: string | null;
     autorizacion_selfie?: string | null;
@@ -1272,52 +1273,11 @@ export default function Estudiantes() {
                 onClose={() => setQrModal({ ...qrModal, open: false })}
             />
 
-            {showRespuestasModal && (
-                <Modal
-                    isOpen={showRespuestasModal}
-                    onClose={() => setShowRespuestasModal(false)}
-                    title={`Respuestas de ${viewData.student?.nombre} ${viewData.student?.apellido}`}
-                    maxWidthClass="max-w-2xl"
-                    actions={
-                        <Button onClick={() => setShowRespuestasModal(false)} className="bg-indigo-600 hover:bg-indigo-500 text-white">
-                            Cerrar
-                        </Button>
-                    }
-                >
-                    <div className="space-y-4">
-                        {NIVELACION_QUESTIONS.map(q => {
-                            const answerStr = viewData.student?.nivelacion_digital?.respuestas_json?.answers?.[q.id];
-                            const answerInt = answerStr !== undefined ? parseInt(answerStr) : -1;
-                            return (
-                                <div key={q.id} className="p-3 bg-indigo-950/40 rounded-lg border border-indigo-500/20">
-                                    <p className="font-bold text-sm text-indigo-100 mb-2">{q.id}. {q.text}</p>
-                                    <div className="space-y-1 pl-2">
-                                        {q.options.map((opt, idx) => {
-                                            let style = "text-indigo-300 text-xs";
-                                            let icon = null;
-                                            if (idx === q.correct && idx === answerInt) {
-                                                style = "text-emerald-400 font-bold";
-                                                icon = "✓";
-                                            } else if (idx === answerInt && idx !== q.correct) {
-                                                style = "text-red-400 font-bold";
-                                                icon = "✗";
-                                            } else if (idx === q.correct) {
-                                                style = "text-emerald-400/70";
-                                            }
-                                            return (
-                                                <div key={idx} className={`flex items-start gap-2 ${style}`}>
-                                                    <span className="mt-0.5">{icon || "•"}</span>
-                                                    <span>{opt}</span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Modal>
-            )}
+            <ModalRespuestas
+                isOpen={showRespuestasModal}
+                student={viewData.student}
+                onClose={() => setShowRespuestasModal(false)}
+            />
 
             {/* Modal Exportación */}
             <Modal
