@@ -30,7 +30,7 @@ import PreinscripcionTerciario from './pages/PreinscripcionTerciario';
 import PreinscripcionVideojuegos from './pages/PreinscripcionVideojuegos';
 import GestionPreinscripciones from './pages/GestionPreinscripciones';
 import GestionPreinscripcionesTerciario from './pages/GestionPreinscripcionesTerciario';
-import GestionPreinscripcionesVideojuegos from './pages/GestionPreinscripcionesVideojuegos.jsx';
+import GestionPreinscripcionesVideojuegos from './pages/GestionPreinscripcionesVideojuegos';
 import AdminTerciario from './pages/AdminTerciario';
 import AutorizacionParental from './pages/AutorizacionParental';
 import NivelacionDigital from './pages/NivelacionDigital';
