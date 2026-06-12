@@ -3,8 +3,31 @@ import { listAsistencias, createAsistencia, updateAsistencia } from "../services
 import api from '../api/client';
 import { Card, Select, Button, Input } from '../components/UI';
 import { Check, X, Save, CheckSquare, AlertCircle, Loader, Baby } from 'lucide-react';
+import { Programa, Cohorte, Bloque, Modulo, EstudianteDetail, Asistencia as AsistenciaType } from '../api/types';
+import axios from 'axios';
 
-const calculateAge = (birthDate) => {
+interface ClaseProgramada {
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  cohorte_id: number;
+  modulo_id?: number | null;
+}
+
+interface GridCell {
+  status: 'none' | 'present' | 'absent';
+  id: number | null;
+}
+
+type AttendanceGrid = Record<number, Record<number, GridCell>>;
+
+interface FeedbackState {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error';
+}
+
+const calculateAge = (birthDate?: string | null): number | null => {
   if (!birthDate) return null;
   const today = new Date();
   const birth = new Date(birthDate);
@@ -17,23 +40,23 @@ const calculateAge = (birthDate) => {
 };
 
 export default function Asistencia() {
-  const [programas, setProgramas] = useState([]);
-  const [cohortes, setCohortes] = useState([]);
-  const [selectedCohorteNombre, setSelectedCohorteNombre] = useState('');
-  const [bloques, setBloques] = useState([]);
-  const [selectedProgramaId, setSelectedProgramaId] = useState('');
-  const [selectedBloqueId, setSelectedBloqueId] = useState('');
-  const [selectedClaseDate, setSelectedClaseDate] = useState('');
-  const [selectedClaseSlot, setSelectedClaseSlot] = useState('');
-  const [clasesProgramadas, setClasesProgramadas] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [modulos, setModulos] = useState([]);
-  const [attendanceGrid, setAttendanceGrid] = useState({});
-  const [studentEnrolledModules, setStudentEnrolledModules] = useState({});
-  const [loadingData, setLoadingData] = useState(false);
-  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
+  const [programas, setProgramas] = useState<Programa[]>([]);
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [selectedCohorteNombre, setSelectedCohorteNombre] = useState<string>('');
+  const [bloques, setBloques] = useState<Bloque[]>([]);
+  const [selectedProgramaId, setSelectedProgramaId] = useState<string>('');
+  const [selectedBloqueId, setSelectedBloqueId] = useState<string>('');
+  const [selectedClaseDate, setSelectedClaseDate] = useState<string>('');
+  const [selectedClaseSlot, setSelectedClaseSlot] = useState<string>('');
+  const [clasesProgramadas, setClasesProgramadas] = useState<ClaseProgramada[]>([]);
+  const [students, setStudents] = useState<EstudianteDetail[]>([]);
+  const [modulos, setModulos] = useState<Modulo[]>([]);
+  const [attendanceGrid, setAttendanceGrid] = useState<AttendanceGrid>({});
+  const [studentEnrolledModules, setStudentEnrolledModules] = useState<Record<number, number[]>>({});
+  const [loadingData, setLoadingData] = useState<boolean>(false);
+  const [feedback, setFeedback] = useState<FeedbackState>({ open: false, message: '', severity: 'success' });
 
-  const formatDate = (yyyyMmDd) => {
+  const formatDate = (yyyyMmDd: string): string => {
     if (!yyyyMmDd || !yyyyMmDd.includes('-')) return yyyyMmDd || '';
     const [y, m, d] = yyyyMmDd.split('-');
     return `${d}/${m}/${y}`;
@@ -41,30 +64,36 @@ export default function Asistencia() {
 
   const fetchProgramas = useCallback(async () => {
     try {
-      const { data } = await api.get('/programas');
+      const { data } = await api.get<Programa[]>('/programas');
       setProgramas(Array.isArray(data) ? data : []);
-    } catch (error) { setFeedback({ open: true, message: 'Error al cargar programas.', severity: 'error' }); }
+    } catch (error: unknown) { 
+      setFeedback({ open: true, message: 'Error al cargar programas.', severity: 'error' }); 
+    }
   }, []);
 
-  const fetchCohortes = useCallback(async (programaId) => {
+  const fetchCohortes = useCallback(async (programaId: string) => {
     if (!programaId) return;
     try {
-      const { data } = await api.get(`/inscripciones/cohortes`, { params: { programa_id: programaId } });
+      const { data } = await api.get<Cohorte[]>(`/inscripciones/cohortes`, { params: { programa_id: programaId } });
       setCohortes(Array.isArray(data) ? data : []);
-    } catch (error) { setFeedback({ open: true, message: 'Error al cargar cohortes.', severity: 'error' }); }
+    } catch (error: unknown) { 
+      setFeedback({ open: true, message: 'Error al cargar cohortes.', severity: 'error' }); 
+    }
   }, []);
 
-  const fetchBloques = useCallback(async (programaId) => {
+  const fetchBloques = useCallback(async (programaId: string) => {
     if (!programaId) return;
     try {
-      const { data } = await api.get(`/bloques`, { params: { programa_id: programaId } });
+      const { data } = await api.get<Bloque[]>(`/bloques`, { params: { programa_id: programaId } });
       const bloquesData = Array.isArray(data) ? data : [];
       setBloques(bloquesData);
-      if (bloquesData.length === 1) setSelectedBloqueId(bloquesData[0].id);
-    } catch (error) { setFeedback({ open: true, message: 'Error al cargar bloques.', severity: 'error' }); }
+      if (bloquesData.length === 1) setSelectedBloqueId(String(bloquesData[0].id));
+    } catch (error: unknown) { 
+      setFeedback({ open: true, message: 'Error al cargar bloques.', severity: 'error' }); 
+    }
   }, []);
 
-  const fetchStudentsAndModulos = useCallback(async (cohorteNombre, bloqueId, fecha) => {
+  const fetchStudentsAndModulos = useCallback(async (cohorteNombre: string, bloqueId: string, fecha: string) => {
     if (!cohorteNombre || !bloqueId || !fecha) return;
     setLoadingData(true);
     try {
@@ -83,18 +112,18 @@ export default function Asistencia() {
       }
 
       const [inscriptionsResponses, modulesRes, attendanceData] = await Promise.all([
-        Promise.all(cohorteIds.map((id) => api.get(`/inscripciones`, { params: { cohorte_id: id } }))),
-        api.get(`/modulos`, { params: { bloque_id: bloqueId } }),
+        Promise.all(cohorteIds.map((id) => api.get('/inscripciones', { params: { cohorte_id: id } }))),
+        api.get<Modulo[]>(`/modulos`, { params: { bloque_id: bloqueId } }),
         listAsistencias({ bloque_id: bloqueId, fecha }),
       ]);
 
       const inscriptions = inscriptionsResponses.flatMap((res) => (Array.isArray(res.data) ? res.data : []));
 
-      const existingAttendance = Array.isArray(attendanceData) ? attendanceData : [];
+      const existingAttendance = Array.isArray(attendanceData) ? (attendanceData as AsistenciaType[]) : [];
       const modulosBloque = Array.isArray(modulesRes.data) ? modulesRes.data : [];
 
-      const studentMap = new Map();
-      const enrolledModulesMap = {};
+      const studentMap = new Map<number, EstudianteDetail>();
+      const enrolledModulesMap: Record<number, number[]> = {};
 
       inscriptions.filter(insc => insc.modulo && insc.modulo.bloque_id === Number(bloqueId)).forEach(insc => {
         if (insc.estudiante && insc.modulo) {
@@ -107,15 +136,15 @@ export default function Asistencia() {
       const uniqueStudents = Array.from(studentMap.values());
       const uniqueModulos = modulosBloque;
 
-      const grid = {};
+      const grid: AttendanceGrid = {};
       uniqueStudents.forEach(student => {
         grid[student.id] = {};
         uniqueModulos.forEach(mod => { grid[student.id][mod.id] = { status: 'none', id: null }; });
       });
 
       existingAttendance.forEach(att => {
-        if (grid[att.estudiante] && grid[att.estudiante][att.modulo]) {
-          grid[att.estudiante][att.modulo] = { status: att.presente ? 'present' : 'absent', id: att.id };
+        if (grid[att.estudiante_id] && grid[att.estudiante_id][att.modulo_id]) {
+          grid[att.estudiante_id][att.modulo_id] = { status: att.presente ? 'present' : 'absent', id: att.id };
         }
       });
 
@@ -123,12 +152,12 @@ export default function Asistencia() {
       setModulos(uniqueModulos);
       setStudentEnrolledModules(enrolledModulesMap);
       setAttendanceGrid(grid);
-    } catch (error) {
+    } catch (error: unknown) {
       setFeedback({ open: true, message: 'Error al cargar datos.', severity: 'error' });
     } finally { setLoadingData(false); }
   }, [cohortes]);
 
-  const fetchClasesProgramadas = useCallback(async (cohorteNombre, bloqueId) => {
+  const fetchClasesProgramadas = useCallback(async (cohorteNombre: string, bloqueId: string) => {
     if (!cohorteNombre || !bloqueId) {
       setClasesProgramadas([]);
       return;
@@ -144,7 +173,7 @@ export default function Asistencia() {
         return;
       }
       const responses = await Promise.all(
-        cohorteIds.map((id) => api.get('/horarios-cursada/clases-programadas', { params: { cohorte_id: id, bloque_id: bloqueId } }))
+        cohorteIds.map((id) => api.get<ClaseProgramada[]>('/horarios-cursada/clases-programadas', { params: { cohorte_id: id, bloque_id: bloqueId } }))
       );
       const clases = responses.flatMap((res) => (Array.isArray(res.data) ? res.data : []));
       clases.sort((a, b) => {
@@ -153,7 +182,7 @@ export default function Asistencia() {
         return aKey.localeCompare(bKey);
       });
       setClasesProgramadas(clases);
-    } catch (error) {
+    } catch (error: unknown) {
       setClasesProgramadas([]);
       setFeedback({ open: true, message: 'Error al cargar clases programadas.', severity: 'error' });
     }
@@ -169,19 +198,19 @@ export default function Asistencia() {
     }
   }, [selectedCohorteNombre, selectedBloqueId, selectedClaseDate, fetchStudentsAndModulos]);
 
-  const handleProgramaChange = (e) => {
+  const handleProgramaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedProgramaId(e.target.value); setSelectedCohorteNombre(''); setSelectedBloqueId(''); setSelectedClaseDate('');
     setSelectedClaseSlot('');
     setClasesProgramadas([]);
     setStudents([]); setModulos([]); setAttendanceGrid({}); setStudentEnrolledModules({});
   };
-  const handleCohorteChange = (e) => {
+  const handleCohorteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedCohorteNombre(e.target.value); setSelectedClaseDate('');
     setSelectedClaseSlot('');
     setStudents([]); setModulos([]); setAttendanceGrid({}); setStudentEnrolledModules({});
   };
 
-  const handleStatusChange = (studentId, moduloId, newStatus) => {
+  const handleStatusChange = (studentId: number, moduloId: number, newStatus: 'present' | 'absent') => {
     setAttendanceGrid(prevGrid => {
       const newGrid = { ...prevGrid };
       if (newGrid[studentId] && newGrid[studentId][moduloId]) {
@@ -196,24 +225,32 @@ export default function Asistencia() {
   const handleSaveAttendance = async () => {
     setLoadingData(true);
     try {
-      for (const studentId in attendanceGrid) {
-        for (const moduloId in attendanceGrid[studentId]) {
+      for (const studentIdStr in attendanceGrid) {
+        const studentId = Number(studentIdStr);
+        for (const moduloIdStr in attendanceGrid[studentId]) {
+          const moduloId = Number(moduloIdStr);
           const { status, id } = attendanceGrid[studentId][moduloId];
-          const isEnrolled = studentEnrolledModules[studentId]?.includes(parseInt(moduloId));
+          const isEnrolled = studentEnrolledModules[studentId]?.includes(moduloId);
           if (!isEnrolled) continue;
 
           if (status === 'none' && id) {
             await api.delete(`/examenes/asistencias/${id}`);
           } else if (status === 'present' || status === 'absent') {
-            const payload = { estudiante: Number(studentId), modulo: Number(moduloId), fecha: selectedClaseDate, presente: status === 'present' };
+            const payload = { estudiante: studentId, modulo: moduloId, fecha: selectedClaseDate, presente: status === 'present' };
             if (id) await updateAsistencia(id, payload); else await createAsistencia(payload);
           }
         }
       }
       setFeedback({ open: true, message: 'Asistencias guardadas con éxito', severity: 'success' });
       fetchStudentsAndModulos(selectedCohorteNombre, selectedBloqueId, selectedClaseDate);
-    } catch (error) {
-      setFeedback({ open: true, message: `Error al guardar: ${error.message}`, severity: 'error' });
+    } catch (error: unknown) {
+      let errorMsg = 'Error desconocido';
+      if (axios.isAxiosError(error)) {
+        errorMsg = error.response?.data?.error || error.message;
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
+      }
+      setFeedback({ open: true, message: `Error al guardar: ${errorMsg}`, severity: 'error' });
     } finally { setLoadingData(false); }
   };
 
@@ -236,13 +273,13 @@ export default function Asistencia() {
 
       <Card className="bg-indigo-900/20 border-indigo-500/30 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-          <Select label="Programa" value={selectedProgramaId} onChange={handleProgramaChange} options={[{ value: '', label: 'Seleccionar...' }, ...programas.map(p => ({ value: p.id, label: p.nombre }))]} className="bg-indigo-950/50" />
+          <Select label="Programa" value={selectedProgramaId} onChange={handleProgramaChange} options={[{ value: '', label: 'Seleccionar...' }, ...programas.map(p => ({ value: String(p.id), label: p.nombre }))]} className="bg-indigo-950/50" />
           <Select
             label="Bloque"
             value={selectedBloqueId}
             onChange={e => { setSelectedBloqueId(e.target.value); setSelectedCohorteNombre(''); setSelectedClaseDate(''); setSelectedClaseSlot(''); setClasesProgramadas([]); setStudents([]); setModulos([]); setAttendanceGrid({}); setStudentEnrolledModules({}); }}
             disabled={!selectedProgramaId}
-            options={[{ value: '', label: 'Seleccionar...' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]}
+            options={[{ value: '', label: 'Seleccionar...' }, ...bloques.map(b => ({ value: String(b.id), label: b.nombre }))]}
             className="bg-indigo-950/50"
           />
           <Select

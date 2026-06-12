@@ -6,7 +6,7 @@ import AppLayout from "./layout/AppLayout";
 
 // Page Components
 import Landing from "./pages/Landing";
-import Asistencia from "./pages/Asistencia.jsx";
+import Asistencia from "./pages/Asistencia";
 import Estudiantes from "./pages/Estudiantes.jsx";
 import Notas from "./pages/Notas.jsx";
 import CursoDetail from "./pages/CursoDetail";
@@ -18,20 +18,20 @@ import Programas from './pages/Programas'; // Still .tsx based on file list
 import Estructura from './pages/Estructura'; // Still .jsx based on file list
 import Calendario from './pages/Calendario';
 import Cohortes from './pages/Cohortes';
-import HorariosCursada from './pages/HorariosCursada.jsx';
+import HorariosCursada from './pages/HorariosCursada';
 import HistoricoCursos from './pages/HistoricoCursos.jsx';
 import HistoricoEstudiante from './pages/HistoricoEstudiante.jsx';
 import GraficoCursos from './pages/GraficoCursos';
 import Egresados from './pages/Egresados.jsx';
 import Usuarios from './pages/Usuarios.jsx';
-import Resoluciones from './pages/Resoluciones.jsx';
+import Resoluciones from './pages/Resoluciones';
 import PreinscripcionPublica from './pages/PreinscripcionPublica.jsx';
 import PreinscripcionTerciario from './pages/PreinscripcionTerciario.jsx';
 import PreinscripcionVideojuegos from './pages/PreinscripcionVideojuegos.jsx';
 import GestionPreinscripciones from './pages/GestionPreinscripciones.jsx';
 import GestionPreinscripcionesTerciario from './pages/GestionPreinscripcionesTerciario';
 import GestionPreinscripcionesVideojuegos from './pages/GestionPreinscripcionesVideojuegos.jsx';
-import AdminTerciario from './pages/AdminTerciario.jsx';
+import AdminTerciario from './pages/AdminTerciario';
 import AutorizacionParental from './pages/AutorizacionParental.jsx';
 import NivelacionDigital from './pages/NivelacionDigital';
 

@@ -12,71 +12,105 @@ import api from '../api/client';
 import CohorteFormDialog from '../components/CohorteFormDialog';
 import { formatDateDisplay } from '../utils/dateFormat';
 import { Select as AppSelect } from '../components/UI';
+import { Programa, Cohorte, Bloque, Modulo, Inscripcion } from '../api/types';
+import axios from 'axios';
 
+interface Calendario {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+}
+
+interface DetalleModuloStats {
+  total: number;
+  activos: number;
+  pausados: number;
+  egresados: number;
+  baja: number;
+}
+
+interface DetalleModulo extends Modulo {
+  stats: DetalleModuloStats;
+}
+
+interface FeedbackState {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error';
+}
+
+interface SaveFormData {
+  nombre: string;
+  programa: string | number;
+  bloque: string | number;
+  bloque_fechas: string | number;
+  fecha_inicio: string;
+}
 
 export default function Cohortes() {
-  const [cohortes, setCohortes] = useState([]);
-  const [programas, setProgramas] = useState([]);
-  const [calendarios, setCalendarios] = useState([]);
-  const [bloquesPrograma, setBloquesPrograma] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [currentCohorte, setCurrentCohorte] = useState(null);
-  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
-  const [filterProgramaId, setFilterProgramaId] = useState('');
-  const [filterBloqueId, setFilterBloqueId] = useState('');
-  const [filterCohorteNombre, setFilterCohorteNombre] = useState('');
-  const [filterInicio, setFilterInicio] = useState('');
-  const [openDetalle, setOpenDetalle] = useState(false);
-  const [detalleCohorte, setDetalleCohorte] = useState(null);
-  const [detalleModulos, setDetalleModulos] = useState([]);
-  const [detalleLoading, setDetalleLoading] = useState(false);
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [programas, setProgramas] = useState<Programa[]>([]);
+  const [calendarios, setCalendarios] = useState<Calendario[]>([]);
+  const [bloquesPrograma, setBloquesPrograma] = useState<Bloque[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [openDialog, setOpenDialog] = useState<boolean>(false);
+  const [currentCohorte, setCurrentCohorte] = useState<Cohorte | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState>({ open: false, message: '', severity: 'success' });
+  const [page, setPage] = useState<number>(0);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(25);
+  const [filterProgramaId, setFilterProgramaId] = useState<string>('');
+  const [filterBloqueId, setFilterBloqueId] = useState<string>('');
+  const [filterCohorteNombre, setFilterCohorteNombre] = useState<string>('');
+  const [filterInicio, setFilterInicio] = useState<string>('');
+  const [openDetalle, setOpenDetalle] = useState<boolean>(false);
+  const [detalleCohorte, setDetalleCohorte] = useState<Cohorte | null>(null);
+  const [detalleModulos, setDetalleModulos] = useState<DetalleModulo[]>([]);
+  const [detalleLoading, setDetalleLoading] = useState<boolean>(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [cohortesRes, programasRes, calendariosRes, bloquesRes] = await Promise.all([
-        api.get('/inscripciones/cohortes', { params: { programa_id: undefined } }),
-        api.get('/programas'),
-        api.get('/bloques-de-fechas'),
-        api.get('/bloques'),
+        api.get<Cohorte[]>('/inscripciones/cohortes', { params: { programa_id: undefined } }),
+        api.get<Programa[]>('/programas'),
+        api.get<Calendario[] | { results?: Calendario[] }>('/bloques-de-fechas'),
+        api.get<Bloque[]>('/bloques'),
       ]);
       const cohortesData = Array.isArray(cohortesRes.data) ? cohortesRes.data : [];
       setCohortes(cohortesData);
       setProgramas(Array.isArray(programasRes.data) ? programasRes.data : []);
+
       const calendariosData = calendariosRes.data;
       const calendariosArr = Array.isArray(calendariosData)
         ? calendariosData
-        : Array.isArray(calendariosData?.results)
-          ? calendariosData.results
+        : Array.isArray((calendariosData as { results?: Calendario[] })?.results)
+          ? ((calendariosData as { results?: Calendario[] })?.results as Calendario[])
           : [];
       setCalendarios(calendariosArr);
       setBloquesPrograma(Array.isArray(bloquesRes.data) ? bloquesRes.data : []);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching data:", error);
       setFeedback({ open: true, message: 'Error al cargar los datos.', severity: 'error' });
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage]);
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const handleSave = async (formData) => {
+  const handleSave = async (formData: SaveFormData) => {
     try {
-      if (!formData.nombre || !formData.programa || !formData.bloque || !formData.bloque_fechas || !formData.fecha_inicio) {
+      if (!formData.nombre || !formData.programa || !formData.bloque_fechas || !formData.fecha_inicio) {
         setFeedback({ open: true, message: 'Completa nombre, fecha, programa, bloque y calendario.', severity: 'error' });
         return;
       }
       const payload = {
         nombre: formData.nombre,
-        programa_id: formData.programa,
-        bloque_id: formData.bloque || null,
-        bloque_fechas_id: formData.bloque_fechas,
+        programa_id: Number(formData.programa),
+        bloque_id: formData.bloque ? Number(formData.bloque) : null,
+        bloque_fechas_id: Number(formData.bloque_fechas),
         fecha_inicio: formData.fecha_inicio || null,
       };
 
@@ -90,48 +124,58 @@ export default function Cohortes() {
       setOpenDialog(false);
       setCurrentCohorte(null);
       fetchData();
-    } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+    } catch (error: unknown) {
+      let errorMsg = 'Error desconocido';
+      if (axios.isAxiosError(error)) {
+        errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
+      }
       setFeedback({ open: true, message: `Error al guardar: ${errorMsg}`, severity: 'error' });
     }
   };
 
-  const handleEdit = (cohorte) => {
+  const handleEdit = (cohorte: Cohorte) => {
     setCurrentCohorte(cohorte);
     setOpenDialog(true);
   };
 
-  const handleDelete = async (cohorteId) => {
+  const handleDelete = async (cohorteId: number) => {
     if (!window.confirm('¿Estás seguro de eliminar esta cohorte?')) return;
 
     try {
       await api.delete(`/inscripciones/cohortes/${cohorteId}`);
       setFeedback({ open: true, message: 'Cohorte eliminada con éxito.', severity: 'success' });
       fetchData();
-    } catch (error) {
-      const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+    } catch (error: unknown) {
+      let errorMsg = 'Error desconocido';
+      if (axios.isAxiosError(error)) {
+        errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
+      }
       setFeedback({ open: true, message: `Error al eliminar: ${errorMsg}`, severity: 'error' });
     }
   };
 
-  const handleCloseFeedback = (event, reason) => {
+  const handleCloseFeedback = (event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') return;
     setFeedback({ ...feedback, open: false });
   };
 
-  const handleOpenDetalle = async (cohorte) => {
+  const handleOpenDetalle = async (cohorte: Cohorte) => {
     setDetalleCohorte(cohorte);
     setOpenDetalle(true);
     setDetalleLoading(true);
     try {
       const [modulosRes, inscripcionesRes] = await Promise.all([
-        cohorte?.bloque_id ? api.get('/modulos', { params: { bloque_id: cohorte.bloque_id } }) : Promise.resolve({ data: [] }),
-        api.get('/inscripciones', { params: { cohorte_id: cohorte.id } }),
+        cohorte?.bloque_id ? api.get<Modulo[]>('/modulos', { params: { bloque_id: cohorte.bloque_id } }) : Promise.resolve({ data: [] }),
+        api.get<Inscripcion[]>('/inscripciones', { params: { cohorte_id: cohorte.id } }),
       ]);
       const modulos = Array.isArray(modulosRes.data) ? modulosRes.data : [];
-      const inscripciones = Array.isArray(inscripcionesRes.data) ? inscripcionesRes.data : [];
+      const inscriptions = Array.isArray(inscripcionesRes.data) ? inscripcionesRes.data : [];
 
-      const counters = inscripciones.reduce((acc, i) => {
+      const counters = inscriptions.reduce<Record<number, DetalleModuloStats>>((acc, i) => {
         if (!i?.modulo_id) return acc;
         if (!acc[i.modulo_id]) {
           acc[i.modulo_id] = { total: 0, activos: 0, pausados: 0, egresados: 0, baja: 0 };
@@ -145,12 +189,12 @@ export default function Cohortes() {
         return acc;
       }, {});
 
-      const detalle = modulos.map((m) => ({
+      const detalle: DetalleModulo[] = modulos.map((m) => ({
         ...m,
         stats: counters[m.id] || { total: 0, activos: 0, pausados: 0, egresados: 0, baja: 0 },
       }));
       setDetalleModulos(detalle);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error cargando detalle de cohorte:', error);
       setDetalleModulos([]);
       setFeedback({ open: true, message: 'No se pudo cargar el detalle de la cohorte.', severity: 'error' });
@@ -163,7 +207,7 @@ export default function Cohortes() {
     const filtered = filterProgramaId
       ? bloquesPrograma.filter((b) => String(b.programa_id) === String(filterProgramaId))
       : bloquesPrograma;
-    return [{ value: '', label: 'Todos' }, ...filtered.map((b) => ({ value: b.id, label: b.nombre }))];
+    return [{ value: '', label: 'Todos' }, ...filtered.map((b) => ({ value: String(b.id), label: b.nombre }))];
   }, [bloquesPrograma, filterProgramaId]);
 
   const cohortesForFilters = useMemo(() => {
@@ -186,7 +230,7 @@ export default function Cohortes() {
       if (filterCohorteNombre && String(c.nombre) !== String(filterCohorteNombre)) return false;
       return true;
     });
-    const values = Array.from(new Set(base.map((c) => c.fecha_inicio).filter(Boolean)));
+    const values = Array.from(new Set(base.map((c) => c.fecha_inicio).filter(Boolean))) as string[];
     values.sort((a, b) => (a < b ? 1 : -1));
     return [{ value: '', label: 'Todos' }, ...values.map((v) => ({ value: v, label: formatDateDisplay(v) }))];
   }, [cohortesForFilters, filterCohorteNombre]);
@@ -231,7 +275,7 @@ export default function Cohortes() {
                   setFilterInicio('');
                   setPage(0);
                 }}
-                options={[{ value: '', label: 'Todos' }, ...programas.map((p) => ({ value: p.id, label: p.nombre }))]}
+                options={[{ value: '', label: 'Todos' }, ...programas.map((p) => ({ value: String(p.id), label: p.nombre }))]}
                 className="bg-indigo-950/50"
               />
               <AppSelect
@@ -334,7 +378,7 @@ export default function Cohortes() {
               count={cohortesFiltradas.length}
               rowsPerPage={rowsPerPage}
               page={page}
-              onPageChange={(e, p) => setPage(p)}
+              onPageChange={(_e, p: number) => setPage(p)}
               onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
               labelRowsPerPage="Filas por página:"
             />

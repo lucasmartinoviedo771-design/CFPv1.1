@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { UserContext, ThemeModeContext } from "../App";
 import authService from "../services/authService";
 import { apiClientV2 } from "../api/client";
+import { PreinscripcionTerciario } from "../api/types";
 
 import {
   Search, Eye, LogOut, Users, BookCheck, MapPin, 
@@ -16,7 +17,23 @@ import { DetailModal } from "../components/AdminTerciario/DetailModal";
 import { CohortePanel } from "../components/AdminTerciario/CohortePanel";
 import { AlumnosPanel } from "../components/AdminTerciario/AlumnosPanel";
 import { ConfiguracionPanel } from "../components/AdminTerciario/ConfiguracionPanel";
-import { UsuariosPanel, GRUPOS_CONFIG } from "../components/AdminTerciario/UsuariosPanel";
+import { UsuariosPanel } from "../components/AdminTerciario/UsuariosPanel";
+
+interface LocalidadStat {
+  localidad: string;
+  total: number;
+}
+
+interface TerciarioStats {
+  total: number;
+  pendiente: number;
+  aprobada: number;
+  con_hd?: number;
+  por_localidad?: LocalidadStat[];
+  con_discapacidad?: number;
+  pueblo_originario?: number;
+  rechazada?: number;
+}
 
 const ESTADOS_FILTER = [
   { value: "", label: "Todos los estados" },
@@ -25,14 +42,14 @@ const ESTADOS_FILTER = [
   { value: "rechazada", label: "Rechazadas" },
 ];
 
-const LOCALIDAD_LABELS = {
+const LOCALIDAD_LABELS: Record<string, string> = {
   ushuaia: "Ushuaia", rg_sur: "Río Grande Sur", rg_norte: "Río Grande Norte",
   tolhuin: "Tolhuin", zona_rural: "Zona Rural", otras: "Otras",
 };
 
-const SECUNDARIA_LABELS = { si: "Sí", no: "No", cursando: "Cursando" };
-const HD_ESTADO_LABELS = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
-const HD_ESTADO_COLORS = {
+const SECUNDARIA_LABELS: Record<string, string> = { si: "Sí", no: "No", cursando: "Cursando" };
+const HD_ESTADO_LABELS: Record<string, string> = { CURSANDO: "Cursando", APROBADO: "Aprobado", DESAPROBADO: "Desaprobado", INACTIVO: "Inactivo" };
+const HD_ESTADO_COLORS: Record<string, string> = {
   CURSANDO: "bg-blue-100 text-blue-800", APROBADO: "bg-green-100 text-green-800",
   DESAPROBADO: "bg-red-100 text-red-800", INACTIVO: "bg-gray-100 text-gray-600",
 };
@@ -53,13 +70,13 @@ export default function AdminTerciario() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
   const { mode, toggleMode } = useContext(ThemeModeContext);
-  const [tab, setTab] = useState("dashboard");
-  const [stats, setStats] = useState(null);
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("pendiente");
-  const [selected, setSelected] = useState(null);
+  const [tab, setTab] = useState<string>("dashboard");
+  const [stats, setStats] = useState<TerciarioStats | null>(null);
+  const [data, setData] = useState<PreinscripcionTerciario[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
+  const [filtroEstado, setFiltroEstado] = useState<string>("pendiente");
+  const [selected, setSelected] = useState<PreinscripcionTerciario | null>(null);
 
   const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
   const tieneTerciario = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_TERCIARIO.includes(g)));
@@ -73,7 +90,7 @@ export default function AdminTerciario() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const { data: s } = await apiClientV2.get("/preinscripciones-terciario-stats");
+      const { data: s } = await apiClientV2.get<TerciarioStats>("/preinscripciones-terciario-stats");
       setStats(s);
     } catch {}
   }, []);
@@ -81,15 +98,21 @@ export default function AdminTerciario() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params = {};
+      const params: Record<string, string> = {};
       if (filtroEstado) params.estado = filtroEstado;
-      const { data: res } = await apiClientV2.get("/preinscripciones-terciario", { params });
+      const { data: res } = await apiClientV2.get<PreinscripcionTerciario[]>("/preinscripciones-terciario", { params });
       setData(Array.isArray(res) ? res : []);
-    } catch { setData([]); }
-    finally { setLoading(false); }
+    } catch { 
+      setData([]); 
+    } finally { 
+      setLoading(false); 
+    }
   }, [filtroEstado]);
 
-  useEffect(() => { fetchStats(); fetchData(); }, [fetchStats, fetchData]);
+  useEffect(() => { 
+    fetchStats(); 
+    fetchData(); 
+  }, [fetchStats, fetchData]);
 
   const filtered = data.filter((p) => {
     const q = search.toLowerCase();
@@ -252,7 +275,7 @@ export default function AdminTerciario() {
                   <StatCard label="Total preinscriptos" value={stats.total} icon={<Users />} color={P.navy} />
                   <StatCard label="Pendientes" value={stats.pendiente} icon={<Clock />} color="#d97706" />
                   <StatCard label="Aprobados" value={stats.aprobada} icon={<CheckCircle2 />} color="#16a34a" />
-                  <StatCard label="Con HD Módulo 2" value={stats.con_hd} icon={<BookCheck />} color="#7c3aed" />
+                  <StatCard label="Con HD Módulo 2" value={stats.con_hd || 0} icon={<BookCheck />} color="#7c3aed" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#b8ccd8]/50">
@@ -260,7 +283,7 @@ export default function AdminTerciario() {
                     <div className="space-y-2">
                       {(stats.por_localidad || []).map((l) => (
                         <div key={l.localidad} className="flex items-center justify-between">
-                          <span className="text-sm text-[#1a1f4e]/70">{LOCALIDAD_LABELS[l.localidad] || l.localidad}</span>
+                          <span className="text-sm text-[#1a1f4e]/70">{LOCALIDAD_LABELS[l.localidad || ''] || l.localidad}</span>
                           <div className="flex items-center gap-2">
                             <div className="w-24 h-2 rounded-full bg-[#b8ccd8]">
                               <div className="h-2 rounded-full bg-[#f5c518]" style={{ width: `${Math.min((l.total / (stats.total || 1)) * 100, 100)}%` }} />
@@ -276,15 +299,15 @@ export default function AdminTerciario() {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-[#1a1f4e]/70">Con discapacidad</span>
-                        <span className="font-bold text-[#1a1f4e]">{stats.con_discapacidad}</span>
+                        <span className="font-bold text-[#1a1f4e]">{stats.con_discapacidad || 0}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-[#1a1f4e]/70">Pueblo originario</span>
-                        <span className="font-bold text-[#1a1f4e]">{stats.pueblo_originario}</span>
+                        <span className="font-bold text-[#1a1f4e]">{stats.pueblo_originario || 0}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-[#1a1f4e]/70">Rechazados</span>
-                        <span className="font-bold text-red-600">{stats.rechazada}</span>
+                        <span className="font-bold text-red-600">{stats.rechazada || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -342,12 +365,12 @@ export default function AdminTerciario() {
                       <tr key={p.id} className="hover:bg-[#b8ccd8]/10 transition-colors">
                         <td className="px-4 py-3 font-semibold text-[#1a1f4e]">{p.apellido_nombre}</td>
                         <td className="px-4 py-3 text-[#1a1f4e]/70">{p.dni}</td>
-                        <td className="px-4 py-3 text-[#1a1f4e]/70">{LOCALIDAD_LABELS[p.localidad] || p.localidad}</td>
-                        <td className="px-4 py-3 text-[#1a1f4e]/70">{SECUNDARIA_LABELS[p.finalizo_secundaria] || p.finalizo_secundaria}</td>
+                        <td className="px-4 py-3 text-[#1a1f4e]/70">{LOCALIDAD_LABELS[p.localidad || ''] || p.localidad}</td>
+                        <td className="px-4 py-3 text-[#1a1f4e]/70">{SECUNDARIA_LABELS[p.finalizo_secundaria || ''] || p.finalizo_secundaria}</td>
                         <td className="px-4 py-3">
                           {p.hd_estado ? (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${HD_ESTADO_COLORS[p.hd_estado] || "bg-gray-100"}`}>
-                              {HD_ESTADO_LABELS[p.hd_estado] || p.hd_estado}
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${HD_ESTADO_COLORS[p.hd_estado || ''] || "bg-gray-100"}`}>
+                              {HD_ESTADO_LABELS[p.hd_estado || ''] || p.hd_estado}
                             </span>
                           ) : (
                             <span className="text-[#1a1f4e]/30 text-xs">—</span>

@@ -196,4 +196,13 @@ export type DashboardStats = {
   [key: string]: unknown;
 };
 
+export type Resolucion = {
+  id: number;
+  numero: string;
+  nombre: string;
+  fecha_publicacion: string;
+  vigente: boolean;
+  observaciones?: string | null;
+};
+
 

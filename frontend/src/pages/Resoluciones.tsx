@@ -31,8 +31,18 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import api from '../api/client';
 import { formatDateDisplay } from '../utils/dateFormat';
+import { Resolucion } from '../api/types';
+import axios from 'axios';
 
-const initialFormState = {
+interface FormState {
+    numero: string;
+    nombre: string;
+    fecha_publicacion: string;
+    vigente: boolean;
+    observaciones: string;
+}
+
+const initialFormState: FormState = {
     numero: '',
     nombre: '',
     fecha_publicacion: '',
@@ -40,22 +50,28 @@ const initialFormState = {
     observaciones: '',
 };
 
+interface FeedbackState {
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'warning' | 'info';
+}
+
 export default function Resoluciones() {
-    const [resoluciones, setResoluciones] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [openDialog, setOpenDialog] = useState(false);
-    const [currentResolucion, setCurrentResolucion] = useState(null);
-    const [form, setForm] = useState(initialFormState);
-    const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [resoluciones, setResoluciones] = useState<Resolucion[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [openDialog, setOpenDialog] = useState<boolean>(false);
+    const [currentResolucion, setCurrentResolucion] = useState<Resolucion | null>(null);
+    const [form, setForm] = useState<FormState>(initialFormState);
+    const [feedback, setFeedback] = useState<FeedbackState>({ open: false, message: '', severity: 'success' });
+    const [page, setPage] = useState<number>(0);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(25);
 
     const fetchResoluciones = useCallback(async () => {
         setLoading(true);
         try {
-            const { data } = await api.get('/resoluciones');
+            const { data } = await api.get<Resolucion[]>('/resoluciones');
             setResoluciones(Array.isArray(data) ? data : []);
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error al cargar resoluciones:', error);
             setFeedback({ open: true, message: 'Error al cargar resoluciones.', severity: 'error' });
         } finally {
@@ -67,7 +83,7 @@ export default function Resoluciones() {
         fetchResoluciones();
     }, [fetchResoluciones]);
 
-    const handleOpenDialog = (resolucion = null) => {
+    const handleOpenDialog = (resolucion: Resolucion | null = null) => {
         if (resolucion) {
             setCurrentResolucion(resolucion);
             setForm({
@@ -90,8 +106,11 @@ export default function Resoluciones() {
         setForm(initialFormState);
     };
 
-    const handleFormChange = (e) => {
-        const { name, value, type, checked } = e.target;
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const name = e.target.name;
+        const type = e.target.type;
+        const value = e.target.value;
+        const checked = (e.target as HTMLInputElement).checked;
         setForm((prev) => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value,
@@ -115,17 +134,22 @@ export default function Resoluciones() {
 
             handleCloseDialog();
             fetchResoluciones();
-        } catch (error) {
-            const errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+        } catch (error: unknown) {
+            let errorMsg = 'Error desconocido';
+            if (axios.isAxiosError(error)) {
+                errorMsg = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+            } else if (error instanceof Error) {
+                errorMsg = error.message;
+            }
             setFeedback({ open: true, message: `Error al guardar: ${errorMsg}`, severity: 'error' });
         }
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: number) => {
         if (!window.confirm('¿Estás seguro de eliminar esta resolución?')) return;
 
         try {
-            const response = await api.delete(`/resoluciones/${id}`);
+            const response = await api.delete<{ error?: string }>(`/resoluciones/${id}`);
 
             if (response.data.error) {
                 setFeedback({
@@ -137,13 +161,18 @@ export default function Resoluciones() {
                 setFeedback({ open: true, message: 'Resolución eliminada con éxito', severity: 'success' });
                 fetchResoluciones();
             }
-        } catch (error) {
-            const errorMsg = error.response?.data?.error || error.message;
+        } catch (error: unknown) {
+            let errorMsg = 'Error desconocido';
+            if (axios.isAxiosError(error)) {
+                errorMsg = error.response?.data?.error || error.message;
+            } else if (error instanceof Error) {
+                errorMsg = error.message;
+            }
             setFeedback({ open: true, message: `Error al eliminar: ${errorMsg}`, severity: 'error' });
         }
     };
 
-    const handleCloseFeedback = (event, reason) => {
+    const handleCloseFeedback = (event?: React.SyntheticEvent | Event, reason?: string) => {
         if (reason === 'clickaway') return;
         setFeedback({ ...feedback, open: false });
     };
@@ -257,7 +286,7 @@ export default function Resoluciones() {
                             count={resoluciones.length}
                             rowsPerPage={rowsPerPage}
                             page={page}
-                            onPageChange={(e, p) => setPage(p)}
+                            onPageChange={(_e, p: number) => setPage(p)}
                             onRowsPerPageChange={(e) => {
                                 setRowsPerPage(parseInt(e.target.value, 10));
                                 setPage(0);

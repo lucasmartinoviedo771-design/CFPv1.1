@@ -2,6 +2,47 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Card, Select, Button, Input } from '../components/UI';
 import api from '../api/client';
 import { EditOutlined, DeleteOutline } from '@mui/icons-material';
+import { Programa, Bloque, Cohorte, Modulo } from '../api/types';
+import axios from 'axios';
+
+interface Docente {
+  id: number;
+  username: string;
+  first_name?: string | null;
+  last_name?: string | null;
+}
+
+interface Horario {
+  id: number;
+  cohorte_id: number;
+  bloque_id: number;
+  modulo_id?: number | null;
+  docente_id?: number | null;
+  docente_nombre?: string | null;
+  dia_semana: string;
+  hora_inicio: string;
+  hora_fin: string;
+}
+
+interface FormState {
+  programa_id: string;
+  cohorte_id: string;
+  bloque_id: string;
+  modulo_id: string;
+  docente_id: string;
+  dia_semana: string;
+  hora_inicio: string;
+  hora_fin: string;
+}
+
+interface MetadataResponse {
+  programas: Programa[];
+  bloques: Bloque[];
+  cohortes: Cohorte[];
+  horarios: Horario[];
+  docentes: Docente[];
+  modulos: Modulo[];
+}
 
 const DIAS = [
   { value: 'LUNES', label: 'Lunes' },
@@ -13,7 +54,7 @@ const DIAS = [
   { value: 'DOMINGO', label: 'Domingo' },
 ];
 
-const emptyForm = {
+const emptyForm: FormState = {
   programa_id: '',
   cohorte_id: '',
   bloque_id: '',
@@ -24,7 +65,7 @@ const emptyForm = {
   hora_fin: '',
 };
 
-const add40Minutes = (hhmm) => {
+const add40Minutes = (hhmm: string): string => {
   if (!hhmm || !hhmm.includes(':')) return '';
   const [hStr, mStr] = hhmm.split(':');
   const h = Number(hStr);
@@ -37,26 +78,26 @@ const add40Minutes = (hhmm) => {
 };
 
 export default function HorariosCursada() {
-  const [programas, setProgramas] = useState([]);
-  const [bloques, setBloques] = useState([]);
-  const [cohortes, setCohortes] = useState([]);
-  const [modulos, setModulos] = useState([]); // Filtered for Select
-  const [allModulos, setAllModulos] = useState([]); // All loaded modules
-  const [horarios, setHorarios] = useState([]);
-  const [docentes, setDocentes] = useState([]);
+  const [programas, setProgramas] = useState<Programa[]>([]);
+  const [bloques, setBloques] = useState<Bloque[]>([]);
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [modulos, setModulos] = useState<Modulo[]>([]); // Filtered for Select
+  const [allModulos, setAllModulos] = useState<Modulo[]>([]); // All loaded modules
+  const [horarios, setHorarios] = useState<Horario[]>([]);
+  const [docentes, setDocentes] = useState<Docente[]>([]);
 
-  const [filterProgramaId, setFilterProgramaId] = useState('');
-  const [filterBloqueId, setFilterBloqueId] = useState('');
-  const [filterCohorteId, setFilterCohorteId] = useState('');
-  const [showPastYears, setShowPastYears] = useState(false);
+  const [filterProgramaId, setFilterProgramaId] = useState<string>('');
+  const [filterBloqueId, setFilterBloqueId] = useState<string>('');
+  const [filterCohorteId, setFilterCohorteId] = useState<string>('');
+  const [showPastYears, setShowPastYears] = useState<boolean>(false);
 
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState({ open: false, message: '', severity: 'success' });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [feedback, setFeedback] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const currentYear = new Date().getFullYear();
 
-  const isCohorteVisibleByYear = (cohorte) => {
+  const isCohorteVisibleByYear = (cohorte?: Cohorte | null): boolean => {
     if (showPastYears) return true;
     const y = Number(String(cohorte?.fecha_inicio || '').slice(0, 4));
     if (!y) return true;
@@ -65,15 +106,15 @@ export default function HorariosCursada() {
 
   const fetchAll = async () => {
     try {
-      const { data } = await api.get('/horarios-cursada/metadata');
+      const { data } = await api.get<MetadataResponse>('/horarios-cursada/metadata');
       setProgramas(Array.isArray(data.programas) ? data.programas : []);
       setBloques(Array.isArray(data.bloques) ? data.bloques : []);
       setCohortes(Array.isArray(data.cohortes) ? data.cohortes : []);
       setHorarios(Array.isArray(data.horarios) ? data.horarios : []);
       setDocentes(Array.isArray(data.docentes) ? data.docentes : []);
       setAllModulos(Array.isArray(data.modulos) ? data.modulos : []);
-    } catch {
-      setFeedback({ open: true, message: 'Error cargando datos iniziales', severity: 'error' });
+    } catch (error: unknown) {
+      setFeedback({ open: true, message: 'Error cargando datos iniciales', severity: 'error' });
     }
   };
 
@@ -87,7 +128,6 @@ export default function HorariosCursada() {
       setModulos([]);
       return;
     }
-    // Filter from allModulos instead of API call
     const filtered = allModulos.filter(m => String(m.bloque_id) === String(bloqueId));
     setModulos(filtered);
   }, [form.bloque_id, allModulos]);
@@ -136,7 +176,7 @@ export default function HorariosCursada() {
     setEditingId(null);
   };
 
-  const onEdit = (h) => {
+  const onEdit = (h: Horario) => {
     const horaInicio = (h.hora_inicio || '').slice(0, 5);
     setEditingId(h.id);
     const coh = cohortes.find(c => c.id === h.cohorte_id);
@@ -152,14 +192,18 @@ export default function HorariosCursada() {
     });
   };
 
-  const onDelete = async (id) => {
+  const onDelete = async (id: number) => {
     if (!window.confirm('¿Eliminar este horario?')) return;
-    await api.delete(`/horarios-cursada/${id}`);
-    await fetchAll();
-    setFeedback({ open: true, message: 'Horario eliminado', severity: 'success' });
+    try {
+      await api.delete(`/horarios-cursada/${id}`);
+      await fetchAll();
+      setFeedback({ open: true, message: 'Horario eliminado', severity: 'success' });
+    } catch (error: unknown) {
+      setFeedback({ open: true, message: 'Error al eliminar', severity: 'error' });
+    }
   };
 
-  const onSubmit = async (e) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.cohorte_id || !form.bloque_id || !form.dia_semana || !form.hora_inicio) return;
 
@@ -177,36 +221,34 @@ export default function HorariosCursada() {
       };
       if (editingId) {
         await api.put(`/horarios-cursada/${editingId}`, payload);
-        resetForm(); // Reset only on edit success
+        resetForm();
         setFeedback({ open: true, message: 'Horario actualizado', severity: 'success' });
       } else {
         await api.post('/horarios-cursada', payload);
-        // Do NOT reset form on create success, per user request
         setFeedback({ open: true, message: 'Horario creado exitosamente. Puedes seguir cargando.', severity: 'success' });
       }
       await fetchAll();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(error);
       setFeedback({ open: true, message: 'Error al guardar.', severity: 'error' });
     } finally {
       setSaving(false);
-      // Auto-hide feedback after 3s
       setTimeout(() => setFeedback(prev => ({ ...prev, open: false })), 3000);
     }
   };
 
-  const getPrograma = (cohorteId) => {
+  const getPrograma = (cohorteId: number) => {
     const coh = cohortes.find((c) => c.id === cohorteId);
     return programas.find((p) => p.id === coh?.programa_id)?.nombre || '-';
   };
 
-  const getBloque = (bloqueId) => bloques.find((b) => b.id === bloqueId)?.nombre || '-';
-  const getCohorte = (cohorteId) => {
+  const getBloque = (bloqueId: number) => bloques.find((b) => b.id === bloqueId)?.nombre || '-';
+  const getCohorte = (cohorteId: number) => {
     const c = cohortes.find((x) => x.id === cohorteId);
     if (!c) return '-';
     return `${c.nombre} (${c.fecha_inicio || '-'})`;
   };
-  const getModulo = (moduloId) => allModulos.find((m) => m.id === moduloId)?.nombre || '-';
+  const getModulo = (moduloId: number) => allModulos.find((m) => m.id === moduloId)?.nombre || '-';
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -222,25 +264,25 @@ export default function HorariosCursada() {
               label="Programa"
               value={form.programa_id || ''}
               onChange={(e) => setForm((prev) => ({ ...prev, programa_id: e.target.value, bloque_id: '', cohorte_id: '', modulo_id: '' }))}
-              options={[{ value: '', label: 'Seleccionar...' }, ...programas.map((p) => ({ value: p.id, label: p.nombre }))]}
+              options={[{ value: '', label: 'Seleccionar...' }, ...programas.map((p) => ({ value: String(p.id), label: p.nombre }))]}
             />
             <Select
               label="Bloque"
               value={form.bloque_id}
               onChange={(e) => setForm((prev) => ({ ...prev, bloque_id: e.target.value, cohorte_id: '', modulo_id: '' }))}
-              options={[{ value: '', label: 'Seleccionar...' }, ...bloquesFormOptions.map((b) => ({ value: b.id, label: b.nombre }))]}
+              options={[{ value: '', label: 'Seleccionar...' }, ...bloquesFormOptions.map((b) => ({ value: String(b.id), label: b.nombre }))]}
             />
             <Select
               label="Cohorte"
               value={form.cohorte_id}
               onChange={(e) => setForm((prev) => ({ ...prev, cohorte_id: e.target.value }))}
-              options={[{ value: '', label: 'Seleccionar...' }, ...cohortesFormOptions.map((c) => ({ value: c.id, label: `${c.nombre} (${c.fecha_inicio || '-'})` }))]}
+              options={[{ value: '', label: 'Seleccionar...' }, ...cohortesFormOptions.map((c) => ({ value: String(c.id), label: `${c.nombre} (${c.fecha_inicio || '-'})` }))]}
             />
             <Select
               label="Módulo (opcional)"
               value={form.modulo_id}
               onChange={(e) => setForm((prev) => ({ ...prev, modulo_id: e.target.value }))}
-              options={[{ value: '', label: 'Bloque completo' }, ...modulos.map((m) => ({ value: m.id, label: m.nombre }))]}
+              options={[{ value: '', label: 'Bloque completo' }, ...modulos.map((m) => ({ value: String(m.id), label: m.nombre }))]}
             />
             <Select
               label="Docente (opcional)"
@@ -248,7 +290,7 @@ export default function HorariosCursada() {
               onChange={(e) => setForm((prev) => ({ ...prev, docente_id: e.target.value }))}
               options={[
                 { value: '', label: 'Sin asignar' },
-                ...docentes.map((d) => ({ value: d.id, label: `${d.first_name || ''} ${d.last_name || ''}`.trim() || d.username })),
+                ...docentes.map((d) => ({ value: String(d.id), label: `${d.first_name || ''} ${d.last_name || ''}`.trim() || d.username })),
               ]}
             />
             <Select
@@ -305,19 +347,19 @@ export default function HorariosCursada() {
             label="Programa"
             value={filterProgramaId}
             onChange={(e) => { setFilterProgramaId(e.target.value); setFilterBloqueId(''); setFilterCohorteId(''); }}
-            options={[{ value: '', label: 'Todos' }, ...programas.map((p) => ({ value: p.id, label: p.nombre }))]}
+            options={[{ value: '', label: 'Todos' }, ...programas.map((p) => ({ value: String(p.id), label: p.nombre }))]}
           />
           <Select
             label="Bloque"
             value={filterBloqueId}
             onChange={(e) => { setFilterBloqueId(e.target.value); setFilterCohorteId(''); }}
-            options={[{ value: '', label: 'Todos' }, ...bloquesFiltrados.map((b) => ({ value: b.id, label: b.nombre }))]}
+            options={[{ value: '', label: 'Todos' }, ...bloquesFiltrados.map((b) => ({ value: String(b.id), label: b.nombre }))]}
           />
           <Select
             label="Cohorte"
             value={filterCohorteId}
             onChange={(e) => setFilterCohorteId(e.target.value)}
-            options={[{ value: '', label: 'Todas' }, ...cohortesFiltradas.map((c) => ({ value: c.id, label: `${c.nombre} (${c.fecha_inicio || '-'})` }))]}
+            options={[{ value: '', label: 'Todas' }, ...cohortesFiltradas.map((c) => ({ value: String(c.id), label: `${c.nombre} (${c.fecha_inicio || '-'})` }))]}
           />
           <label className="md:col-span-3 mt-1 inline-flex items-center gap-2 text-indigo-200 text-sm">
             <input

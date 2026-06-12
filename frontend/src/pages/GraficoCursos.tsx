@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardContent, Typography, FormControl, InputLabel, Select, MenuItem, Accordion, AccordionSummary, AccordionDetails, CircularProgress, Button, Grid } from '@mui/material';
+import { Box, Card, CardContent, Typography, Accordion, AccordionSummary, AccordionDetails, CircularProgress, Grid } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { listProgramas } from '../services/programasService';
 import api from '../api/client';
@@ -7,19 +7,78 @@ import { getCoursesGraph } from '../services/estructuraService';
 import { formatDateDisplay } from '../utils/dateFormat';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Select as AppSelect, Button as AppButton } from '../components/UI';
+import { Programa, Bloque, Cohorte } from '../api/types';
+
+interface TreeFinal {
+  id: number;
+  tipo_examen: string;
+  fecha?: string | null;
+}
+
+interface TreeModulo {
+  id: number;
+  nombre: string;
+  es_practica: boolean;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+}
+
+interface TreeBloque {
+  id: number;
+  nombre: string;
+  children?: TreeModulo[];
+  finales?: TreeFinal[];
+}
+
+interface TreeTrayecto {
+  id: number;
+  nombre: string;
+  children?: TreeBloque[];
+}
+
+interface TreeCohorteData {
+  nombre: string;
+  estudiantes_total?: number;
+  estatus_regular?: number;
+  estatus_libre?: number;
+  estatus_baja?: number;
+  estado_inscripto?: number;
+  estado_activo?: number;
+  estado_pausado?: number;
+  estado_egresado?: number;
+}
+
+interface TreeCohorteInfo {
+  nombre: string;
+  bloque_fechas_nombre?: string;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  bloque_fechas_descripcion?: string | null;
+  secuencia?: Array<{ orden: number; tipo_label: string; fecha?: string | null }>;
+  stats?: {
+    tipos_semana?: Record<string, number>;
+  };
+}
+
+interface CourseTree {
+  programa?: { nombre: string };
+  tree?: TreeTrayecto[];
+  cohortes?: TreeCohorteData[];
+  cohorte?: TreeCohorteInfo;
+}
 
 export default function GraficoCursos() {
-  const [programas, setProgramas] = useState([]);
-  const [bloques, setBloques] = useState([]);
-  const [cohortesRaw, setCohortesRaw] = useState([]);
-  const [cohortes, setCohortes] = useState([]);
-  const [programaId, setProgramaId] = useState('');
-  const [bloqueId, setBloqueId] = useState('');
-  const [cohorteId, setCohorteId] = useState('');
-  const [anio, setAnio] = useState('');
-  const [tree, setTree] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [programas, setProgramas] = useState<Programa[]>([]);
+  const [bloques, setBloques] = useState<Bloque[]>([]);
+  const [cohortesRaw, setCohortesRaw] = useState<Cohorte[]>([]);
+  const [cohortes, setCohortes] = useState<Cohorte[]>([]);
+  const [programaId, setProgramaId] = useState<string>('');
+  const [bloqueId, setBloqueId] = useState<string>('');
+  const [cohorteId, setCohorteId] = useState<string>('');
+  const [anio, setAnio] = useState<string>('');
+  const [tree, setTree] = useState<CourseTree | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     const boot = async () => {
@@ -42,9 +101,9 @@ export default function GraficoCursos() {
         return;
       }
       try {
-        const params = { programa_id: programaId };
+        const params: Record<string, string> = { programa_id: programaId };
         if (bloqueId) params.bloque_id = bloqueId;
-        const res = await api.get('/inscripciones/cohortes', { params });
+        const res = await api.get<Cohorte[]>('/inscripciones/cohortes', { params });
         const list = Array.isArray(res.data) ? res.data : [];
         setCohortesRaw(list);
       } catch (e) {
@@ -63,7 +122,7 @@ export default function GraficoCursos() {
         return;
       }
       try {
-        const res = await api.get('/bloques', { params: { programa_id: programaId } });
+        const res = await api.get<Bloque[]>('/bloques', { params: { programa_id: programaId } });
         setBloques(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
         setBloques([]);
@@ -89,7 +148,7 @@ export default function GraficoCursos() {
     new Set(
       (cohortesRaw || [])
         .map((c) => (c?.fecha_inicio ? new Date(c.fecha_inicio).getFullYear() : null))
-        .filter(Boolean)
+        .filter((y): y is number => y !== null)
     )
   )
     .sort((a, b) => b - a)
@@ -101,12 +160,12 @@ export default function GraficoCursos() {
     setError('');
     try {
       const data = await getCoursesGraph({
-        programa_id: programaId,
-        bloque_id: bloqueId || undefined,
-        cohorte_id: cohorteId || undefined,
-        anio: anio || undefined,
+        programa_id: Number(programaId),
+        bloque_id: bloqueId ? Number(bloqueId) : undefined,
+        cohorte_id: cohorteId ? Number(cohorteId) : undefined,
+        anio: anio ? Number(anio) : undefined,
       });
-      setTree(data);
+      setTree(data as CourseTree);
     } catch (e) {
       setTree(null);
       setError('No se pudo cargar el gráfico de cohortes para el programa seleccionado.');
@@ -219,7 +278,7 @@ export default function GraficoCursos() {
                 setAnio('');
                 setTree(null);
               }}
-              options={[{ value: '', label: 'Seleccionar...' }, ...(programas || []).map((p) => ({ value: p.id, label: p.nombre }))]}
+              options={[{ value: '', label: 'Seleccionar...' }, ...(programas || []).map((p) => ({ value: String(p.id), label: p.nombre }))]}
               className="bg-indigo-950/50"
             />
             <AppSelect
@@ -227,7 +286,7 @@ export default function GraficoCursos() {
               value={bloqueId}
               onChange={(e) => { setBloqueId(e.target.value); setCohorteId(''); setTree(null); }}
               disabled={!programaId}
-              options={[{ value: '', label: 'Todos' }, ...(bloques || []).map((b) => ({ value: b.id, label: b.nombre }))]}
+              options={[{ value: '', label: 'Todos' }, ...(bloques || []).map((b) => ({ value: String(b.id), label: b.nombre }))]}
               className="bg-indigo-950/50"
             />
             <AppSelect
@@ -235,7 +294,7 @@ export default function GraficoCursos() {
               value={cohorteId}
               onChange={(e) => setCohorteId(e.target.value)}
               disabled={!programaId}
-              options={[{ value: '', label: 'Todos' }, ...(cohortes || []).map((c) => ({ value: c.id, label: c.nombre }))]}
+              options={[{ value: '', label: 'Todos' }, ...(cohortes || []).map((c) => ({ value: String(c.id), label: c.nombre }))]}
               className="bg-indigo-950/50"
             />
             <AppSelect
@@ -271,7 +330,7 @@ export default function GraficoCursos() {
                 <CardContent>
                   <Typography variant="h6" sx={{ mb: 2 }}>Estudiantes por Cohorte</Typography>
                   <Box sx={{ width: '100%', height: 280 }}>
-                    <ResponsiveContainer>
+                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartCohortes}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" />
                         <XAxis dataKey="cohorte" stroke="#c7d2fe" />
@@ -290,7 +349,7 @@ export default function GraficoCursos() {
                 <CardContent>
                   <Typography variant="h6" sx={{ mb: 2 }}>Estatus de Estudiantes por Cohorte</Typography>
                   <Box sx={{ width: '100%', height: 280 }}>
-                    <ResponsiveContainer>
+                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartCohortes}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" />
                         <XAxis dataKey="cohorte" stroke="#c7d2fe" />
@@ -329,7 +388,7 @@ export default function GraficoCursos() {
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={5}>
                     <Box sx={{ width: '100%', height: 260 }}>
-                      <ResponsiveContainer>
+                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={tiposSemanaData}
