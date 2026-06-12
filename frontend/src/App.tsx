@@ -28,7 +28,7 @@ import Resoluciones from './pages/Resoluciones';
 import PreinscripcionPublica from './pages/PreinscripcionPublica.jsx';
 import PreinscripcionTerciario from './pages/PreinscripcionTerciario.jsx';
 import PreinscripcionVideojuegos from './pages/PreinscripcionVideojuegos.jsx';
-import GestionPreinscripciones from './pages/GestionPreinscripciones.jsx';
+import GestionPreinscripciones from './pages/GestionPreinscripciones';
 import GestionPreinscripcionesTerciario from './pages/GestionPreinscripcionesTerciario';
 import GestionPreinscripcionesVideojuegos from './pages/GestionPreinscripcionesVideojuegos.jsx';
 import AdminTerciario from './pages/AdminTerciario';

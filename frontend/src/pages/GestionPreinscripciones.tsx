@@ -1,24 +1,39 @@
 import React, { useMemo, useState, useContext } from "react";
 import { createPortal } from "react-dom";
 import { UserContext } from "../App";
-import { useEstudiantes, useSaveEstudiante } from "../api/hooks";
+import { useEstudiantes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
-import { Card, Button, Input, Select } from '../components/UI';
+import { Card, Button, Input } from '../components/UI';
 import {
     CheckCircle, XCircle, Search, Eye, FileText,
-    Download, Check, AlertCircle, Loader, UserCheck, Trash2, UploadCloud, Baby
+    Download, Check, AlertCircle, Loader, UserCheck, Trash2, UploadCloud
 } from 'lucide-react';
 import { formatDateDisplay } from "../utils/dateFormat";
 import { getMediaUrl } from "../utils/media";
+import type { EstudianteDetail } from '../api/types';
+import type { LucideIcon } from 'lucide-react';
 
-const SectionDivider = ({ title, icon: Icon }) => (
+interface Aspirante extends EstudianteDetail {
+    autorizacion_status?: string | null;
+    autorizacion_fecha?: string | null;
+    autorizacion_selfie?: string | null;
+    autorizacion_token?: string | null;
+    created_at?: string | null;
+}
+
+interface SectionDividerProps {
+    title: string;
+    icon?: LucideIcon;
+}
+
+const SectionDivider: React.FC<SectionDividerProps> = ({ title, icon: Icon }) => (
     <div className="flex items-center gap-2 text-indigo-300 border-b border-indigo-500/20 pb-2 mb-4 mt-6">
         {Icon && <Icon size={16} />}
         <span className="text-sm font-bold uppercase tracking-wider">{title}</span>
     </div>
 );
 
-const calculateAge = (birthDate) => {
+const calculateAge = (birthDate?: string | null): number | null => {
     if (!birthDate) return null;
     const today = new Date();
     const birth = new Date(birthDate);
@@ -30,27 +45,40 @@ const calculateAge = (birthDate) => {
     return age;
 };
 
+interface FeedbackState {
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+}
+
+interface OrderingState {
+    field: string;
+    direction: "asc" | "desc";
+}
+
 export default function GestionPreinscripciones() {
-    const [selectedIds, setSelectedIds] = useState(new Set());
-    const [searchTerm, setSearchTerm] = useState("");
-    const [approving, setApproving] = useState(false);
-    const [feedback, setFeedback] = useState({ open: false, message: "", severity: "success" });
-    const [viewStudent, setViewStudent] = useState(null);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [searchTerm, setSearchTerm] = useState<string>("");
+    const [approving, setApproving] = useState<boolean>(false);
+    const [feedback, setFeedback] = useState<FeedbackState>({ open: false, message: "", severity: "success" });
+    const [viewStudent, setViewStudent] = useState<Aspirante | null>(null);
     const { user } = useContext(UserContext);
     const isAdmin = user?.groups?.includes('Admin');
     const isPreceptor = user?.groups?.includes('Preceptor');
     const canDelete = isAdmin || isPreceptor;
-    const [ordering, setOrdering] = useState({ field: "created_at", direction: "desc" });
-    const [viewArchived, setViewArchived] = useState(false);
+    const [ordering, setOrdering] = useState<OrderingState>({ field: "created_at", direction: "desc" });
+    const [viewArchived, setViewArchived] = useState<boolean>(false);
 
     // Fetch only students with status 'Preinscripto'
-    const { data: preinscriptos = [], isLoading, refetch } = useEstudiantes({
+    const { data, isLoading, refetch } = useEstudiantes({
         estatus: 'Preinscripto',
         archived: viewArchived,
         excluir_terciario: true
     });
 
-    const handleSort = (field) => {
+    const preinscriptos = (data as Aspirante[]) || [];
+
+    const handleSort = (field: string) => {
         setOrdering(prev => ({
             field,
             direction: prev.field === field && prev.direction === "asc" ? "desc" : "asc"
@@ -59,15 +87,16 @@ export default function GestionPreinscripciones() {
 
     const sortedAndFiltered = useMemo(() => {
         const needle = searchTerm.toLowerCase();
-        let result = preinscriptos.filter(s =>
-            s.apellido.toLowerCase().includes(needle) ||
-            s.nombre.toLowerCase().includes(needle) ||
-            s.dni.includes(needle)
+        const result = preinscriptos.filter(s =>
+            (s.apellido || '').toLowerCase().includes(needle) ||
+            (s.nombre || '').toLowerCase().includes(needle) ||
+            (s.dni || '').includes(needle)
         );
 
         return result.sort((a, b) => {
             const dir = ordering.direction === "asc" ? 1 : -1;
-            let valA, valB;
+            let valA: string | number = "";
+            let valB: string | number = "";
 
             switch (ordering.field) {
                 case 'dni':
@@ -75,8 +104,8 @@ export default function GestionPreinscripciones() {
                     valB = b.dni || "";
                     break;
                 case 'estudiante':
-                    valA = `${a.apellido} ${a.nombre}`.toLowerCase();
-                    valB = `${b.apellido} ${b.nombre}`.toLowerCase();
+                    valA = `${a.apellido || ''} ${a.nombre || ''}`.toLowerCase();
+                    valB = `${b.apellido || ''} ${b.nombre || ''}`.toLowerCase();
                     break;
                 case 'trayectos':
                     valA = (a.trayectos?.[0] || "").toLowerCase();
@@ -100,7 +129,7 @@ export default function GestionPreinscripciones() {
         });
     }, [preinscriptos, searchTerm, ordering]);
 
-    const toggleSelect = (id) => {
+    const toggleSelect = (id: number) => {
         const next = new Set(selectedIds);
         if (next.has(id)) next.delete(id);
         else next.add(id);
@@ -109,9 +138,9 @@ export default function GestionPreinscripciones() {
 
     const toggleSelectAll = () => {
         if (selectedIds.size === sortedAndFiltered.length) {
-            setSelectedIds(new Set());
+            setSelectedIds(new Set<number>());
         } else {
-            setSelectedIds(new Set(sortedAndFiltered.map(s => s.id)));
+            setSelectedIds(new Set<number>(sortedAndFiltered.map(s => s.id)));
         }
     };
 
@@ -127,9 +156,10 @@ export default function GestionPreinscripciones() {
         try {
             await apiClientV2.post('/estudiantes/bulk_delete/', { ids: Array.from(selectedIds) });
             setFeedback({ open: true, message: `${selectedIds.size} estudiante(s) eliminados físicamente.`, severity: "success" });
-            setSelectedIds(new Set());
+            setSelectedIds(new Set<number>());
             refetch();
-        } catch (error) {
+        } catch (error: unknown) {
+            console.error("Error al eliminar físicamente:", error);
             setFeedback({ open: true, message: "Error al eliminar estudiantes.", severity: "error" });
         } finally {
             setApproving(false);
@@ -144,9 +174,10 @@ export default function GestionPreinscripciones() {
         try {
             await apiClientV2.post('/estudiantes/bulk_archive/', { ids: Array.from(selectedIds) });
             setFeedback({ open: true, message: `${selectedIds.size} estudiante(s) archivados con éxito.`, severity: "success" });
-            setSelectedIds(new Set());
+            setSelectedIds(new Set<number>());
             refetch();
-        } catch (error) {
+        } catch (error: unknown) {
+            console.error("Error al archivar estudiantes:", error);
             setFeedback({ open: true, message: "Error al archivar estudiantes.", severity: "error" });
         } finally {
             setApproving(false);
@@ -161,9 +192,10 @@ export default function GestionPreinscripciones() {
         try {
             await apiClientV2.post('/estudiantes/bulk_approve/', { ids: Array.from(selectedIds) });
             setFeedback({ open: true, message: `${selectedIds.size} estudiante(s) aprobados con éxito.`, severity: "success" });
-            setSelectedIds(new Set());
+            setSelectedIds(new Set<number>());
             refetch();
-        } catch (error) {
+        } catch (error: unknown) {
+            console.error("Error al aprobar estudiantes:", error);
             setFeedback({ open: true, message: "Error al aprobar estudiantes.", severity: "error" });
         } finally {
             setApproving(false);
@@ -178,9 +210,10 @@ export default function GestionPreinscripciones() {
         try {
             await apiClientV2.post('/estudiantes/bulk_restore/', { ids: Array.from(selectedIds) });
             setFeedback({ open: true, message: `${selectedIds.size} estudiante(s) restaurados con éxito.`, severity: "success" });
-            setSelectedIds(new Set());
+            setSelectedIds(new Set<number>());
             refetch();
-        } catch (error) {
+        } catch (error: unknown) {
+            console.error("Error al restaurar estudiantes:", error);
             setFeedback({ open: true, message: "Error al restaurar estudiantes.", severity: "error" });
         } finally {
             setApproving(false);
@@ -240,13 +273,13 @@ export default function GestionPreinscripciones() {
 
             <div className="flex gap-2 mb-4 bg-indigo-950/30 p-1 rounded-lg w-fit border border-indigo-500/10">
                 <button
-                    onClick={() => { setViewArchived(false); setSelectedIds(new Set()); }}
+                    onClick={() => { setViewArchived(false); setSelectedIds(new Set<number>()); }}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${!viewArchived ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 hover:text-indigo-200'}`}
                 >
                     Cola Principal
                 </button>
                 <button
-                    onClick={() => { setViewArchived(true); setSelectedIds(new Set()); }}
+                    onClick={() => { setViewArchived(true); setSelectedIds(new Set<number>()); }}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewArchived ? 'bg-orange-600 text-white shadow-lg' : 'text-indigo-400 hover:text-indigo-200'}`}
                 >
                     <Trash2 size={16} /> Papelera / Archivados
@@ -325,7 +358,7 @@ export default function GestionPreinscripciones() {
                                                         </span>
                                                         {age !== null && (
                                                             <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "bg-indigo-500/20 text-indigo-300"}`}>
-                                                                {age} años {isMinor && <Baby size={10} className="inline ml-0.5" />}
+                                                                {age} años
                                                             </span>
                                                         )}
                                                     </div>
@@ -380,7 +413,8 @@ export default function GestionPreinscripciones() {
                                                                 await apiClientV2.post('/estudiantes/bulk_archive/', { ids: [s.id] });
                                                                 setFeedback({ open: true, message: "Estudiante archivado correctamente.", severity: "success" });
                                                                 refetch();
-                                                            } catch (e) {
+                                                            } catch (e: unknown) {
+                                                                console.error("Error al archivar:", e);
                                                                 setFeedback({ open: true, message: "Error al archivar.", severity: "error" });
                                                             }
                                                         }
@@ -399,7 +433,8 @@ export default function GestionPreinscripciones() {
                                                                 await apiClientV2.post('/estudiantes/bulk_delete/', { ids: [s.id] });
                                                                 setFeedback({ open: true, message: "Estudiante eliminado físicamente.", severity: "success" });
                                                                 refetch();
-                                                            } catch (e) {
+                                                            } catch (e: unknown) {
+                                                                console.error("Error al eliminar físicamente:", e);
                                                                 setFeedback({ open: true, message: "Error al eliminar físicamente.", severity: "error" });
                                                             }
                                                         }
@@ -417,7 +452,8 @@ export default function GestionPreinscripciones() {
                                                             await apiClientV2.post('/estudiantes/bulk_restore/', { ids: [s.id] });
                                                             setFeedback({ open: true, message: "Estudiante restaurado.", severity: "success" });
                                                             refetch();
-                                                        } catch (e) {
+                                                        } catch (e: unknown) {
+                                                            console.error("Error al restaurar:", e);
                                                             setFeedback({ open: true, message: "Error al restaurar.", severity: "error" });
                                                         }
                                                     }}
@@ -451,7 +487,7 @@ export default function GestionPreinscripciones() {
 
             {viewStudent && createPortal(
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-indigo-950/80 backdrop-blur-sm animate-fade-in">
-                    <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-indigo-900/90 border-indigo-500/30 shadow-2xl relative">
+                    <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-indigo-900/90 border-indigo-500/30 shadow-2xl relative animate-in zoom-in duration-300">
                         <button
                             onClick={() => setViewStudent(null)}
                             className="absolute top-4 right-4 text-indigo-300 hover:text-white transition-colors"
@@ -539,23 +575,19 @@ export default function GestionPreinscripciones() {
                                                                 {viewStudent.autorizacion_status === 'DIGITAL' ? (
                                                                     <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl">
                                                                         <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm mb-2">
-                                                                            <CheckCircle size={16} /> Firma Digital Validada
+                                                                            <CheckCircle size={16} className="text-emerald-400" /> Firma Digital Validada
                                                                         </div>
                                                                         <div className="text-[10px] text-emerald-400/70 mb-3">
                                                                             {viewStudent.autorizacion_fecha && new Date(viewStudent.autorizacion_fecha).toLocaleString()}
                                                                         </div>
-                                                                        <Button
-                                                                            size="sm"
-                                                                            fullWidth
-                                                                            as="a"
-                                                                            href={getMediaUrl(viewStudent.autorizacion_selfie)}
+                                                                        <a
+                                                                            href={getMediaUrl(viewStudent.autorizacion_selfie || '')}
                                                                             target="_blank"
                                                                             rel="noreferrer"
-                                                                            className="text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white"
-                                                                            startIcon={<Eye size={14} />}
+                                                                            className="w-full text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white py-1.5 rounded-md text-center font-semibold flex items-center justify-center gap-1 transition-all"
                                                                         >
-                                                                            VER SELFIE DE FIRMA
-                                                                        </Button>
+                                                                            <Eye size={14} /> VER SELFIE DE FIRMA
+                                                                        </a>
                                                                     </div>
                                                                 ) : viewStudent.nota_parental_firmada ? (
                                                                     <a href={getMediaUrl(viewStudent.nota_parental_firmada)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-emerald-500/20 hover:bg-emerald-500/40 p-3 rounded-lg text-emerald-300 transition-all border border-emerald-500/30">
@@ -593,7 +625,8 @@ export default function GestionPreinscripciones() {
                                                         setFeedback({ open: true, message: `Estudiante aprobado con éxito.`, severity: "success" });
                                                         setViewStudent(null);
                                                         refetch();
-                                                    } catch (e) {
+                                                    } catch (e: unknown) {
+                                                        console.error("Error al aprobar:", e);
                                                         setFeedback({ open: true, message: "Error al aprobar.", severity: "error" });
                                                     } finally {
                                                         setApproving(false);
