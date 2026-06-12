@@ -31,12 +31,17 @@ import {
   Moon,
   KeyRound,
   ExternalLink,
-  Settings
+  Settings,
+  ClipboardList,
+  CheckSquare
 } from "lucide-react";
 
 import AlumnosTab from "../components/Videojuegos/AlumnosTab";
 import ConfigTab from "../components/Videojuegos/ConfigTab";
 import UsuariosTab from "../components/Videojuegos/UsuariosTab";
+import InscripcionesTab from "../components/Videojuegos/InscripcionesTab";
+import AsistenciaTab from "../components/Videojuegos/AsistenciaTab";
+import CalificacionesTab from "../components/Videojuegos/CalificacionesTab";
 
 // States mapping
 const ESTADOS = [
@@ -614,6 +619,45 @@ export default function GestionPreinscripcionesVideojuegos() {
           </button>
 
           <button
+            onClick={() => setTab("inscripciones")}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+              tab === "inscripciones"
+                ? "bg-gradient-to-r from-[#00ccff]/20 to-[#FF6600]/20 text-[#00ccff] border border-[#00ccff]/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]"
+                : "text-indigo-300 hover:text-white hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <FileText size={16} />
+            <span>Inscripciones VJ</span>
+            {tab === "inscripciones" && <ChevronRight size={14} className="ml-auto text-[#00ccff]" />}
+          </button>
+
+          <button
+            onClick={() => setTab("asistencia")}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+              tab === "asistencia"
+                ? "bg-gradient-to-r from-[#00ccff]/20 to-[#FF6600]/20 text-[#00ccff] border border-[#00ccff]/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]"
+                : "text-indigo-300 hover:text-white hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <CheckSquare size={16} />
+            <span>Asistencia VJ</span>
+            {tab === "asistencia" && <ChevronRight size={14} className="ml-auto text-[#00ccff]" />}
+          </button>
+
+          <button
+            onClick={() => setTab("calificaciones")}
+            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+              tab === "calificaciones"
+                ? "bg-gradient-to-r from-[#00ccff]/20 to-[#FF6600]/20 text-[#00ccff] border border-[#00ccff]/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]"
+                : "text-indigo-300 hover:text-white hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <ClipboardList size={16} />
+            <span>Calificaciones VJ</span>
+            {tab === "calificaciones" && <ChevronRight size={14} className="ml-auto text-[#00ccff]" />}
+          </button>
+
+          <button
             onClick={() => setTab("configuracion")}
             className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
               tab === "configuracion"
@@ -674,12 +718,18 @@ export default function GestionPreinscripcionesVideojuegos() {
               {tab === "dashboard" && <BarChart3 size={18} />}
               {tab === "preinscripciones" && <Users size={18} />}
               {tab === "alumnos" && <Users size={18} />}
+              {tab === "inscripciones" && <FileText size={18} />}
+              {tab === "asistencia" && <CheckSquare size={18} />}
+              {tab === "calificaciones" && <ClipboardList size={18} />}
               {tab === "configuracion" && <Settings size={18} />}
               {tab === "usuarios" && <KeyRound size={18} />}
             </span>
             {tab === "dashboard" && "Estadísticas"}
             {tab === "preinscripciones" && "Preinscripciones VJ"}
             {tab === "alumnos" && "Alumnos VJ"}
+            {tab === "inscripciones" && "Inscripciones VJ"}
+            {tab === "asistencia" && "Asistencia VJ"}
+            {tab === "calificaciones" && "Calificaciones VJ"}
             {tab === "configuracion" && "Configuración VJ"}
             {tab === "usuarios" && "Usuarios VJ"}
           </h2>
@@ -945,6 +995,21 @@ export default function GestionPreinscripcionesVideojuegos() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* INSCRIPCIONES TAB CONTENT */}
+          {tab === "inscripciones" && (
+            <InscripcionesTab />
+          )}
+
+          {/* ASISTENCIA TAB CONTENT */}
+          {tab === "asistencia" && (
+            <AsistenciaTab />
+          )}
+
+          {/* CALIFICACIONES TAB CONTENT */}
+          {tab === "calificaciones" && (
+            <CalificacionesTab />
           )}
 
           {/* ALUMNOS TAB CONTENT */}

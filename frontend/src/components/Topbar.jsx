@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, KeyRound, Moon, Sun } from 'lucide-react';
 import authService from '../services/authService';
-import { ThemeModeContext, UserContext } from '../App';
+import { ThemeModeContext, UserContext, ActivePanelContext } from '../App';
 
 const GRUPOS_CFP = ['Admin', 'Secretaría', 'Regencia', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel', 'Rector'];
 const GRUPOS_TERCIARIO = ['Admin', 'Terciario', 'Rector'];
@@ -11,6 +11,7 @@ export default function Topbar({ title }) {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
   const { mode, toggleMode } = useContext(ThemeModeContext);
+  const { activePanel } = useContext(ActivePanelContext);
 
   const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
   const tieneTerciario = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_TERCIARIO.includes(g)));
@@ -38,23 +39,33 @@ export default function Topbar({ title }) {
           <div className="flex items-center bg-indigo-950/60 p-0.5 rounded-xl border border-indigo-500/20 mr-2 shadow-inner">
             {tieneCFP && (
               <button
-                className="px-4 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all cursor-default"
+                onClick={activePanel !== 'cfp' ? () => navigate('/dashboard') : undefined}
+                className={activePanel === 'cfp'
+                  ? "px-4 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all cursor-default"
+                  : "px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
+                }
               >
                 CFP
               </button>
             )}
             {tieneTerciario && (
               <button
-                onClick={() => navigate('/admin-terciario')}
-                className="px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
+                onClick={activePanel !== 'terciario' ? () => navigate('/admin-terciario') : undefined}
+                className={activePanel === 'terciario'
+                  ? "px-4 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all cursor-default"
+                  : "px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
+                }
               >
                 Terciario
               </button>
             )}
             {tieneVJ && (
               <button
-                onClick={() => navigate('/admin-videojuegos')}
-                className="px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
+                onClick={activePanel !== 'videojuegos' ? () => navigate('/admin-videojuegos') : undefined}
+                className={activePanel === 'videojuegos'
+                  ? "px-4 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all cursor-default"
+                  : "px-4 py-1.5 rounded-lg text-xs font-bold text-indigo-300 hover:text-white transition-all hover:bg-white/5 active:scale-95"
+                }
               >
                 VJ
               </button>

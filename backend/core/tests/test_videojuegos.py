@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.core.management import call_command
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-from core.models import BloqueDeFechas, Programa, Bloque, Modulo, Cohorte, Estudiante, Inscripcion, ConfiguracionPreinscripcionVideojuegos
+from core.models import BloqueDeFechas, Programa, Bloque, Modulo, Cohorte, Estudiante, Inscripcion, ConfiguracionPreinscripcionVideojuegos, Asistencia, Nota, Examen
 
 class VideojuegosTests(TestCase):
     def setUp(self):
@@ -280,3 +280,296 @@ class VideojuegosTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["apellido"], "VJAlumnoMod")
         self.assertEqual(resp.json()["estatus"], "Regular")
+
+    def test_inscripciones_isolation_and_crud(self):
+        """Test GET, POST, PATCH/PUT, and DELETE for /videojuegos/inscripciones and check isolation."""
+        from core.models import Inscripcion, Cohorte, Modulo, Estudiante
+        vj_prog = Programa.objects.get(codigo="VJ")
+        vj_cohorte = Cohorte.objects.filter(programa=vj_prog).first()
+        vj_modulo = Modulo.objects.filter(bloque=vj_cohorte.bloque).first()
+        
+        # 1. Create a VJ student and a CFP student
+        vj_student = Estudiante.objects.create(
+            apellido="VJStudent", nombre="Insc", dni="11111101", email="vjinsc@example.com", estatus="Preinscripto"
+        )
+        cfp_student = Estudiante.objects.create(
+            apellido="CFPStudent", nombre="Insc", dni="11111102", email="cfpinsc@example.com", estatus="Preinscripto"
+        )
+        
+        # Create a VJ inscription and a CFP inscription
+        vj_insc = Inscripcion.objects.create(estudiante=vj_student, cohorte=vj_cohorte, modulo=vj_modulo, estado="CURSANDO")
+        cfp_insc = Inscripcion.objects.create(estudiante=cfp_student, cohorte=self.cfp_cohorte, modulo=self.cfp_modulo, estado="CURSANDO")
+        
+        # 2. Authenticate as VJ user
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.vj_token}")
+        
+        # List VJ inscriptions -> should return only VJ inscription
+        resp = self.client.get("/api/v2/videojuegos/inscripciones")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = [i["id"] for i in data]
+        self.assertIn(vj_insc.id, ids)
+        self.assertNotIn(cfp_insc.id, ids)
+        
+        # 3. Create a VJ inscription
+        vj_student2 = Estudiante.objects.create(
+            apellido="VJStudent2", nombre="Insc", dni="11111103", email="vjinsc2@example.com", estatus="Preinscripto"
+        )
+        payload = {
+            "estudiante_id": vj_student2.id,
+            "cohorte_id": vj_cohorte.id,
+            "modulo_id": vj_modulo.id,
+            "estado": "CURSANDO"
+        }
+        resp = self.client.post("/api/v2/videojuegos/inscripciones", payload, format="json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["estudiante"]["id"], vj_student2.id)
+        
+        # Try to create VJ inscription referencing a CFP cohorte -> should fail (403)
+        payload_invalid = {
+            "estudiante_id": vj_student2.id,
+            "cohorte_id": self.cfp_cohorte.id,
+            "estado": "CURSANDO"
+        }
+        resp = self.client.post("/api/v2/videojuegos/inscripciones", payload_invalid, format="json")
+        self.assertEqual(resp.status_code, 403)
+        
+        # 4. Update VJ inscription
+        resp = self.client.patch(
+            f"/api/v2/videojuegos/inscripciones/{vj_insc.id}",
+            {
+                "estudiante_id": vj_student.id,
+                "cohorte_id": vj_cohorte.id,
+                "estado": "EGRESADO"
+            },
+            format="json"
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["estado"], "EGRESADO")
+        
+        # Try to update CFP inscription -> should fail (403 or 404)
+        resp = self.client.patch(
+            f"/api/v2/videojuegos/inscripciones/{cfp_insc.id}",
+            {
+                "estudiante_id": cfp_student.id,
+                "cohorte_id": self.cfp_cohorte.id,
+                "estado": "EGRESADO"
+            },
+            format="json"
+        )
+        self.assertEqual(resp.status_code, 403)
+        
+        # 5. Delete VJ inscription
+        resp = self.client.delete(f"/api/v2/videojuegos/inscripciones/{vj_insc.id}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["deleted"])
+        
+        # Try to delete CFP inscription -> should fail (403)
+        resp = self.client.delete(f"/api/v2/videojuegos/inscripciones/{cfp_insc.id}")
+        self.assertEqual(resp.status_code, 403)
+
+    def test_asistencias_isolation_and_crud(self):
+        """Test GET, POST, and PATCH/PUT for /videojuegos/asistencia and check isolation."""
+        from core.models import Asistencia, Inscripcion, Cohorte, Modulo, Estudiante
+        vj_prog = Programa.objects.get(codigo="VJ")
+        vj_cohorte = Cohorte.objects.filter(programa=vj_prog).first()
+        vj_modulo = Modulo.objects.filter(bloque=vj_cohorte.bloque).first()
+        
+        # Create VJ student and CFP student
+        vj_student = Estudiante.objects.create(
+            apellido="VJStudent", nombre="Asis", dni="22222201", email="vjasis@example.com", estatus="Preinscripto"
+        )
+        cfp_student = Estudiante.objects.create(
+            apellido="CFPStudent", nombre="Asis", dni="22222202", email="cfpasis@example.com", estatus="Preinscripto"
+        )
+        
+        # We need VJ enrollment for attendance checks
+        Inscripcion.objects.create(estudiante=vj_student, cohorte=vj_cohorte, modulo=vj_modulo, estado="CURSANDO")
+        
+        # Create VJ attendance and CFP attendance
+        vj_att = Asistencia.objects.create(estudiante=vj_student, modulo=vj_modulo, fecha="2026-06-12", presente=True)
+        cfp_att = Asistencia.objects.create(estudiante=cfp_student, modulo=self.cfp_modulo, fecha="2026-06-12", presente=True)
+        
+        # Authenticate as VJ user
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.vj_token}")
+        
+        # 1. GET /videojuegos/asistencia -> should return only VJ attendance
+        resp = self.client.get("/api/v2/videojuegos/asistencia")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = [a["id"] for a in data]
+        self.assertIn(vj_att.id, ids)
+        self.assertNotIn(cfp_att.id, ids)
+        
+        # 2. POST /videojuegos/asistencia -> valid creation
+        vj_student2 = Estudiante.objects.create(
+            apellido="VJStudent2", nombre="Asis", dni="22222203", email="vjasis2@example.com", estatus="Preinscripto"
+        )
+        Inscripcion.objects.create(estudiante=vj_student2, cohorte=vj_cohorte, modulo=vj_modulo, estado="CURSANDO")
+        
+        payload = {
+            "estudiante": vj_student2.id,
+            "modulo": vj_modulo.id,
+            "fecha": "2026-06-12",
+            "presente": False
+        }
+        resp = self.client.post("/api/v2/videojuegos/asistencia", payload, format="json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.json()["presente"])
+        
+        # Try POST with CFP module -> should fail (403)
+        payload_invalid = {
+            "estudiante": vj_student2.id,
+            "modulo": self.cfp_modulo.id,
+            "fecha": "2026-06-12",
+            "presente": True
+        }
+        resp = self.client.post("/api/v2/videojuegos/asistencia", payload_invalid, format="json")
+        self.assertEqual(resp.status_code, 403)
+        
+        # Try POST with CFP student -> should fail (403)
+        payload_invalid2 = {
+            "estudiante": cfp_student.id,
+            "modulo": vj_modulo.id,
+            "fecha": "2026-06-12",
+            "presente": True
+        }
+        resp = self.client.post("/api/v2/videojuegos/asistencia", payload_invalid2, format="json")
+        self.assertEqual(resp.status_code, 403)
+        
+        # 3. PATCH /videojuegos/asistencia/{id}
+        resp = self.client.patch(
+            f"/api/v2/videojuegos/asistencia/{vj_att.id}",
+            {
+                "estudiante": vj_student.id,
+                "modulo": vj_modulo.id,
+                "fecha": "2026-06-12",
+                "presente": False
+            },
+            format="json"
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.json()["presente"])
+        
+        # Try PATCH CFP attendance -> should fail (403)
+        resp = self.client.patch(
+            f"/api/v2/videojuegos/asistencia/{cfp_att.id}",
+            {
+                "estudiante": cfp_student.id,
+                "modulo": self.cfp_modulo.id,
+                "fecha": "2026-06-12",
+                "presente": False
+            },
+            format="json"
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_calificaciones_isolation_and_crud(self):
+        """Test GET, POST, PATCH/PUT, and DELETE for /videojuegos/notas and check isolation."""
+        from core.models import Examen, Nota, Inscripcion, Cohorte, Modulo, Estudiante
+        vj_prog = Programa.objects.get(codigo="VJ")
+        vj_cohorte = Cohorte.objects.filter(programa=vj_prog).first()
+        vj_modulo = Modulo.objects.filter(bloque=vj_cohorte.bloque).first()
+        
+        # Create VJ student and CFP student
+        vj_student = Estudiante.objects.create(
+            apellido="VJStudent", nombre="Nota", dni="33333301", email="vjnota@example.com", estatus="Preinscripto"
+        )
+        cfp_student = Estudiante.objects.create(
+            apellido="CFPStudent", nombre="Nota", dni="33333302", email="cfpnota@example.com", estatus="Preinscripto"
+        )
+        
+        # Add VJ enrollment
+        Inscripcion.objects.create(estudiante=vj_student, cohorte=vj_cohorte, modulo=vj_modulo, estado="CURSANDO")
+        
+        # Create VJ exam and CFP exam
+        vj_exam = Examen.objects.create(modulo=vj_modulo, tipo_examen="PARCIAL", peso=1.0)
+        cfp_exam = Examen.objects.create(modulo=self.cfp_modulo, tipo_examen="PARCIAL", peso=1.0)
+        
+        # Create VJ grade and CFP grade
+        vj_grade = Nota.objects.create(estudiante=vj_student, examen=vj_exam, calificacion=8.5, aprobado=True)
+        cfp_grade = Nota.objects.create(estudiante=cfp_student, examen=cfp_exam, calificacion=7.0, aprobado=True)
+        
+        # Authenticate as VJ user
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.vj_token}")
+        
+        # 1. GET /videojuegos/notas -> should return only VJ grade
+        resp = self.client.get("/api/v2/videojuegos/notas")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        ids = [g["id"] for g in data]
+        self.assertIn(vj_grade.id, ids)
+        self.assertNotIn(cfp_grade.id, ids)
+        
+        # 2. POST /videojuegos/notas -> valid creation
+        payload = {
+            "estudiante": vj_student.id,
+            "examen": vj_exam.id,
+            "calificacion": 9.0,
+            "aprobado": True,
+            "fecha_calificacion": "2026-06-12T15:00:00Z"
+        }
+        # Clear existing grade for vj_student & vj_exam to avoid unique constraint issues
+        vj_grade.delete()
+        
+        resp = self.client.post("/api/v2/videojuegos/notas", payload, format="json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["calificacion"], "9.00")
+        new_grade_id = resp.json()["id"]
+        
+        # Try POST with CFP exam -> should fail (403)
+        payload_invalid = {
+            "estudiante": vj_student.id,
+            "examen": cfp_exam.id,
+            "calificacion": 8.0,
+            "aprobado": True
+        }
+        resp = self.client.post("/api/v2/videojuegos/notas", payload_invalid, format="json")
+        self.assertEqual(resp.status_code, 403)
+        
+        # Try POST with CFP student -> should fail (403)
+        payload_invalid2 = {
+            "estudiante": cfp_student.id,
+            "examen": vj_exam.id,
+            "calificacion": 8.0,
+            "aprobado": True
+        }
+        resp = self.client.post("/api/v2/videojuegos/notas", payload_invalid2, format="json")
+        self.assertEqual(resp.status_code, 403)
+        
+        # 3. PATCH /videojuegos/notas/{id}
+        resp = self.client.patch(
+            f"/api/v2/videojuegos/notas/{new_grade_id}",
+            {
+                "examen": vj_exam.id,
+                "estudiante": vj_student.id,
+                "calificacion": 5.0,
+                "aprobado": False
+            },
+            format="json"
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["calificacion"], "5.00")
+        self.assertFalse(resp.json()["aprobado"])
+        
+        # Try PATCH CFP grade -> should fail (403)
+        resp = self.client.patch(
+            f"/api/v2/videojuegos/notas/{cfp_grade.id}",
+            {
+                "examen": cfp_exam.id,
+                "estudiante": cfp_student.id,
+                "calificacion": 10.0,
+                "aprobado": True
+            },
+            format="json"
+        )
+        self.assertEqual(resp.status_code, 403)
+        
+        # 4. DELETE /videojuegos/notas/{id}
+        resp = self.client.delete(f"/api/v2/videojuegos/notas/{new_grade_id}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()["deleted"])
+        
+        # Try DELETE CFP grade -> should fail (403)
+        resp = self.client.delete(f"/api/v2/videojuegos/notas/{cfp_grade.id}")
+        self.assertEqual(resp.status_code, 403)

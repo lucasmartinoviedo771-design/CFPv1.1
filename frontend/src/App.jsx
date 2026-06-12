@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider, CircularProgress, Box } from "@mui/material";
 import theme from "./theme";
 import AppLayout from "./layout/AppLayout";
@@ -39,11 +39,14 @@ import NivelacionDigital from './pages/NivelacionDigital.jsx';
 // Services
 import authService from "./services/authService";
 
-// Create a UserContext
 export const UserContext = createContext(null);
 export const ThemeModeContext = createContext({
   mode: "dark",
   toggleMode: () => { },
+});
+export const ActivePanelContext = createContext({
+  activePanel: "cfp",
+  setActivePanel: () => {},
 });
 const THEME_STORAGE_KEY = "cfp_theme_mode";
 
@@ -65,6 +68,19 @@ export default function App() {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     return saved === "light" ? "light" : "dark";
   });
+  const [activePanel, setActivePanel] = useState("cfp");
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/admin-terciario')) {
+      setActivePanel('terciario');
+    } else if (path.startsWith('/admin-videojuegos')) {
+      setActivePanel('videojuegos');
+    } else {
+      setActivePanel('cfp');
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const init = async () => {
@@ -108,7 +124,8 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <ThemeModeContext.Provider value={{ mode: themeMode, toggleMode: toggleThemeMode }}>
-        <UserContext.Provider value={{ user, setUser }}>
+        <ActivePanelContext.Provider value={{ activePanel, setActivePanel }}>
+          <UserContext.Provider value={{ user, setUser }}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Navigate to="/login" replace />} />
@@ -147,7 +164,8 @@ export default function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </UserContext.Provider>
+          </UserContext.Provider>
+        </ActivePanelContext.Provider>
       </ThemeModeContext.Provider>
     </ThemeProvider>
   );

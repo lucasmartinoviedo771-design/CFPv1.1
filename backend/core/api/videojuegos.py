@@ -7,8 +7,17 @@ from django.db.models import Q
 from ninja import Router, Schema
 from ninja.errors import HttpError
 
-from core.models import Estudiante, Inscripcion, ConfiguracionPreinscripcionVideojuegos
-from core.api.schemas import EstudianteDetailOut, EstudianteListOut, EstudianteIn
+from core.models import (
+    Estudiante, Inscripcion, ConfiguracionPreinscripcionVideojuegos,
+    Asistencia, Nota, Cohorte, Modulo, Examen
+)
+from core.api.schemas import (
+    EstudianteDetailOut, EstudianteListOut, EstudianteIn,
+    InscripcionIn, AsistenciaIn, NotaIn, CohorteOut
+)
+from core.serializers import (
+    InscripcionSerializer, AsistenciaSerializer, NotaSerializer, ExamenSerializer
+)
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -344,3 +353,382 @@ def actualizar_alumno_videojuegos(request, estudiante_id: int, payload: Estudian
         estudiante.save(update_fields=update_fields)
         
     return estudiante
+
+
+# -------------------------------------------------------------
+# Auxiliares y Nuevos Endpoints Aislados para Videojuegos (VJ)
+# -------------------------------------------------------------
+
+def aplicar_filtro_vj(queryset):
+    model = queryset.model
+    if model == Estudiante:
+        return queryset.filter(inscripciones__cohorte__programa__codigo="VJ").distinct()
+    elif model == Inscripcion:
+        return queryset.filter(cohorte__programa__codigo="VJ")
+    elif model == Asistencia:
+        return queryset.filter(modulo__bloque__programa__codigo="VJ")
+    elif model == Nota:
+        return queryset.filter(Q(examen__modulo__bloque__programa__codigo="VJ") | Q(examen__bloque__programa__codigo="VJ"))
+    return queryset
+
+
+@router.get("/estudiantes", response=List[EstudianteListOut])
+@require_videojuegos_access
+def listar_estudiantes_videojuegos(
+    request,
+    search: Optional[str] = None,
+    dni: Optional[str] = None,
+    estatus: Optional[str] = None,
+    cohorte_id: Optional[int] = None,
+    rango_edad: Optional[str] = None,
+):
+    """
+    Alias para listar estudiantes de Videojuegos.
+    """
+    return listar_alumnos_videojuegos(
+        request,
+        search=search,
+        dni=dni,
+        estatus=estatus,
+        cohorte_id=cohorte_id,
+        rango_edad=rango_edad
+    )
+
+
+# --- Inscripciones VJ ---
+
+@router.get("/inscripciones", response=List[dict])
+@require_videojuegos_access
+def listar_inscripciones_videojuegos(
+    request,
+    cohorte_id: Optional[int] = None,
+    estudiante_id: Optional[int] = None,
+    estado: Optional[str] = None,
+):
+    """
+    Lista las inscripciones filtrando exclusivamente por cohortes del programa VJ.
+    """
+    qs = Inscripcion.objects.select_related("cohorte", "estudiante", "modulo", "modulo__bloque").order_by("-created_at")
+    qs = aplicar_filtro_vj(qs)
+    if cohorte_id:
+        qs = qs.filter(cohorte_id=cohorte_id)
+    if estudiante_id:
+        qs = qs.filter(estudiante_id=estudiante_id)
+    if estado:
+        qs = qs.filter(estado=estado)
+    return InscripcionSerializer(qs, many=True).data
+
+
+@router.post("/inscripciones", response=dict)
+@require_videojuegos_access
+def crear_inscripcion_videojuegos(request, payload: InscripcionIn):
+    """
+    Crea una nueva inscripción asegurando aislamiento en el programa VJ.
+    """
+    cohorte = get_object_or_404(Cohorte, pk=payload.cohorte_id)
+    if cohorte.programa.codigo != "VJ":
+        raise HttpError(403, "La cohorte seleccionada no pertenece al programa de Videojuegos.")
+    if payload.modulo_id:
+        modulo = get_object_or_404(Modulo, pk=payload.modulo_id)
+        if modulo.bloque.programa.codigo != "VJ":
+            raise HttpError(403, "El módulo seleccionado no pertenece al programa de Videojuegos.")
+            
+    serializer = InscripcionSerializer(data=payload.dict(exclude_none=True))
+    serializer.is_valid(raise_exception=True)
+    insc = serializer.save()
+    
+    recargado = get_object_or_404(
+        Inscripcion.objects.select_related("cohorte", "estudiante", "modulo", "modulo__bloque"),
+        pk=insc.id
+    )
+    return InscripcionSerializer(recargado).data
+
+
+@router.patch("/inscripciones/{inscripcion_id}", response=dict)
+@router.put("/inscripciones/{inscripcion_id}", response=dict)
+@require_videojuegos_access
+def actualizar_inscripcion_videojuegos(request, inscripcion_id: int, payload: InscripcionIn):
+    """
+    Actualiza una inscripción VJ existente con validación de aislamiento.
+    """
+    insc = get_object_or_404(Inscripcion, pk=inscripcion_id)
+    if insc.cohorte.programa.codigo != "VJ":
+        raise HttpError(403, "No tiene permiso para modificar esta inscripción.")
+        
+    if payload.cohorte_id:
+        cohorte = get_object_or_404(Cohorte, pk=payload.cohorte_id)
+        if cohorte.programa.codigo != "VJ":
+            raise HttpError(403, "La cohorte seleccionada no pertenece al programa de Videojuegos.")
+    if payload.modulo_id:
+        modulo = get_object_or_404(Modulo, pk=payload.modulo_id)
+        if modulo.bloque.programa.codigo != "VJ":
+            raise HttpError(403, "El módulo seleccionado no pertenece al programa de Videojuegos.")
+            
+    serializer = InscripcionSerializer(instance=insc, data=payload.dict(exclude_none=True), partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    
+    recargado = get_object_or_404(
+        Inscripcion.objects.select_related("cohorte", "estudiante", "modulo", "modulo__bloque"),
+        pk=insc.id
+    )
+    return InscripcionSerializer(recargado).data
+
+
+@router.delete("/inscripciones/{inscripcion_id}", response=dict)
+@require_videojuegos_access
+def eliminar_inscripcion_videojuegos(request, inscripcion_id: int):
+    """
+    Elimina una inscripción VJ asegurando aislamiento.
+    """
+    insc = get_object_or_404(Inscripcion, pk=inscripcion_id)
+    if insc.cohorte.programa.codigo != "VJ":
+        raise HttpError(403, "No tiene permiso para eliminar esta inscripción.")
+    insc.delete()
+    return {"deleted": True, "id": inscripcion_id}
+
+
+# --- Asistencias VJ ---
+
+@router.get("/asistencia", response=List[dict])
+@require_videojuegos_access
+def listar_asistencia_videojuegos(
+    request,
+    estudiante_id: Optional[int] = None,
+    modulo_id: Optional[int] = None,
+    fecha: Optional[str] = None,
+):
+    """
+    Lista las asistencias de VJ asegurando aislamiento.
+    """
+    qs = Asistencia.objects.select_related("estudiante", "modulo", "modulo__bloque")
+    qs = aplicar_filtro_vj(qs)
+    if estudiante_id:
+        qs = qs.filter(estudiante_id=estudiante_id)
+    if modulo_id:
+        qs = qs.filter(modulo_id=modulo_id)
+    if fecha:
+        qs = qs.filter(fecha=fecha)
+    return AsistenciaSerializer(qs, many=True).data
+
+
+@router.post("/asistencia", response=dict)
+@require_videojuegos_access
+def crear_asistencia_videojuegos(request, payload: AsistenciaIn):
+    """
+    Registra una asistencia para un alumno VJ.
+    """
+    modulo = get_object_or_404(Modulo, pk=payload.modulo)
+    if modulo.bloque.programa.codigo != "VJ":
+        raise HttpError(403, "El módulo seleccionado no pertenece al programa de Videojuegos.")
+    
+    estudiante = get_object_or_404(Estudiante, pk=payload.estudiante)
+    if not estudiante.inscripciones.filter(cohorte__programa__codigo="VJ").exists():
+        raise HttpError(403, "El estudiante no registra inscripciones en Videojuegos.")
+        
+    serializer = AsistenciaSerializer(data=payload.dict(exclude_none=True))
+    serializer.is_valid(raise_exception=True)
+    asistencia = serializer.save()
+    return AsistenciaSerializer(asistencia).data
+
+
+@router.patch("/asistencia/{asistencia_id}", response=dict)
+@router.put("/asistencia/{asistencia_id}", response=dict)
+@require_videojuegos_access
+def actualizar_asistencia_videojuegos(request, asistencia_id: int, payload: AsistenciaIn):
+    """
+    Modifica una asistencia existente en el programa VJ.
+    """
+    asistencia = get_object_or_404(Asistencia, pk=asistencia_id)
+    if asistencia.modulo.bloque.programa.codigo != "VJ":
+        raise HttpError(403, "No tiene permiso para modificar esta asistencia.")
+        
+    if payload.modulo:
+        modulo = get_object_or_404(Modulo, pk=payload.modulo)
+        if modulo.bloque.programa.codigo != "VJ":
+            raise HttpError(403, "El módulo seleccionado no pertenece al programa de Videojuegos.")
+    if payload.estudiante:
+        estudiante = get_object_or_404(Estudiante, pk=payload.estudiante)
+        if not estudiante.inscripciones.filter(cohorte__programa__codigo="VJ").exists():
+            raise HttpError(403, "El estudiante no registra inscripciones en Videojuegos.")
+            
+    serializer = AsistenciaSerializer(instance=asistencia, data=payload.dict(exclude_none=True), partial=True)
+    serializer.is_valid(raise_exception=True)
+    asistencia = serializer.save()
+    return AsistenciaSerializer(asistencia).data
+
+
+# --- Helpers para Selectores del Frontend VJ ---
+
+@router.get("/cohortes", response=List[CohorteOut])
+@require_videojuegos_access
+def listar_cohortes_videojuegos(request):
+    """
+    Lista las cohortes del programa VJ.
+    """
+    qs = Cohorte.objects.filter(programa__codigo="VJ").select_related("programa", "bloque_fechas").order_by("-fecha_inicio")
+    return [
+        CohorteOut(
+            id=c.id,
+            nombre=c.nombre,
+            programa_id=c.programa_id,
+            bloque_id=c.bloque_id,
+            bloque_fechas_id=c.bloque_fechas_id,
+            fecha_inicio=c.fecha_inicio,
+            fecha_fin=c.fecha_fin,
+        )
+        for c in qs
+    ]
+
+
+@router.get("/modulos", response=List[dict])
+@require_videojuegos_access
+def listar_modulos_videojuegos(request, cohorte_id: Optional[int] = None):
+    """
+    Lista los módulos de Videojuegos, opcionalmente filtrados por cohorte.
+    """
+    qs = Modulo.objects.filter(bloque__programa__codigo="VJ").select_related("bloque")
+    if cohorte_id:
+        cohorte = get_object_or_404(Cohorte, pk=cohorte_id)
+        if cohorte.bloque_id:
+            qs = qs.filter(bloque_id=cohorte.bloque_id)
+    return [
+        {
+            "id": m.id,
+            "nombre": m.nombre,
+            "bloque_id": m.bloque_id,
+            "bloque_nombre": m.bloque.nombre,
+        }
+        for m in qs
+    ]
+
+
+@router.get("/examenes", response=List[dict])
+@require_videojuegos_access
+def listar_examenes_videojuegos(request, modulo_id: Optional[int] = None):
+    """
+    Lista los exámenes del programa VJ.
+    """
+    qs = Examen.objects.filter(
+        Q(modulo__bloque__programa__codigo="VJ") | Q(bloque__programa__codigo="VJ")
+    ).select_related("modulo", "bloque").order_by("id")
+    if modulo_id:
+        qs = qs.filter(modulo_id=modulo_id)
+    return ExamenSerializer(qs, many=True).data
+
+
+# --- Calificaciones VJ ---
+
+@router.get("/notas", response=List[dict])
+@require_videojuegos_access
+def listar_notas_videojuegos(
+    request,
+    examen_id: Optional[int] = None,
+    estudiante_id: Optional[int] = None,
+    aprobado: Optional[bool] = None,
+    modulo_id: Optional[int] = None,
+    bloque_id: Optional[int] = None,
+):
+    """
+    Lista las notas de alumnos VJ asegurando aislamiento.
+    """
+    qs = Nota.objects.select_related("examen", "examen__modulo", "examen__bloque", "estudiante")
+    qs = aplicar_filtro_vj(qs)
+    if examen_id:
+        qs = qs.filter(examen_id=examen_id)
+    if estudiante_id:
+        qs = qs.filter(estudiante_id=estudiante_id)
+    if aprobado is not None:
+        qs = qs.filter(aprobado=aprobado)
+    if modulo_id:
+        qs = qs.filter(examen__modulo_id=modulo_id)
+    if bloque_id:
+        qs = qs.filter(examen__bloque_id=bloque_id)
+    return NotaSerializer(qs, many=True).data
+
+
+@router.post("/notas", response=dict)
+@require_videojuegos_access
+def crear_nota_videojuegos(request, payload: NotaIn):
+    """
+    Registra una calificación para un estudiante de VJ.
+    """
+    examen = get_object_or_404(Examen, pk=payload.examen)
+    is_vj = False
+    if examen.modulo and examen.modulo.bloque.programa.codigo == "VJ":
+        is_vj = True
+    elif examen.bloque and examen.bloque.programa.codigo == "VJ":
+        is_vj = True
+    if not is_vj:
+        raise HttpError(403, "El examen seleccionado no pertenece al programa de Videojuegos.")
+        
+    estudiante = get_object_or_404(Estudiante, pk=payload.estudiante)
+    if not estudiante.inscripciones.filter(cohorte__programa__codigo="VJ").exists():
+        raise HttpError(403, "El estudiante no registra inscripciones en Videojuegos.")
+        
+    data = payload.dict(exclude_none=True)
+    if "es_nota_definitiva" not in data:
+        data["es_nota_definitiva"] = False
+    serializer = NotaSerializer(data=data)
+    serializer.is_valid(raise_exception=True)
+    nota = serializer.save()
+    return NotaSerializer(nota).data
+
+
+@router.patch("/notas/{nota_id}", response=dict)
+@router.put("/notas/{nota_id}", response=dict)
+@require_videojuegos_access
+def actualizar_nota_videojuegos(request, nota_id: int, payload: NotaIn):
+    """
+    Actualiza una calificación existente del programa VJ.
+    """
+    nota = get_object_or_404(Nota, pk=nota_id)
+    
+    is_vj = False
+    if nota.examen.modulo and nota.examen.modulo.bloque.programa.codigo == "VJ":
+        is_vj = True
+    elif nota.examen.bloque and nota.examen.bloque.programa.codigo == "VJ":
+        is_vj = True
+    if not is_vj:
+        raise HttpError(403, "No tiene permiso para modificar esta calificación.")
+        
+    if payload.examen:
+        examen = get_object_or_404(Examen, pk=payload.examen)
+        is_vj_new = False
+        if examen.modulo and examen.modulo.bloque.programa.codigo == "VJ":
+            is_vj_new = True
+        elif examen.bloque and examen.bloque.programa.codigo == "VJ":
+            is_vj_new = True
+        if not is_vj_new:
+            raise HttpError(403, "El examen seleccionado no pertenece al programa de Videojuegos.")
+            
+    if payload.estudiante:
+        estudiante = get_object_or_404(Estudiante, pk=payload.estudiante)
+        if not estudiante.inscripciones.filter(cohorte__programa__codigo="VJ").exists():
+            raise HttpError(403, "El estudiante no registra inscripciones en Videojuegos.")
+            
+    data = payload.dict(exclude_none=True)
+    if "es_nota_definitiva" not in data:
+        data["es_nota_definitiva"] = nota.es_nota_definitiva
+    serializer = NotaSerializer(instance=nota, data=data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    nota = serializer.save()
+    return NotaSerializer(nota).data
+
+
+@router.delete("/notas/{nota_id}", response=dict)
+@require_videojuegos_access
+def eliminar_nota_videojuegos(request, nota_id: int):
+    """
+    Elimina una calificación del programa VJ.
+    """
+    nota = get_object_or_404(Nota, pk=nota_id)
+    is_vj = False
+    if nota.examen.modulo and nota.examen.modulo.bloque.programa.codigo == "VJ":
+        is_vj = True
+    elif nota.examen.bloque and nota.examen.bloque.programa.codigo == "VJ":
+        is_vj = True
+    if not is_vj:
+        raise HttpError(403, "No tiene permiso para eliminar esta calificación.")
+    nota.delete()
+    return {"deleted": True, "id": nota_id}
