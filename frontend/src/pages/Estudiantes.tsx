@@ -5,6 +5,8 @@ import { ModalConfirmDelete } from "../components/Estudiantes/ModalConfirmDelete
 import { ModalRespuestas } from "../components/Estudiantes/ModalRespuestas";
 import { ModalExport } from "../components/Estudiantes/ModalExport";
 import { ModalDetalle } from "../components/Estudiantes/ModalDetalle";
+import { EstudiantesTable } from "../components/Estudiantes/EstudiantesTable";
+import { EstudiantesFilters } from "../components/Estudiantes/EstudiantesFilters";
 import { useEstudiantes, useSaveEstudiante, useProgramas, useBloques, useModulos, useCohortes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
 import { formatDateDisplay, formatDateTimeDisplay } from "../utils/dateFormat";
@@ -100,7 +102,7 @@ const initialFormState: FormState = {
     dni_tutor_digitalizado: "", nota_parental_firmada: ""
 };
 
-const calculateAge = (birthDate: string | null | undefined): number | null => {
+export const calculateAge = (birthDate: string | null | undefined): number | null => {
     if (!birthDate) return null;
     const today = new Date();
     const birth = new Date(birthDate);
@@ -112,7 +114,7 @@ const calculateAge = (birthDate: string | null | undefined): number | null => {
     return age;
 };
 
-type LocalEstudiante = Estudiante & {
+export type LocalEstudiante = Estudiante & {
     fecha_nacimiento?: string | null;
 };
 
@@ -152,8 +154,21 @@ export interface ExportConfigState {
     cohorte_id: string;
 }
 
+export interface FiltersState {
+    dni: string;
+    nombre_apellido: string;
+    telefono: string;
+    estatus: string;
+    anio: string;
+    programa_id: string;
+    bloque_id: string;
+    modulo_id: string;
+    cohorte_id: string;
+    rango_edad: string;
+}
+
 export default function Estudiantes() {
-    const [filters, setFilters] = useState({ 
+    const [filters, setFilters] = useState<FiltersState>({ 
         dni: "", 
         nombre_apellido: "", 
         telefono: "", 
@@ -257,6 +272,11 @@ export default function Estudiantes() {
     const paginatedRows = useMemo(() => sortedRows.slice(page * rowsPerPage, (page + 1) * rowsPerPage), [sortedRows, page, rowsPerPage]);
 
     const handleSort = (field: string) => setOrdering({ field, direction: ordering.field === field && ordering.direction === "asc" ? "desc" : "asc" });
+
+    const handleFilterChange = (updates: Partial<FiltersState>) => {
+        setFilters(prev => ({ ...prev, ...updates }));
+        setPage(0);
+    };
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -692,195 +712,37 @@ export default function Estudiantes() {
                 /* Listado y Filtros (Solapa 1) */
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="space-y-4 mb-6">
-                        {/* Panel de Búsqueda de Estudiante */}
-                        <div className="bg-white/5 border border-white/5 p-4 rounded-2xl">
-                            <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                <Search size={14} /> Búsqueda de Estudiante
-                            </p>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                <div className="col-span-1 md:col-span-1">
-                                    <Input placeholder="Nombre/Apellido" value={filters.nombre_apellido} name="nombre_apellido" onChange={(e) => { setFilters({ ...filters, nombre_apellido: e.target.value }); setPage(0); }} className="bg-indigo-950/30" />
-                                </div>
-                                <Input placeholder="DNI" value={filters.dni} name="dni" onChange={(e) => { setFilters({ ...filters, dni: e.target.value }); setPage(0); }} className="bg-indigo-950/30" />
-                                <Input placeholder="Teléfono" value={filters.telefono} name="telefono" onChange={(e) => { setFilters({ ...filters, telefono: e.target.value }); setPage(0); }} className="bg-indigo-950/30" />
-                                <Select 
-                                    value={filters.anio} 
-                                    onChange={(e) => { setFilters({ ...filters, anio: e.target.value }); setPage(0); }} 
-                                    options={[
-                                        { value: '', label: 'Cualquier Año' },
-                                        { value: '2023', label: '2023' },
-                                        { value: '2024', label: '2024' },
-                                        { value: '2025', label: '2025' },
-                                        { value: '2026', label: '2026' },
-                                    ]} 
-                                    className="bg-indigo-950/30" 
-                                />
-                            </div>
-                        </div>
-
-                        {/* Panel de Filtros Académicos / Reportes */}
-                        <div className="bg-brand-accent/5 border border-brand-accent/20 p-4 rounded-2xl shadow-lg shadow-brand-accent/5">
-                            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-3">
-                                <p className="text-[10px] font-bold text-brand-accent uppercase tracking-widest flex items-center gap-2">
-                                    <Briefcase size={14} /> Filtros de Cursada / Reportes
-                                </p>
-                                <div className="flex gap-2">
-                                    <Button onClick={() => refetch()} size="sm" startIcon={<Search size={16} />} className="bg-indigo-600 hover:bg-indigo-500 border-none px-4">Filtrar</Button>
-                                    <Button 
-                                        onClick={() => setExportModalOpen(true)} 
-                                        size="sm"
-                                        startIcon={<Download size={16} />} 
-                                        variant="outline" 
-                                        className="border-brand-accent/50 text-brand-accent hover:bg-brand-accent/10 px-4"
-                                    >
-                                        Exportar Listado
-                                    </Button>
-                                    <Button 
-                                        onClick={() => {
-                                            setEditId(null);
-                                            setForm(initialFormState);
-                                            setActiveTab("add");
-                                        }}
-                                        size="sm"
-                                        startIcon={<Plus size={16} />}
-                                        className="bg-brand-accent hover:bg-orange-600 border-none px-4"
-                                    >
-                                        Nuevo Estudiante
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                                <Select 
-                                    value={filters.estatus} 
-                                    onChange={(e) => { setFilters({ ...filters, estatus: e.target.value }); setPage(0); }} 
-                                    options={[
-                                        { value: '', label: 'Estatus: Todos' }, 
-                                        { value: 'Regular', label: 'Regular' }, 
-                                        { value: 'Baja', label: 'Baja' }, 
-                                        { value: 'Condicional', label: 'Condicional' }, 
-                                        { value: 'Preinscripto', label: 'Preinscripto' }
-                                    ]} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.rango_edad} 
-                                    onChange={(e) => { setFilters({ ...filters, rango_edad: e.target.value }); setPage(0); }} 
-                                    options={[
-                                        { value: '', label: 'Cualquier Edad' }, 
-                                        { value: 'MENORES', label: 'Menores (< 18 años)' }, 
-                                        { value: 'MAYORES', label: 'Adultos (>= 18 años)' }
-                                    ]} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.programa_id} 
-                                    onChange={(e) => { setFilters({ ...filters, programa_id: e.target.value, bloque_id: "", modulo_id: "", cohorte_id: "" }); setPage(0); }} 
-                                    options={[{ value: '', label: 'Cualquier Trayecto' }, ...programas.map(p => ({ value: p.id, label: p.nombre }))]} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.bloque_id} 
-                                    onChange={(e) => { setFilters({ ...filters, bloque_id: e.target.value, modulo_id: "", cohorte_id: "" }); setPage(0); }} 
-                                    options={[{ value: '', label: 'Cualquier Módulo' }, ...bloques.map(b => ({ value: b.id, label: b.nombre }))]} 
-                                    disabled={!filters.programa_id} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.modulo_id} 
-                                    onChange={(e) => { setFilters({ ...filters, modulo_id: e.target.value }); setPage(0); }} 
-                                    options={[{ value: '', label: 'Cualquier Materia' }, ...modulos.map(m => ({ value: m.id, label: m.nombre }))]} 
-                                    disabled={!filters.bloque_id} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                                <Select 
-                                    value={filters.cohorte_id} 
-                                    onChange={(e) => { setFilters({ ...filters, cohorte_id: e.target.value }); setPage(0); }} 
-                                    options={[{ value: '', label: 'Cualquier Cohorte' }, ...filteredCohortes.map(c => ({ value: c.id, label: c.nombre }))]} 
-                                    disabled={!filters.programa_id} 
-                                    className="bg-indigo-950/40 border-brand-accent/20 text-xs" 
-                                />
-                            </div>
-                        </div>
+                        <EstudiantesFilters
+                            filters={filters}
+                            onFilterChange={handleFilterChange}
+                            programas={programas}
+                            bloques={bloques}
+                            modulos={modulos}
+                            cohortes={filteredCohortes}
+                            onRefetch={refetch}
+                            onExport={() => setExportModalOpen(true)}
+                            onNewStudent={() => {
+                                setEditId(null);
+                                setForm(initialFormState);
+                                setActiveTab("add");
+                            }}
+                        />
                     </div>
 
-                    <Card className="bg-indigo-900/10 border-indigo-500/20 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-indigo-950/40 text-indigo-300 uppercase text-xs">
-                                    <tr>
-                                        <th className="px-6 py-3 cursor-pointer select-none hover:text-white" onClick={() => handleSort("apellido")}>Apellido, Nombre {ordering.field === "apellido" && (ordering.direction === "asc" ? "▲" : "▼")}</th>
-                                        <th className="px-6 py-3 cursor-pointer select-none hover:text-white" onClick={() => handleSort("dni")}>DNI {ordering.field === "dni" && (ordering.direction === "asc" ? "▲" : "▼")}</th>
-                                        <th className="px-6 py-3 cursor-pointer select-none hover:text-white flex items-center gap-1">Fecha Nac. / Edad</th>
-                                        <th className="px-6 py-3">Email</th>
-                                        <th className="px-6 py-3 cursor-pointer select-none hover:text-white" onClick={() => handleSort("estatus")}>Estatus {ordering.field === "estatus" && (ordering.direction === "asc" ? "▲" : "▼")}</th>
-                                        <th className="px-6 py-3 text-right">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-indigo-500/10">
-                                    {isLoading ? (
-                                        <tr><td colSpan={6} className="text-center py-8 text-white">Cargando estudiantes...</td></tr>
-                                    ) : paginatedRows.map((r) => (
-                                        <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                                            <td className="px-6 py-3 font-medium text-white">{r.apellido}, {r.nombre}</td>
-                                            <td className="px-6 py-3">{r.dni}</td>
-                                            <td className="px-6 py-3">
-                                                {(() => {
-                                                    const age = calculateAge(r.fecha_nacimiento);
-                                                    const isMinor = age !== null && age < 18;
-                                                    return (
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className={isMinor ? "text-orange-400 font-bold" : ""}>
-                                                                {formatDateDisplay(r.fecha_nacimiento)}
-                                                            </span>
-                                                            {age !== null && (
-                                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold" : "bg-indigo-500/20 text-indigo-300"}`}>
-                                                                    {age} años {isMinor && <Baby size={10} className="inline ml-0.5" />}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </td>
-                                            <td className="px-6 py-3 text-gray-300">{r.email}</td>
-                                            <td className="px-6 py-3">
-                                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                                                    r.estatus === "Regular" ? "bg-emerald-500/20 text-emerald-400" :
-                                                    r.estatus === "Baja" ? "bg-red-500/20 text-red-400" :
-                                                    r.estatus === "Condicional" ? "bg-yellow-500/20 text-yellow-500" :
-                                                    "bg-indigo-500/20 text-indigo-300"
-                                                }`}>
-                                                    {r.estatus}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-3 text-right flex justify-end gap-2">
-                                                <button onClick={() => handleOpenDetail(r)} className="p-1 text-cyan-400 hover:text-cyan-200" title="Ver detalle"><Eye size={16} /></button>
-                                                <button
-                                                    onClick={() => handleStartEdit(r)}
-                                                    className="p-1 text-indigo-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    disabled={loadingEditId === r.id}
-                                                    title={loadingEditId === r.id ? "Cargando datos completos..." : "Editar"}
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button onClick={() => setDeleteTarget(r)} className="p-1 text-red-400 hover:text-red-200"><Trash2 size={16} /></button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {paginatedRows.length === 0 && (
-                                        <tr><td colSpan={6} className="text-center py-8 text-white">No se encontraron estudiantes.</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        {/* Paginación simple manual */}
-                        <div className="p-4 border-t border-indigo-500/20 flex items-center justify-between text-indigo-300 text-sm">
-                            <span>Mostrando {page * rowsPerPage + 1} - {Math.min((page + 1) * rowsPerPage, sortedRows.length)} de {sortedRows.length}</span>
-                            <div className="flex gap-2">
-                                <button disabled={page === 0} onClick={() => setPage(page - 1)} className="px-3 py-1 bg-indigo-950 hover:bg-indigo-900 rounded disabled:opacity-50">Anterior</button>
-                                <button disabled={(page + 1) * rowsPerPage >= sortedRows.length} onClick={() => setPage(page + 1)} className="px-3 py-1 bg-indigo-950 hover:bg-indigo-900 rounded disabled:opacity-50">Siguiente</button>
-                            </div>
-                        </div>
-                    </Card>
+                    <EstudiantesTable
+                        rows={paginatedRows}
+                        isLoading={isLoading}
+                        ordering={ordering}
+                        onSort={handleSort}
+                        onView={handleOpenDetail}
+                        onStartEdit={handleStartEdit}
+                        onDelete={setDeleteTarget}
+                        loadingEditId={loadingEditId}
+                        page={page}
+                        rowsPerPage={rowsPerPage}
+                        totalRows={sortedRows.length}
+                        onPageChange={setPage}
+                    />
                 </div>
             )}
 
