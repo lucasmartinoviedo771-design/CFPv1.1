@@ -35,40 +35,70 @@ import AdminTerciario from './pages/AdminTerciario.jsx';
 import AutorizacionParental from './pages/AutorizacionParental.jsx';
 import NivelacionDigital from './pages/NivelacionDigital.jsx';
 
-
 // Services
 import authService from "./services/authService";
+import type { UserDetails } from "./api/types";
 
-export const UserContext = createContext(null);
-export const ThemeModeContext = createContext({
+export interface ThemeModeContextType {
+  mode: "light" | "dark";
+  toggleMode: () => void;
+}
+
+export interface UserContextType {
+  user: UserDetails | null;
+  setUser: React.Dispatch<React.SetStateAction<UserDetails | null>>;
+}
+
+export interface ActivePanelContextType {
+  activePanel: "cfp" | "terciario" | "videojuegos";
+  setActivePanel: React.Dispatch<React.SetStateAction<"cfp" | "terciario" | "videojuegos">>;
+}
+
+export const UserContext = createContext<UserContextType>({
+  user: null,
+  setUser: () => {},
+});
+
+export const ThemeModeContext = createContext<ThemeModeContextType>({
   mode: "dark",
   toggleMode: () => { },
 });
-export const ActivePanelContext = createContext({
+
+export const ActivePanelContext = createContext<ActivePanelContextType>({
   activePanel: "cfp",
   setActivePanel: () => {},
 });
+
 const THEME_STORAGE_KEY = "cfp_theme_mode";
 
 // PrivateRoute component
-const PrivateRoute = ({ children }) => {
+interface PrivateRouteProps {
+  children: React.ReactNode;
+}
+
+const PrivateRoute = ({ children }: PrivateRouteProps) => {
   const isAuthenticated = authService.isLoggedIn();
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 // Layout wrapper helper
-const WithLayout = ({ title, children }) => (
+interface WithLayoutProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+const WithLayout = ({ title, children }: WithLayoutProps) => (
   <AppLayout title={title}>{children}</AppLayout>
 );
 
 export default function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<UserDetails | null>(null);
   const [initializing, setInitializing] = useState(true);
-  const [themeMode, setThemeMode] = useState(() => {
+  const [themeMode, setThemeMode] = useState<"light" | "dark">((() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     return saved === "light" ? "light" : "dark";
-  });
-  const [activePanel, setActivePanel] = useState("cfp");
+  }) as () => "light" | "dark");
+  const [activePanel, setActivePanel] = useState<"cfp" | "terciario" | "videojuegos">("cfp");
   const location = useLocation();
 
   useEffect(() => {

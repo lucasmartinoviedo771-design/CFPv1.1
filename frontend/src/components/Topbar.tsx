@@ -14,9 +14,9 @@ interface TopbarProps {
 
 export default function Topbar({ title }: TopbarProps) {
   const navigate = useNavigate();
-  const { user } = useContext(UserContext) as { user: UserDetails | null };
-  const { mode, toggleMode } = useContext(ThemeModeContext) as { mode: 'light' | 'dark'; toggleMode: () => void };
-  const { activePanel } = useContext(ActivePanelContext) as { activePanel: 'cfp' | 'terciario' | 'videojuegos'; setActivePanel: (panel: string) => void };
+  const { user } = useContext(UserContext);
+  const { mode, toggleMode } = useContext(ThemeModeContext);
+  const { activePanel } = useContext(ActivePanelContext);
 
   const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
   const tieneTerciario = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_TERCIARIO.includes(g)));
