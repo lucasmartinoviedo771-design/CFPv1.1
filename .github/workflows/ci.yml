@@ -34,15 +34,20 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
     - name: Install frontend dependencies
       run: |
         cd frontend
-        npm install
+        pnpm install --frozen-lockfile
 
     - name: Run frontend typecheck (tsc --noEmit)
       run: |
         cd frontend
-        npx tsc --noEmit
+        pnpm exec tsc --noEmit
 
     - name: Install system dependencies
       run: |

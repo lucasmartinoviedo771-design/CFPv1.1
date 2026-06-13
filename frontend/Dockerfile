@@ -1,9 +1,9 @@
 # Build Stage
 FROM node:20 as build
 WORKDIR /app
-RUN npm install -g pnpm@9
-COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install
+RUN npm install -g pnpm@10
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY . .
 # En producción, el proxy de nginx redigirá /api al backend
 ENV VITE_API_BASE=/api

@@ -33,8 +33,6 @@ node_modules/
 build/
 dist/
 .vite/
-pnpm-lock.yaml
-package-lock.json
 *.local
 
 # Environment variables
