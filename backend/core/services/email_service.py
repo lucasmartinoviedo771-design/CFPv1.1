@@ -104,14 +104,6 @@ def enviar_correo_bienvenida(estudiante_id: int):
                 'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12'
             })
 
-        # Trayecto: Matemática para Técnicos (ID 6)
-        if 6 in programas_ids:
-            contenido_opciones.append({
-                'titulo': 'Matemática para Técnicos',
-                'clave': 'MaTec#$2026',
-                'link': 'https://politecnico.ar/campus/course/index.php?categoryid=12'
-            })
-
         # Definimos el link principal según el programa prioritario (prioridad a Programador)
         main_url = 'https://politecnico.ar/campus/course/index.php?categoryid=14' if 1 in programas_ids else 'https://politecnico.ar/campus/course/index.php?categoryid=12'
 

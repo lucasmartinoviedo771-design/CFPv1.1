@@ -259,8 +259,8 @@ def listar_oferta_preinscripcion(
     programa_codigo: Optional[str] = None
 ):
     qs = _cohortes_habilitadas()
-    # Filtro temporal para excluir 'Sistemas de Representación' y carreras terciarias (Tecnicaturas)
-    qs = [c for c in qs if _normalize_text(c.programa.nombre) != "sistemas de representacion" and "tecnicatura" not in _normalize_text(c.programa.nombre)]
+    # Excluir 'Sistemas de Representación', carreras terciarias y 'Matemática para Técnicos'
+    qs = [c for c in qs if _normalize_text(c.programa.nombre) != "sistemas de representacion" and "tecnicatura" not in _normalize_text(c.programa.nombre) and "matematica para tecnicos" not in _normalize_text(c.programa.nombre)]
     
     # Exclude VJ from standard list if not explicitly requested
     if not programa_id and not programa_codigo:
