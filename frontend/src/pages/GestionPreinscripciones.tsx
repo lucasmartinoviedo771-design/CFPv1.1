@@ -1,60 +1,13 @@
 import React, { useMemo, useState, useContext } from "react";
-import { createPortal } from "react-dom";
 import { UserContext } from "../App";
 import { useEstudiantes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
-import { Card, Button, Input } from '../components/UI';
-import {
-    CheckCircle, XCircle, Search, Eye, FileText,
-    Download, Check, AlertCircle, Loader, UserCheck, Trash2, UploadCloud
-} from 'lucide-react';
-import { formatDateDisplay } from "../utils/dateFormat";
-import { getMediaUrl } from "../utils/media";
-import type { EstudianteDetail } from '../api/types';
-import type { LucideIcon } from 'lucide-react';
-
-interface Aspirante extends EstudianteDetail {
-    autorizacion_status?: string | null;
-    autorizacion_fecha?: string | null;
-    autorizacion_selfie?: string | null;
-    autorizacion_token?: string | null;
-    created_at?: string | null;
-}
-
-interface SectionDividerProps {
-    title: string;
-    icon?: LucideIcon;
-}
-
-const SectionDivider: React.FC<SectionDividerProps> = ({ title, icon: Icon }) => (
-    <div className="flex items-center gap-2 text-indigo-300 border-b border-indigo-500/20 pb-2 mb-4 mt-6">
-        {Icon && <Icon size={16} />}
-        <span className="text-sm font-bold uppercase tracking-wider">{title}</span>
-    </div>
-);
-
-const calculateAge = (birthDate?: string | null): number | null => {
-    if (!birthDate) return null;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
-};
-
-interface FeedbackState {
-    open: boolean;
-    message: string;
-    severity: "success" | "error";
-}
-
-interface OrderingState {
-    field: string;
-    direction: "asc" | "desc";
-}
+import { Card } from '../components/UI';
+import { Check, AlertCircle, XCircle } from 'lucide-react';
+import { Aspirante, FeedbackState, OrderingState } from "../components/GestionPreinscripciones/types";
+import PreinscripcionesHeader from "../components/GestionPreinscripciones/PreinscripcionesHeader";
+import PreinscripcionesTable from "../components/GestionPreinscripciones/PreinscripcionesTable";
+import AspiranteDetailModal from "../components/GestionPreinscripciones/AspiranteDetailModal";
 
 export default function GestionPreinscripciones() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -220,261 +173,97 @@ export default function GestionPreinscripciones() {
         }
     };
 
+    const handleSingleArchive = async (s: Aspirante) => {
+        if (window.confirm(`¿Archivar a ${s.apellido}, ${s.nombre}? No figurará más en las colas pero el registro se mantiene.`)) {
+            try {
+                await apiClientV2.post('/estudiantes/bulk_archive/', { ids: [s.id] });
+                setFeedback({ open: true, message: "Estudiante archivado correctamente.", severity: "success" });
+                refetch();
+            } catch (e: unknown) {
+                console.error("Error al archivar:", e);
+                setFeedback({ open: true, message: "Error al archivar.", severity: "error" });
+            }
+        }
+    };
+
+    const handleSingleDeletePhysical = async (s: Aspirante) => {
+        if (window.confirm(`¿ELIMINAR PERMANENTEMENTE a ${s.apellido}, ${s.nombre}? ESTA ACCIÓN ES IRREVERSIBLE.`)) {
+            try {
+                await apiClientV2.post('/estudiantes/bulk_delete/', { ids: [s.id] });
+                setFeedback({ open: true, message: "Estudiante eliminado físicamente.", severity: "success" });
+                refetch();
+            } catch (e: unknown) {
+                console.error("Error al eliminar físicamente:", e);
+                setFeedback({ open: true, message: "Error al eliminar físicamente.", severity: "error" });
+            }
+        }
+    };
+
+    const handleSingleRestore = async (s: Aspirante) => {
+        try {
+            await apiClientV2.post('/estudiantes/bulk_restore/', { ids: [s.id] });
+            setFeedback({ open: true, message: "Estudiante restaurado.", severity: "success" });
+            refetch();
+        } catch (e: unknown) {
+            console.error("Error al restaurar:", e);
+            setFeedback({ open: true, message: "Error al restaurar.", severity: "error" });
+        }
+    };
+
+    const handleApproveSingleFromModal = async () => {
+        if (!viewStudent) return;
+        setApproving(true);
+        try {
+            await apiClientV2.post('/estudiantes/bulk_approve/', { ids: [viewStudent.id] });
+            setFeedback({ open: true, message: `Estudiante aprobado con éxito.`, severity: "success" });
+            setViewStudent(null);
+            refetch();
+        } catch (e: unknown) {
+            console.error("Error al aprobar:", e);
+            setFeedback({ open: true, message: "Error al aprobar.", severity: "error" });
+        } finally {
+            setApproving(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in-up">
-            <div className="flex justify-between items-end">
-                <div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight">Preinscripciones CFP</h1>
-                    <p className="text-indigo-300">Revisión y aprobación masiva de nuevos Estudiantes.</p>
-                </div>
-                <div className="flex gap-3">
-                    {canDelete && (
-                        <Button
-                            onClick={handleBulkArchive}
-                            disabled={selectedIds.size === 0 || approving}
-                            variant="danger"
-                            className="bg-orange-600 hover:bg-orange-500 border-none px-6"
-                            startIcon={<Trash2 size={18} />}
-                            title="Quitar de la lista (Borrado Lógico)"
-                        >
-                            Quitar ({selectedIds.size})
-                        </Button>
-                    )}
-                    {isAdmin && (
-                        <Button
-                            onClick={handleBulkDelete}
-                            disabled={selectedIds.size === 0 || approving}
-                            variant="danger"
-                            className="bg-red-700 hover:bg-red-600 border-none px-2"
-                            startIcon={<XCircle size={18} />}
-                            title="Eliminar Permanente"
-                        />
-                    )}
-                    <Button
-                        onClick={handleBulkApprove}
-                        disabled={selectedIds.size === 0 || approving}
-                        className="bg-emerald-600 hover:bg-emerald-500 border-none px-6"
-                        startIcon={approving ? <Loader className="animate-spin" size={18} /> : <UserCheck size={18} />}
-                    >
-                        Aprobar Seleccionados ({selectedIds.size})
-                    </Button>
-                    {viewArchived && selectedIds.size > 0 && (
-                        <Button
-                            onClick={handleBulkRestore}
-                            disabled={approving}
-                            className="bg-cyan-600 hover:bg-cyan-500 border-none px-6"
-                            startIcon={<UploadCloud size={18} />}
-                        >
-                            Restaurar ({selectedIds.size})
-                        </Button>
-                    )}
-                </div>
-            </div>
-
-            <div className="flex gap-2 mb-4 bg-indigo-950/30 p-1 rounded-lg w-fit border border-indigo-500/10">
-                <button
-                    onClick={() => { setViewArchived(false); setSelectedIds(new Set<number>()); }}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${!viewArchived ? 'bg-indigo-600 text-white shadow-lg' : 'text-indigo-400 hover:text-indigo-200'}`}
-                >
-                    Cola Principal
-                </button>
-                <button
-                    onClick={() => { setViewArchived(true); setSelectedIds(new Set<number>()); }}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewArchived ? 'bg-orange-600 text-white shadow-lg' : 'text-indigo-400 hover:text-indigo-200'}`}
-                >
-                    <Trash2 size={16} /> Papelera / Archivados
-                </button>
-            </div>
+            <PreinscripcionesHeader
+                selectedCount={selectedIds.size}
+                approving={approving}
+                canDelete={!!canDelete}
+                isAdmin={!!isAdmin}
+                viewArchived={viewArchived}
+                onBulkArchive={handleBulkArchive}
+                onBulkDelete={handleBulkDelete}
+                onBulkApprove={handleBulkApprove}
+                onBulkRestore={handleBulkRestore}
+                onViewArchivedChange={(val) => {
+                    setViewArchived(val);
+                    setSelectedIds(new Set<number>());
+                }}
+                searchTerm={searchTerm}
+                onSearchTermChange={setSearchTerm}
+                onRefetch={refetch}
+            />
 
             <Card className="bg-indigo-900/10 border-indigo-500/20">
-                <div className="flex flex-col md:flex-row gap-4 mb-4">
-                    <div className="flex-1 relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-400">
-                            <Search size={18} />
-                        </div>
-                        <Input
-                            placeholder="Buscar por DNI, Nombre o Apellido..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="bg-indigo-950/50 pl-10"
-                        />
-                    </div>
-                    <Button onClick={() => refetch()} variant="ghost" className="text-indigo-300">Actualizar</Button>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-[#1e1b4b] text-indigo-300 uppercase text-xs">
-                            <tr>
-                                <th className="px-4 py-3 w-10">
-                                    <input
-                                        type="checkbox"
-                                        className="rounded bg-indigo-900 border-indigo-500"
-                                        checked={sortedAndFiltered.length > 0 && selectedIds.size === sortedAndFiltered.length}
-                                        onChange={toggleSelectAll}
-                                    />
-                                </th>
-                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('dni')}>
-                                    <div className="flex items-center gap-1">DNI {ordering.field === 'dni' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                </th>
-                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('estudiante')}>
-                                    <div className="flex items-center gap-1">Estudiante {ordering.field === 'estudiante' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                </th>
-                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('trayectos')}>
-                                    <div className="flex items-center gap-1">Trayectos {ordering.field === 'trayectos' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                </th>
-                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('created_at')}>
-                                    <div className="flex items-center gap-1">Fecha {ordering.field === 'created_at' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                </th>
-                                <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => handleSort('archivos')}>
-                                    <div className="flex items-center gap-1">Archivos {ordering.field === 'archivos' ? (ordering.direction === "asc" ? "↑" : "↓") : <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>}</div>
-                                </th>
-                                <th className="px-6 py-3 text-right">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-indigo-500/10">
-                            {isLoading ? (
-                                <tr><td colSpan={7} className="text-center py-8 text-indigo-300"><Loader className="animate-spin inline mr-2" />Cargando aspirantes...</td></tr>
-                            ) : sortedAndFiltered.map(s => (
-                                <tr key={s.id} className={`hover:bg-white/5 transition-colors ${selectedIds.has(s.id) ? 'bg-indigo-500/10' : ''}`}>
-                                    <td className="px-4 py-3">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded bg-indigo-900 border-indigo-500 text-brand-accent focus:ring-brand-accent"
-                                            checked={selectedIds.has(s.id)}
-                                            onChange={() => toggleSelect(s.id)}
-                                        />
-                                    </td>
-                                    <td className="px-6 py-3 font-mono text-indigo-200">{s.dni}</td>
-                                    <td className="px-6 py-3">
-                                        <div className="flex flex-col">
-                                            {(() => {
-                                                const age = calculateAge(s.fecha_nacimiento);
-                                                const isMinor = age !== null && age < 18;
-                                                return (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={isMinor ? "text-orange-400 font-bold" : "text-white font-medium"}>
-                                                            {s.apellido}, {s.nombre}
-                                                        </span>
-                                                        {age !== null && (
-                                                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isMinor ? "bg-orange-500/20 text-orange-300 border border-orange-500/30" : "bg-indigo-500/20 text-indigo-300"}`}>
-                                                                {age} años
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })()}
-                                            <div className="text-xs text-indigo-400">{s.email}</div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                        <div className="flex flex-wrap gap-1">
-                                            {s.trayectos?.map((t, idx) => (
-                                                <span key={idx} className="text-[10px] bg-indigo-500/20 text-indigo-200 px-1.5 py-0.5 rounded border border-indigo-500/30">
-                                                    {t}
-                                                </span>
-                                            ))}
-                                            {(!s.trayectos || s.trayectos.length === 0) && <span className="text-xs text-gray-500">-</span>}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-3 text-indigo-300">{formatDateDisplay(s.created_at)}</td>
-                                    <td className="px-6 py-3">
-                                        <div className="flex gap-2">
-                                            {s.dni_digitalizado ? (
-                                                <a href={getMediaUrl(s.dni_digitalizado)} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/40 px-2 py-1 rounded text-cyan-300 transition-colors">
-                                                    <FileText size={12} /> DNI
-                                                </a>
-                                            ) : (
-                                                <span className="text-xs text-red-400/60 flex items-center gap-1"><XCircle size={12} /> DNI</span>
-                                            )}
-                                            {s.titulo_secundario_digitalizado ? (
-                                                <a href={getMediaUrl(s.titulo_secundario_digitalizado)} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/40 px-2 py-1 rounded text-emerald-300 transition-colors">
-                                                    <FileText size={12} /> Título
-                                                </a>
-                                            ) : (
-                                                <span className="text-xs text-gray-500 flex items-center gap-1"><XCircle size={12} /> Título</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-3 text-right">
-                                        <div className="flex justify-end gap-1">
-                                            <button
-                                                onClick={() => setViewStudent(s)}
-                                                className="p-2 text-brand-cyan hover:text-white transition-colors"
-                                                title="Ver detalle completo"
-                                            >
-                                                <Eye size={18} />
-                                            </button>
-                                            {canDelete && (
-                                                <button
-                                                    onClick={async () => {
-                                                        if (window.confirm(`¿Archivar a ${s.apellido}, ${s.nombre}? No figurará más en las colas pero el registro se mantiene.`)) {
-                                                            try {
-                                                                await apiClientV2.post('/estudiantes/bulk_archive/', { ids: [s.id] });
-                                                                setFeedback({ open: true, message: "Estudiante archivado correctamente.", severity: "success" });
-                                                                refetch();
-                                                            } catch (e: unknown) {
-                                                                console.error("Error al archivar:", e);
-                                                                setFeedback({ open: true, message: "Error al archivar.", severity: "error" });
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="p-2 text-orange-400 hover:text-orange-200 transition-colors"
-                                                    title="Archivar (Borrado lógico)"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            )}
-                                            {isAdmin && (
-                                                <button
-                                                    onClick={async () => {
-                                                        if (window.confirm(`¿ELIMINAR PERMANENTEMENTE a ${s.apellido}, ${s.nombre}? ESTA ACCIÓN ES IRREVERSIBLE.`)) {
-                                                            try {
-                                                                await apiClientV2.post('/estudiantes/bulk_delete/', { ids: [s.id] });
-                                                                setFeedback({ open: true, message: "Estudiante eliminado físicamente.", severity: "success" });
-                                                                refetch();
-                                                            } catch (e: unknown) {
-                                                                console.error("Error al eliminar físicamente:", e);
-                                                                setFeedback({ open: true, message: "Error al eliminar físicamente.", severity: "error" });
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="p-2 text-red-600 hover:text-red-400 transition-colors"
-                                                    title="ELIMINAR PERMANENTE"
-                                                >
-                                                    <XCircle size={18} />
-                                                </button>
-                                            )}
-                                            {viewArchived && canDelete && (
-                                                <button
-                                                    onClick={async () => {
-                                                        try {
-                                                            await apiClientV2.post('/estudiantes/bulk_restore/', { ids: [s.id] });
-                                                            setFeedback({ open: true, message: "Estudiante restaurado.", severity: "success" });
-                                                            refetch();
-                                                        } catch (e: unknown) {
-                                                            console.error("Error al restaurar:", e);
-                                                            setFeedback({ open: true, message: "Error al restaurar.", severity: "error" });
-                                                        }
-                                                    }}
-                                                    className="p-2 text-cyan-400 hover:text-cyan-200 transition-colors"
-                                                    title="Restaurar a la cola"
-                                                >
-                                                    <UploadCloud size={18} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {!isLoading && sortedAndFiltered.length === 0 && (
-                                <tr><td colSpan={7} className="text-center py-12 text-indigo-300">
-                                    {viewArchived ? "No hay estudiantes en la papelera." : "No hay preinscripciones pendientes."}
-                                </td></tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                <PreinscripcionesTable
+                    isLoading={isLoading}
+                    sortedAndFiltered={sortedAndFiltered}
+                    selectedIds={selectedIds}
+                    onToggleSelectAll={toggleSelectAll}
+                    onToggleSelect={toggleSelect}
+                    onSort={handleSort}
+                    ordering={ordering}
+                    viewArchived={viewArchived}
+                    canDelete={!!canDelete}
+                    isAdmin={!!isAdmin}
+                    onViewStudent={setViewStudent}
+                    onArchive={handleSingleArchive}
+                    onDeletePhysical={handleSingleDeletePhysical}
+                    onRestore={handleSingleRestore}
+                />
             </Card>
 
             {feedback.open && (
@@ -485,164 +274,12 @@ export default function GestionPreinscripciones() {
                 </div>
             )}
 
-            {viewStudent && createPortal(
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-indigo-950/80 backdrop-blur-sm animate-fade-in">
-                    <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-indigo-900/90 border-indigo-500/30 shadow-2xl relative animate-in zoom-in duration-300">
-                        <button
-                            onClick={() => setViewStudent(null)}
-                            className="absolute top-4 right-4 text-indigo-300 hover:text-white transition-colors"
-                        >
-                            <XCircle size={24} />
-                        </button>
-
-                        <div className="p-2">
-                            {(() => {
-                                const hoy = new Date();
-                                const nac = viewStudent.fecha_nacimiento ? new Date(viewStudent.fecha_nacimiento) : null;
-                                let edad = 18;
-                                if (nac) {
-                                    edad = hoy.getFullYear() - nac.getFullYear();
-                                    const m = hoy.getMonth() - nac.getMonth();
-                                    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
-                                }
-                                const esMenor = edad < 18;
-                                return (
-                                    <>
-                                        <h2 className="text-2xl font-bold text-white mb-1">{viewStudent.apellido}, {viewStudent.nombre}</h2>
-                                        <p className="text-indigo-300 mb-6 font-mono">
-                                            {viewStudent.dni}
-                                            {esMenor && <span className="ml-3 text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-black animate-pulse">MENOR DE EDAD</span>}
-                                        </p>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div>
-                                                <SectionDivider title="Datos Personales" icon={Search} />
-                                                <div className="space-y-2 text-sm">
-                                                    <p><span className="text-indigo-400">Email:</span> <span className="text-white">{viewStudent.email}</span></p>
-                                                    <p><span className="text-indigo-400">Teléfono:</span> <span className="text-white">{viewStudent.telefono || '-'}</span></p>
-                                                    <p><span className="text-indigo-400">Fecha Nac.:</span> <span className="text-white">{viewStudent.fecha_nacimiento || '-'}</span></p>
-                                                    <p><span className="text-indigo-400">Domicilio:</span> <span className="text-white">{viewStudent.domicilio || '-'}, {viewStudent.ciudad || '-'}</span></p>
-                                                </div>
-
-                                                <SectionDivider title="Trayectos Solicitados" icon={FileText} />
-                                                <div className="flex flex-wrap gap-2">
-                                                    {viewStudent.trayectos?.map((t, idx) => (
-                                                        <span key={idx} className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30 text-xs">
-                                                            {t}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <SectionDivider title="Documentación" icon={Download} />
-                                                <div className="space-y-3">
-                                                    {viewStudent.dni_digitalizado ? (
-                                                        <a href={getMediaUrl(viewStudent.dni_digitalizado)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-cyan-300 transition-all border border-cyan-500/30">
-                                                            <span className="flex items-center gap-2"><FileText size={18} /> DNI Digitalizado</span>
-                                                            <Download size={18} />
-                                                        </a>
-                                                    ) : (
-                                                        <div className="p-3 rounded-lg border border-red-500/30 text-red-400 bg-red-900/20 text-sm">DNI no cargado</div>
-                                                    )}
-
-                                                    {viewStudent.titulo_secundario_digitalizado ? (
-                                                        <a href={getMediaUrl(viewStudent.titulo_secundario_digitalizado)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-emerald-300 transition-all border border-emerald-500/30">
-                                                            <span className="flex items-center gap-2"><FileText size={18} /> Título Secundario</span>
-                                                            <Download size={18} />
-                                                        </a>
-                                                    ) : (
-                                                        !esMenor && <div className="p-3 rounded-lg border border-white/10 text-gray-500 bg-white/5 text-sm">Título no cargado</div>
-                                                    )}
-
-                                                    {esMenor && (
-                                                        <>
-                                                            <SectionDivider title="Datos del Tutor (Menor)" icon={UserCheck} />
-                                                            <div className="space-y-3 p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
-                                                                <p className="text-sm"><span className="text-orange-300/70">Nombre:</span> <span className="text-white font-bold">{viewStudent.tutor_nombre}</span></p>
-                                                                <p className="text-sm"><span className="text-orange-300/70">DNI:</span> <span className="text-white font-bold">{viewStudent.tutor_dni}</span></p>
-
-                                                                {viewStudent.dni_tutor_digitalizado ? (
-                                                                    <a href={getMediaUrl(viewStudent.dni_tutor_digitalizado)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-orange-500/20 hover:bg-orange-500/40 p-3 rounded-lg text-orange-200 transition-all border border-orange-500/30">
-                                                                        <span className="flex items-center gap-2"><FileText size={18} /> DNI del Tutor</span>
-                                                                        <Download size={18} />
-                                                                    </a>
-                                                                ) : (
-                                                                    <div className="p-3 rounded-lg border border-red-500/30 text-red-300 bg-red-900/20 text-xs">DNI Tutor no cargado</div>
-                                                                )}
-
-                                                                <SectionDivider title="Autorización Parental" icon={UserCheck} />
-                                                                {viewStudent.autorizacion_status === 'DIGITAL' ? (
-                                                                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl">
-                                                                        <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm mb-2">
-                                                                            <CheckCircle size={16} className="text-emerald-400" /> Firma Digital Validada
-                                                                        </div>
-                                                                        <div className="text-[10px] text-emerald-400/70 mb-3">
-                                                                            {viewStudent.autorizacion_fecha && new Date(viewStudent.autorizacion_fecha).toLocaleString()}
-                                                                        </div>
-                                                                        <a
-                                                                            href={getMediaUrl(viewStudent.autorizacion_selfie || '')}
-                                                                            target="_blank"
-                                                                            rel="noreferrer"
-                                                                            className="w-full text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white py-1.5 rounded-md text-center font-semibold flex items-center justify-center gap-1 transition-all"
-                                                                        >
-                                                                            <Eye size={14} /> VER SELFIE DE FIRMA
-                                                                        </a>
-                                                                    </div>
-                                                                ) : viewStudent.nota_parental_firmada ? (
-                                                                    <a href={getMediaUrl(viewStudent.nota_parental_firmada)} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-emerald-500/20 hover:bg-emerald-500/40 p-3 rounded-lg text-emerald-300 transition-all border border-emerald-500/30">
-                                                                        <span className="flex items-center gap-2"><CheckCircle size={18} /> Nota Autorización OK</span>
-                                                                        <Download size={18} />
-                                                                    </a>
-                                                                ) : (
-                                                                    <div className="p-3 rounded-lg border border-dashed border-red-500/50 text-red-300 text-center text-xs">
-                                                                        Esperando recepción de firma digital
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-
-                                                <SectionDivider title="Información Adicional" icon={AlertCircle} />
-                                                <div className="space-y-2 text-sm text-indigo-200">
-                                                    <p>Posee PC: {viewStudent.posee_pc ? 'Sí' : 'No'}</p>
-                                                    <p>Conectividad: {viewStudent.posee_conectividad ? 'Sí' : 'No'}</p>
-                                                    <p>Trabaja: {viewStudent.trabaja ? 'Sí' : 'No'}</p>
-                                                    <p>Nivel Educativo: {viewStudent.nivel_educativo || '-'}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-8 flex justify-end gap-3">
-                                            <Button variant="ghost" onClick={() => setViewStudent(null)}>Cerrar</Button>
-                                            <Button
-                                                className="bg-emerald-600 hover:bg-emerald-500"
-                                                onClick={async () => {
-                                                    setApproving(true);
-                                                    try {
-                                                        await apiClientV2.post('/estudiantes/bulk_approve/', { ids: [viewStudent.id] });
-                                                        setFeedback({ open: true, message: `Estudiante aprobado con éxito.`, severity: "success" });
-                                                        setViewStudent(null);
-                                                        refetch();
-                                                    } catch (e: unknown) {
-                                                        console.error("Error al aprobar:", e);
-                                                        setFeedback({ open: true, message: "Error al aprobar.", severity: "error" });
-                                                    } finally {
-                                                        setApproving(false);
-                                                    }
-                                                }}
-                                            >
-                                                Aprobar Estudiante
-                                            </Button>
-                                        </div>
-                                    </>
-                                );
-                            })()}
-                        </div>
-                    </Card>
-                </div>,
-                document.body
+            {viewStudent && (
+                <AspiranteDetailModal
+                    viewStudent={viewStudent}
+                    onClose={() => setViewStudent(null)}
+                    onApprove={handleApproveSingleFromModal}
+                />
             )}
         </div>
     );
