@@ -4,7 +4,7 @@ from django.db.models import Q
 
 from core.models import Nota, Asistencia, Inscripcion
 from core.api.permissions import require_authenticated_group
-from core.serializers import NotaSerializer, NotaSlimSerializer
+from core.serializers import NotaSlimSerializer
 
 router = Router(tags=["historicos"])
 

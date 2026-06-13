@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.core.management import call_command
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-from core.models import BloqueDeFechas, Programa, Bloque, Modulo, Cohorte, Estudiante, Inscripcion, ConfiguracionPreinscripcionVideojuegos, Asistencia, Nota, Examen
+from core.models import BloqueDeFechas, Programa, Bloque, Modulo, Cohorte, Estudiante, Inscripcion, ConfiguracionPreinscripcionVideojuegos
 
 class VideojuegosTests(TestCase):
     def setUp(self):
