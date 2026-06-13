@@ -2,85 +2,32 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   ArrowLeft,
-  ChevronDown,
-  ChevronUp,
   Moon,
   Sun,
   CheckCircle2,
-  User,
-  FileText,
-  GraduationCap,
-  Smartphone,
-  UploadCloud,
   X
 } from "lucide-react";
 import { apiClientV2 } from "../api/client";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
-
-const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-const NIVEL_EDUCATIVO_OPTIONS = [
-  "Primaria Completa",
-  "Secundaria Incompleta",
-  "Secundaria Completa",
-  "Terciaria/Universitaria Incompleta",
-  "Terciaria/Universitaria Completa",
-  "Terciaria/Universitaria",
-];
-
-async function compressImage(file: File): Promise<File> {
-  if (!file.type.startsWith("image/")) return file;
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (e) => {
-      const img = new Image();
-      img.src = e.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
-        const MAX_WIDTH = 1200;
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-        }
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() }));
-          } else {
-            resolve(file);
-          }
-        }, "image/jpeg", 0.7);
-      };
-    };
-  });
-}
-
-function validateFile(file: File | null, label: string): string {
-  if (!file) return `${label}: archivo requerido.`;
-  // Solo validamos tamaño aquí para el feedback visual inicial, 
-  // pero el proceso de carga manejará la compresión de ser necesario.
-  if (file.size > 5 * 1024 * 1024 && !file.type.startsWith("image/")) {
-    return `${label}: el PDF no debe superar los 5MB.`;
-  }
-  if (!ACCEPTED_TYPES.includes(file.type)) return `${label}: formato permitido PDF/JPG/PNG/WEBP.`;
-  return "";
-}
-
-function normalizeText(value: string | null | undefined): string {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
+import {
+  compressImage,
+  validateFile,
+  normalizeText,
+  calculateAge
+} from "../components/Preinscripcion/formHelpers";
+import {
+  STORAGE_KEY,
+  FormState,
+  INIT_FORM,
+  Bloque,
+  ProgramaOferta
+} from "../components/PreinscripcionPublica/types";
+import { ProgressBar } from "../components/PreinscripcionPublica/ProgressBar";
+import { StepOferta } from "../components/PreinscripcionPublica/StepOferta";
+import { StepIdentidad } from "../components/PreinscripcionPublica/StepIdentidad";
+import { StepContacto } from "../components/PreinscripcionPublica/StepContacto";
+import { StepDocumentacion } from "../components/PreinscripcionPublica/StepDocumentacion";
 
 function isProgramacionII(bloqueNombre: string): boolean {
   return normalizeText(bloqueNombre).includes("programacion ii");
@@ -91,182 +38,17 @@ function isProgramadorNivelIII(programaNombre: string): boolean {
   return norm.includes("programador de nivel iii") || norm.includes("programacion de nivel iii") || norm.includes("programacion (nivel iii)");
 }
 
-interface DropFileFieldProps {
-  label: string;
-  required?: boolean;
-  file: File | null;
-  onFileChange: (file: File | null) => void;
-  isDark: boolean;
-  description?: string;
-}
-
-function DropFileField({ label, required, file, onFileChange, isDark, description }: DropFileFieldProps) {
-  const [dragOver, setDragOver] = useState(false);
-
-  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    setDragOver(false);
-    const dropped = e.dataTransfer?.files?.[0] || null;
-    if (dropped) onFileChange(dropped);
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-col">
-        <div className="flex justify-between items-center">
-          <label className={`block text-sm font-semibold ${isDark ? "text-indigo-200" : "text-slate-700"}`}>
-            {label} {required && <span className="text-red-500">*</span>}
-          </label>
-          {file && (
-            <button
-              type="button"
-              onClick={() => onFileChange(null)}
-              className="text-xs flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
-            >
-              <X size={12} /> Limpiar
-            </button>
-          )}
-        </div>
-        {description && (
-          <p className={`text-xs mt-1 leading-relaxed ${isDark ? "text-indigo-300" : "text-slate-500"}`}>
-            {description}
-          </p>
-        )}
-      </div>
-      <label
-        className={`group relative block rounded-2xl border-2 border-dashed p-8 cursor-pointer transition-all duration-300 overflow-hidden ${dragOver
-          ? "border-cyan-400 bg-cyan-400/10"
-          : isDark
-            ? "border-indigo-500/30 bg-white/5 hover:border-cyan-400/50"
-            : "border-slate-300 bg-white hover:border-sky-500"
-          }`}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-      >
-        <input type="file" accept=".pdf,image/*" className="hidden" onChange={(e) => onFileChange(e.target.files?.[0] || null)} />
-        <div className="flex flex-col items-center text-center space-y-3">
-          <div className={`p-4 rounded-full transition-transform group-hover:scale-110 ${isDark ? "bg-indigo-500/10 text-cyan-400" : "bg-sky-50 text-sky-600"}`}>
-            <UploadCloud size={32} />
-          </div>
-          <div>
-            <p className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
-              {file ? "¡Archivo detectado!" : "Arrastrá y soltá el archivo acá"}
-            </p>
-            <p className={`text-xs mt-1 ${isDark ? "text-indigo-300" : "text-slate-500"}`}>
-              PDF, JPG o PNG hasta 3MB
-            </p>
-          </div>
-          {file && (
-            <div className="mt-4 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 animate-in fade-in slide-in-from-bottom-2">
-              <p className="text-sm font-bold text-emerald-400 line-clamp-1">
-                {file.name}
-              </p>
-            </div>
-          )}
-        </div>
-      </label>
-    </div>
-  );
-}
-
-interface ProgressBarProps {
-  currentStep: number;
-  totalSteps: number;
-  isDark: boolean;
-}
-
-const ProgressBar = ({ currentStep, totalSteps, isDark }: ProgressBarProps) => {
-  const steps = [
-    { n: 1, label: "Oferta", icon: <GraduationCap size={18} /> },
-    { n: 2, label: "Identidad", icon: <User size={18} /> },
-    { n: 3, label: "Datos", icon: <Smartphone size={18} /> },
-    { n: 4, label: "Documentación", icon: <FileText size={18} /> }
-  ];
-
-  const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
-
-  return (
-    <div className="w-full mb-12">
-      <div className="flex justify-between items-center relative mb-4">
-        <div className={`absolute top-1/2 left-0 w-full h-1 -translate-y-1/2 rounded-full ${isDark ? "bg-white/5" : "bg-slate-200"}`} />
-        <div
-          className="absolute top-1/2 left-0 h-1 -translate-y-1/2 bg-gradient-to-r from-cyan-400 to-orange-500 transition-all duration-700 ease-out shadow-[0_0_15px_#00ffff]"
-          style={{ width: `${progress}%` }}
-        />
-
-        {steps.map((s) => (
-          <div key={s.n} className="relative z-10 flex flex-col items-center">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${s.n < currentStep
-              ? "bg-cyan-400 text-white shadow-[0_0_15px_rgba(0,255,255,0.4)]"
-              : s.n === currentStep
-                ? "bg-orange-500 text-white shadow-[0_0_15px_rgba(255,102,0,0.4)] scale-110"
-                : isDark ? "bg-indigo-950 border border-indigo-500/30 text-indigo-400" : "bg-white border border-slate-300 text-slate-400"
-              }`}>
-              {s.n < currentStep ? <CheckCircle2 size={24} /> : s.icon}
-            </div>
-            <span className={`absolute -bottom-7 text-[10px] font-black uppercase tracking-widest ${s.n <= currentStep ? "text-cyan-400" : "text-slate-500"
-              }`}>
-              {s.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const STORAGE_KEY = "preinscripcion_publica_v1";
-
-interface FormState {
-  apellido: string;
-  nombre: string;
-  email: string;
-  dni: string;
-  cuit: string;
-  sexo: string;
-  fecha_nacimiento: string;
-  pais_nacimiento: string;
-  pais_nacimiento_otro: string;
-  nacionalidad: string;
-  nacionalidad_otra: string;
-  lugar_nacimiento: string;
-  domicilio: string;
-  barrio: string;
-  ciudad: string;
-  telefono: string;
-  nivel_educativo: string;
-  posee_pc: boolean;
-  posee_conectividad: boolean;
-  puede_traer_pc: boolean;
-  trabaja: boolean;
-  lugar_trabajo: string;
-  tutor_nombre: string;
-  tutor_dni: string;
-  tutor_telefono: string;
-}
-
-const INIT_FORM: FormState = {
-  apellido: "", nombre: "", email: "", dni: "", cuit: "", sexo: "",
-  fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
-  nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
-  domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
-  posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
-  tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
-};
-
-interface SavedState {
-  form: FormState;
-  step: number;
-  selectedProgramaIds: string[];
-  bloquesPorPrograma: Record<string, number[]>;
-}
-
-function loadSaved(): SavedState {
+function loadSaved(): { form: FormState; step: number; selectedProgramaIds: string[]; bloquesPorPrograma: Record<string, number[]> } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { form: INIT_FORM, step: 1, selectedProgramaIds: [], bloquesPorPrograma: {} };
-    const parsed = JSON.parse(raw) as { form?: Partial<FormState>; step?: number; selectedProgramaIds?: string[]; bloquesPorPrograma?: Record<string, number[]>; expiresAt?: number } | null;
+    const parsed = JSON.parse(raw) as {
+      form?: Partial<FormState>;
+      step?: number;
+      selectedProgramaIds?: string[];
+      bloquesPorPrograma?: Record<string, number[]>;
+      expiresAt?: number;
+    } | null;
     if (!parsed) return { form: INIT_FORM, step: 1, selectedProgramaIds: [], bloquesPorPrograma: {} };
     if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
       localStorage.removeItem(STORAGE_KEY);
@@ -281,21 +63,6 @@ function loadSaved(): SavedState {
   } catch {
     return { form: INIT_FORM, step: 1, selectedProgramaIds: [], bloquesPorPrograma: {} };
   }
-}
-
-interface Bloque {
-  bloque_id: number;
-  bloque_nombre: string;
-  cohorte_nombre: string;
-  correlativas_ids?: number[];
-}
-
-interface ProgramaOferta {
-  programa_id: number;
-  programa_nombre: string;
-  requiere_titulo_secundario?: boolean;
-  bloques?: Bloque[];
-  bloquesOrdenados?: Bloque[];
 }
 
 export default function PreinscripcionPublica() {
@@ -320,17 +87,23 @@ export default function PreinscripcionPublica() {
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true); setError("");
+      setLoading(true);
+      setError("");
       try {
         const { data } = await apiClientV2.get<{ items?: ProgramaOferta[] }>("/preinscripcion/oferta");
         setOferta(Array.isArray(data?.items) ? data.items : []);
-      } catch { setError("No se pudo cargar la oferta."); }
-      finally { setLoading(false); }
+      } catch {
+        setError("No se pudo cargar la oferta.");
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);
 
-  useEffect(() => { localStorage.setItem("preins_theme", isDark ? "dark" : "light"); }, [isDark]);
+  useEffect(() => {
+    localStorage.setItem("preins_theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   useEffect(() => {
     const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
@@ -344,23 +117,7 @@ export default function PreinscripcionPublica() {
   const selectedProgramaSet = useMemo(() => new Set(selectedProgramaIds), [selectedProgramaIds]);
 
   const edad = useMemo(() => {
-    if (!form.fecha_nacimiento) return 18;
-    try {
-      // Soportar formatos YYYY-MM-DD (estándar) y otros posibles
-      const parts = form.fecha_nacimiento.split(/[-/]/).map(Number);
-      let y, m, d;
-      if (parts[0] > 1000) { [y, m, d] = parts; }
-      else { [d, m, y] = parts; }
-
-      const nac = new Date(y, m - 1, d);
-      if (isNaN(nac.getTime())) return 18;
-
-      const hoy = new Date();
-      let e = hoy.getFullYear() - nac.getFullYear();
-      const mm = hoy.getMonth() - nac.getMonth();
-      if (mm < 0 || (mm === 0 && hoy.getDate() < nac.getDate())) e--;
-      return e;
-    } catch { return 18; }
+    return calculateAge(form.fecha_nacimiento);
   }, [form.fecha_nacimiento]);
 
   const esMenor = edad < 18;
@@ -519,7 +276,6 @@ export default function PreinscripcionPublica() {
         else if (data && typeof data === "object" && "detail" in data && typeof data.detail === "string") {
           msg = data.detail;
         } else if (typeof data === "object") {
-          // Tomar el primer error que encontremos en el objeto (formato DRF)
           const firstKey = Object.keys(data)[0];
           const firstError = data[firstKey];
           msg = Array.isArray(firstError) ? `${firstKey}: ${firstError[0]}` : String(firstError);
@@ -537,9 +293,6 @@ export default function PreinscripcionPublica() {
       help: "text-indigo-200",
       title: "text-white",
       input: "bg-indigo-950/40 border-indigo-500/30 text-white placeholder-indigo-300 focus:border-cyan-400/70 focus:ring-1 focus:ring-cyan-400/20",
-      card: "border-white/10 bg-black/30",
-      cardActive: "border-emerald-400 bg-emerald-900/20",
-      summary: "border-indigo-400/40 bg-indigo-950/30 text-indigo-100",
     }
     : {
       page: "bg-[#cfe3f2] text-[#0f172a]",
@@ -547,9 +300,6 @@ export default function PreinscripcionPublica() {
       help: "text-[#1e3a5f]",
       title: "text-[#0f172a]",
       input: "bg-[#a8cce3] border-[#6ba3c7] text-[#0f172a] placeholder-[#355a78] focus:border-sky-600 focus:ring-1 focus:ring-sky-400",
-      card: "border-[#6ba3c7] bg-[#a8cce3]",
-      cardActive: "border-emerald-600 bg-emerald-100",
-      summary: "border-[#6ba3c7] bg-[#a8cce3] text-[#0f172a]",
     };
 
   return (
@@ -565,7 +315,7 @@ export default function PreinscripcionPublica() {
         }
       />
 
-      <div className="fixed inset-0 z-0">
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <div className={`absolute top-0 left-0 w-full h-full ${isDark ? "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-[#0a0033] to-[#0a0033]" : "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-200 via-slate-100 to-slate-100"}`}></div>
         <div className={`absolute top-0 left-1/4 w-96 h-96 rounded-full blur-[120px] transition-opacity duration-1000 ${isDark ? 'bg-cyan-400/20' : 'bg-sky-400/20 opacity-40'}`} />
         <div className={`absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-[120px] transition-opacity duration-1000 ${isDark ? 'bg-orange-500/10' : 'bg-orange-300/20 opacity-30'}`} />
@@ -600,191 +350,37 @@ export default function PreinscripcionPublica() {
 
                 <form onSubmit={onSubmit} className="space-y-10 min-h-[400px]">
                   {step === 1 && (
-                    <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
-                      <div className="space-y-2">
-                        <h2 className={`text-2xl font-black ${theme.title}`}>Oferta Formativa</h2>
-                        <p className={theme.help}>Seleccioná los programas de tu interés.</p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {ofertaView.map((p) => {
-                          const active = selectedProgramaSet.has(String(p.programa_id));
-                          const expanded = active && String(p.programa_id) === String(expandedProgramaId);
-                          return (
-                            <div
-                              key={p.programa_id}
-                              className={`group relative rounded-3xl border-2 p-6 transition-all duration-500 cursor-pointer overflow-hidden ${active
-                                ? `${theme.cardActive} ring-2 ring-emerald-500 shadow-lg`
-                                : `${theme.card} hover:border-cyan-400/70 hover:shadow-md hover:scale-[1.01]`
-                                }`}
-                              onClick={() => openPrograma(p)}
-                            >
-                              <div className="flex justify-between items-start">
-                                <div className="space-y-1 flex-grow">
-                                  <h3 className={`font-black text-xl leading-tight ${theme.title}`}>{p.programa_nombre}</h3>
-                                  <p className={`text-xs font-bold ${active ? 'text-cyan-400' : theme.help}`}>{p.bloques?.length || 0} BLOQUES DISPONIBLES</p>
-                                </div>
-                                <div className={`p-2 rounded-xl transition-colors ${active ? "bg-cyan-400 shadow-lg shadow-cyan-400/50 text-white" : "bg-indigo-500/10 text-indigo-400 group-hover:text-cyan-400"}`}>
-                                  {active ? <CheckCircle2 size={24} /> : (expanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />)}
-                                </div>
-                              </div>
-                              {expanded && (
-                                <div className="mt-6 pt-6 border-t border-white/10 space-y-4 animate-in fade-in zoom-in-95 duration-500" onClick={(e) => e.stopPropagation()}>
-                                  {p.bloquesOrdenados?.map((b) => (
-                                    <label
-                                      key={b.bloque_id}
-                                      className={`flex items-start gap-4 p-4 rounded-2xl transition-all ${isDark ? "bg-white/5 hover:bg-white/10" : "bg-white/40 hover:bg-white/60"
-                                        }`}
-                                    >
-                                      <input type="checkbox" className="mt-1 w-5 h-5 rounded-lg border-2 border-cyan-400 text-cyan-400 focus:ring-0 cursor-pointer" checked={(bloquesPorPrograma[String(p.programa_id)] || []).includes(b.bloque_id)} disabled={isProgramacionII(b.bloque_nombre)} onChange={() => toggleBloque(p.programa_id, b.bloque_id)} />
-                                      <div className="flex flex-col">
-                                        <span className="font-bold text-sm tracking-tight">{b.bloque_nombre}</span>
-                                        <span className={`text-[10px] uppercase font-black tracking-widest ${isDark ? 'text-indigo-400' : 'text-slate-400'}`}>Inicio: {b.cohorte_nombre}</span>
-                                        {isProgramacionII(b.bloque_nombre) && <span className="text-[10px] text-orange-500 mt-1 font-bold">REQUISITO: PROG. I Y BD APROBADA</span>}
-                                      </div>
-                                    </label>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <StepOferta
+                      ofertaView={ofertaView}
+                      selectedProgramaSet={selectedProgramaSet}
+                      expandedProgramaId={expandedProgramaId}
+                      bloquesPorPrograma={bloquesPorPrograma}
+                      openPrograma={openPrograma}
+                      toggleBloque={toggleBloque}
+                      isDark={isDark}
+                    />
                   )}
 
                   {step === 2 && (
-                    <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
-                      <div className="space-y-2">
-                        <h2 className={`text-2xl font-black ${theme.title}`}>Identidad</h2>
-                        <p className={theme.help}>Tus datos personales básicos.</p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-cyan-400">Apellido</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input} transition-all`} name="apellido" placeholder="Pérez" value={form.apellido} onChange={onChange} required /></div>
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-cyan-400">Nombre</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input} transition-all`} name="nombre" placeholder="Juan" value={form.nombre} onChange={onChange} required /></div>
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-cyan-400">DNI</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input} transition-all`} name="dni" placeholder="Sin puntos ni espacios" value={form.dni} onChange={onChange} required /></div>
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">CUIT (Opcional)</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="cuit" placeholder="20XXXXXXXXX" value={form.cuit} onChange={onChange} /></div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Sexo</label>
-                          <select className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="sexo" value={form.sexo} onChange={onChange}>
-                            <option value="">Seleccione...</option><option value="M">Masculino</option><option value="F">Femenino</option><option value="O">Otro/X</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Fecha de Nacimiento *</label>
-                          <input type="date" className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange} required />
-                          {form.fecha_nacimiento && (
-                            <div className="flex items-center justify-between mt-2">
-                              <p className={`text-[10px] font-bold ${esMenor ? (isDark ? "text-orange-400" : "text-orange-700") : "text-cyan-400"}`}>
-                                EDAD CALCULADA: {edad} AÑOS
-                              </p>
-                              {esMenor && (
-                                <p className={`text-[10px] font-black animate-pulse ${isDark ? "text-orange-400" : "text-orange-600"}`}>
-                                  ⚠️ REQUIERE TUTOR (CODE 3)
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        {esMenor && (
-                          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/20 animate-in zoom-in-95 duration-300">
-                            <div className="md:col-span-2 flex items-start gap-4 p-4 rounded-2xl bg-orange-500/10 border border-orange-500/30 mb-2">
-                              <Smartphone className={`${isDark ? "text-orange-400" : "text-orange-600"} mt-1 flex-none`} size={20} />
-                              <div>
-                                <p className={`text-xs font-bold uppercase tracking-tight ${isDark ? "text-orange-200" : "text-orange-700"}`}>Autorización del Padre/Madre o Tutor vía WhatsApp</p>
-                                <p className={`text-[11px] leading-relaxed ${isDark ? "text-orange-300/80" : "text-orange-900"}`}>
-                                  Al ser menor de edad, el padre, madre o tutor responsable recibirá un enlace por <b>WhatsApp</b> para autorizar la cursada mediante una <b>firma digital (selfie de conformidad)</b>.
-                                </p>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase tracking-widest ml-1 text-orange-500">Nombre del Padre/Madre o Tutor *</label>
-                              <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-orange-500/30`} name="tutor_nombre" placeholder="Nombre completo" value={form.tutor_nombre} onChange={onChange} required />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase tracking-widest ml-1 text-orange-500">DNI del Padre/Madre o Tutor *</label>
-                              <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-orange-500/30`} name="tutor_dni" placeholder="DNI del responsable" value={form.tutor_dni} onChange={onChange} required />
-                            </div>
-                            <div className="md:col-span-2 space-y-2">
-                              <label className="text-xs font-black uppercase tracking-widest ml-1 text-orange-500">WhatsApp del Padre/Madre o Tutor (Celular) *</label>
-                              <input className={`w-full rounded-2xl px-5 py-4 ${theme.input} border-orange-500/30`} name="tutor_telefono" placeholder="2964 XXXXXX (Sin 0 ni 15)" value={form.tutor_telefono} onChange={onChange} required />
-                            </div>
-                          </div>
-                        )}
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Nacionalidad</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="nacionalidad" value={form.nacionalidad} onChange={onChange} /></div>
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Lugar de Nacim. (Provincia)</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="lugar_nacimiento" placeholder="Ej: Tierra del Fuego" value={form.lugar_nacimiento} onChange={onChange} /></div>
-                      </div>
-                    </div>
+                    <StepIdentidad form={form} onChange={onChange} edad={edad} esMenor={esMenor} isDark={isDark} />
                   )}
 
                   {step === 3 && (
-                    <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
-                      <div className="space-y-2">
-                        <h2 className={`text-2xl font-black ${theme.title}`}>Contacto y Situación</h2>
-                        <p className={theme.help}>¿Cómo te contactamos y cuál es tu perfil?</p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="md:col-span-2 space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-cyan-400">Email</label><input type="email" className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="email" placeholder="usuario@ejemplo.com" value={form.email} onChange={onChange} required /></div>
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Teléfono</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="telefono" value={form.telefono} onChange={onChange} /></div>
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Nivel Educativo</label><select className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="nivel_educativo" value={form.nivel_educativo} onChange={onChange}>{NIVEL_EDUCATIVO_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}</select></div>
-
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Ciudad</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="ciudad" placeholder="Ej: Río Grande" value={form.ciudad} onChange={onChange} /></div>
-                        <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Barrio</label><input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="barrio" placeholder="Ej: Chacra II" value={form.barrio} onChange={onChange} /></div>
-
-                        <div className="md:col-span-2 space-y-2">
-                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Domicilio Particular</label>
-                          <input className={`w-full rounded-2xl px-5 py-4 ${theme.input}`} name="domicilio" placeholder="Calle y número" value={form.domicilio} onChange={onChange} />
-                        </div>
-                        <div className="md:col-span-2 p-6 rounded-[2rem] bg-cyan-400/5 border border-cyan-400/10 space-y-4">
-                          <p className="text-xs font-black uppercase tracking-tighter text-cyan-400">Equipamiento y Trabajo</p>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-5 h-5 rounded border-indigo-500/30 text-cyan-400" name="posee_pc" checked={form.posee_pc} onChange={onChange} /><span className="text-sm font-bold">Poseo PC</span></label>
-                            <label className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-5 h-5 rounded border-indigo-500/30 text-cyan-400" name="posee_conectividad" checked={form.posee_conectividad} onChange={onChange} /><span className="text-sm font-bold">Tengo Internet</span></label>
-                            <label className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-5 h-5 rounded border-indigo-500/30 text-orange-500" name="trabaja" checked={form.trabaja} onChange={onChange} /><span className="text-sm font-bold">Actualmente Trabajo</span></label>
-                          </div>
-                          {form.trabaja && (
-                            <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                              <label className="text-xs font-black uppercase tracking-widest ml-1 text-orange-500">Lugar de Trabajo</label>
-                              <input className={`w-full rounded-2xl px-5 py-4 mt-1 ${theme.input} border-orange-500/30`} name="lugar_trabajo" placeholder="Nombre de la empresa o institución" value={form.lugar_trabajo} onChange={onChange} />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    <StepContacto form={form} onChange={onChange} isDark={isDark} />
                   )}
 
                   {step === 4 && (
-                    <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
-                      <div className="space-y-2">
-                        <h2 className={`text-2xl font-black ${theme.title}`}>Documentación</h2>
-                        <p className={theme.help}>Subí copias digitales legibles.</p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <DropFileField label="Digitalización de DNI" required file={dniFile} onFileChange={setDniFile} isDark={isDark} />
-                        {esMenor ? (
-                          <DropFileField label="DNI del Padre/Madre o Tutor (Obligatorio)" required file={dniTutorFile} onFileChange={setDniTutorFile} isDark={isDark} />
-                        ) : (
-                          requiresTitle && (
-                            <DropFileField
-                              label="Digitalización de Título Secundario"
-                              required
-                              file={tituloFile}
-                              onFileChange={setTituloFile}
-                              isDark={isDark}
-                              description="Formatos permitidos: PDF o foto/imagen. Recordá incluir todas sus hojas (anverso y reverso)."
-                            />
-                          )
-                        )}
-                      </div>
-                      <div className={`p-6 rounded-3xl ${isDark ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-emerald-50 border border-emerald-200"}`}>
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"><CheckCircle2 size={24} /></div>
-                          <div>
-                            <p className="font-black tracking-tight leading-none">Listo para enviar</p>
-                            <p className="text-sm opacity-70">Al hacer clic en enviar, confirmás que tus datos son verídicos.</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <StepDocumentacion
+                      esMenor={esMenor}
+                      requiresTitle={requiresTitle}
+                      dniFile={dniFile}
+                      onDniFileChange={setDniFile}
+                      dniTutorFile={dniTutorFile}
+                      onDniTutorFileChange={setDniTutorFile}
+                      tituloFile={tituloFile}
+                      onTituloFileChange={setTituloFile}
+                      isDark={isDark}
+                    />
                   )}
 
                   <footer className="pt-8 border-t border-white/5 flex flex-col-reverse sm:flex-row justify-between gap-4">
@@ -817,14 +413,15 @@ export default function PreinscripcionPublica() {
 
           {ok && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-              <div className={`${isDark ? 'bg-indigo-950/90 border-cyan-400/30' : 'bg-white border-slate-200'} border-2 rounded-[3rem] p-10 max-w-md w-full text-center space-y-6 shadow-2xl`}>
+              <div className="bg-indigo-950/90 border border-cyan-400/30 rounded-[3rem] p-10 max-w-md w-full text-center space-y-6 shadow-2xl relative overflow-hidden">
+                <div className="absolute -top-10 -left-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl" />
                 <div className="relative mx-auto w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40">
-                  <CheckCircle2 size={50} className="text-white" />
+                  <CheckCircle2 size={50} className="text-[#050814]" />
                   <div className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-25" />
                 </div>
                 <h3 className="text-3xl font-black tracking-tight">¡Genial!</h3>
-                <p className="opacity-80 font-medium">{ok}</p>
-                <button onClick={() => setOk("")} className="w-full py-4 bg-cyan-400 text-[#05011a] font-black rounded-2xl uppercase tracking-widest text-xs">Cerrar</button>
+                <p className="text-indigo-200 text-sm font-medium leading-relaxed">{ok}</p>
+                <button onClick={() => setOk("")} className="w-full py-4 bg-cyan-400 text-[#05011a] font-black rounded-2xl uppercase tracking-widest text-xs hover:bg-cyan-400/80 transition-colors">Cerrar</button>
               </div>
             </div>
           )}

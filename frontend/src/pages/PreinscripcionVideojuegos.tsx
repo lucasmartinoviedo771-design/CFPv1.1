@@ -3,257 +3,48 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
-  User,
-  FileText,
-  Smartphone,
-  UploadCloud,
   X,
   Gamepad2,
   Clock,
-  Sparkles
 } from "lucide-react";
 import { apiClientV2 } from "../api/client";
 import { NavbarVideojuegos } from "../components/NavbarVideojuegos";
 import { FooterVideojuegos } from "../components/FooterVideojuegos";
-
-const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-const NIVEL_EDUCATIVO_OPTIONS = [
-  "Primaria Completa",
-  "Secundaria Incompleta",
-  "Secundaria Completa",
-  "Terciaria/Universitaria Incompleta",
-  "Terciaria/Universitaria Completa",
-  "Terciaria/Universitaria",
-];
-
-async function compressImage(file: File): Promise<File> {
-  if (!file.type.startsWith("image/")) return file;
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (e) => {
-      const img = new Image();
-      img.src = e.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
-        const MAX_WIDTH = 1200;
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-        }
-        canvas.toBlob((blob) => {
-          if (blob) {
-            resolve(new File([blob], file.name, { type: "image/jpeg", lastModified: Date.now() }));
-          } else {
-            resolve(file);
-          }
-        }, "image/jpeg", 0.7);
-      };
-    };
-  });
-}
-
-function validateFile(file: File | null, label: string): string {
-  if (!file) return `${label}: archivo requerido.`;
-  if (file.size > 5 * 1024 * 1024 && !file.type.startsWith("image/")) {
-    return `${label}: el PDF no debe superar los 5MB.`;
-  }
-  if (!ACCEPTED_TYPES.includes(file.type)) return `${label}: formato permitido PDF/JPG/PNG/WEBP.`;
-  return "";
-}
-
-function normalizeText(value: string | null | undefined): string {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
+import {
+  compressImage,
+  validateFile,
+  normalizeText,
+  calculateAge,
+} from "../components/Preinscripcion/formHelpers";
+import {
+  STORAGE_KEY,
+  FormState,
+  INIT_FORM,
+  Bloque,
+  ProgramaOferta,
+  VideojuegosConfig,
+} from "../components/PreinscripcionVideojuegos/types";
+import { ProgressBar } from "../components/PreinscripcionVideojuegos/ProgressBar";
+import { StepEspecialidad } from "../components/PreinscripcionVideojuegos/StepEspecialidad";
+import { StepIdentidad } from "../components/PreinscripcionVideojuegos/StepIdentidad";
+import { StepContacto } from "../components/PreinscripcionVideojuegos/StepContacto";
+import { StepDocumentacion } from "../components/PreinscripcionVideojuegos/StepDocumentacion";
 
 function isOptativo(bloqueNombre: string): boolean {
   const norm = normalizeText(bloqueNombre);
   return norm.includes("arte") || norm.includes("entornos virtuales") || norm.includes("animacion");
 }
 
-interface DropFileFieldProps {
-  label: string;
-  required?: boolean;
-  file: File | null;
-  onFileChange: (file: File | null) => void;
-  description?: string;
-}
-
-function DropFileField({ label, required, file, onFileChange, description }: DropFileFieldProps) {
-  const [dragOver, setDragOver] = useState(false);
-
-  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    setDragOver(false);
-    const dropped = e.dataTransfer?.files?.[0] || null;
-    if (dropped) onFileChange(dropped);
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-col">
-        <div className="flex justify-between items-center">
-          <label className="block text-sm font-semibold text-indigo-200">
-            {label} {required && <span className="text-red-500">*</span>}
-          </label>
-          {file && (
-            <button
-              type="button"
-              onClick={() => onFileChange(null)}
-              className="text-xs flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
-            >
-              <X size={12} /> Limpiar
-            </button>
-          )}
-        </div>
-        {description && (
-          <p className="text-xs mt-1 text-indigo-300 leading-relaxed">
-            {description}
-          </p>
-        )}
-      </div>
-      <label
-        className={`group relative block rounded-2xl border-2 border-dashed p-8 cursor-pointer transition-all duration-300 overflow-hidden ${dragOver
-          ? "border-cyan-400 bg-cyan-400/10"
-          : "border-indigo-500/30 bg-white/5 hover:border-cyan-400/50"
-          }`}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-      >
-        <input type="file" accept=".pdf,image/*" className="hidden" onChange={(e) => onFileChange(e.target.files?.[0] || null)} />
-        <div className="flex flex-col items-center text-center space-y-3">
-          <div className="p-4 rounded-full transition-transform group-hover:scale-110 bg-indigo-500/10 text-cyan-400">
-            <UploadCloud size={32} />
-          </div>
-          <div>
-            <p className="font-bold text-white">
-              {file ? "¡Archivo detectado!" : "Arrastrá y soltá el archivo acá"}
-            </p>
-            <p className="text-xs mt-1 text-indigo-300">
-              PDF, JPG o PNG hasta 3MB
-            </p>
-          </div>
-          {file && (
-            <div className="mt-4 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 animate-in fade-in slide-in-from-bottom-2">
-              <p className="text-sm font-bold text-emerald-400 line-clamp-1">
-                {file.name}
-              </p>
-            </div>
-          )}
-        </div>
-      </label>
-    </div>
-  );
-}
-
-interface ProgressBarProps {
-  currentStep: number;
-  totalSteps: number;
-}
-
-const ProgressBar = ({ currentStep, totalSteps }: ProgressBarProps) => {
-  const steps = [
-    { n: 1, label: "Especialidad", icon: <Gamepad2 size={18} /> },
-    { n: 2, label: "Identidad", icon: <User size={18} /> },
-    { n: 3, label: "Contacto", icon: <Smartphone size={18} /> },
-    { n: 4, label: "Documentación", icon: <FileText size={18} /> }
-  ];
-
-  const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
-
-  return (
-    <div className="w-full mb-12">
-      <div className="flex justify-between items-center relative mb-4">
-        <div className="absolute top-1/2 left-0 w-full h-1 -translate-y-1/2 rounded-full bg-white/5" />
-        <div
-          className="absolute top-1/2 left-0 h-1 -translate-y-1/2 bg-gradient-to-r from-cyan-400 to-orange-500 transition-all duration-700 ease-out shadow-[0_0_15px_#00ffff]"
-          style={{ width: `${progress}%` }}
-        />
-
-        {steps.map((s) => (
-          <div key={s.n} className="relative z-10 flex flex-col items-center">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${s.n < currentStep
-              ? "bg-cyan-400 text-[#050814] shadow-[0_0_15px_rgba(0,255,255,0.4)]"
-              : s.n === currentStep
-                ? "bg-orange-500 text-white shadow-[0_0_15px_rgba(255,102,0,0.4)] scale-110"
-                : "bg-indigo-950 border border-indigo-500/30 text-indigo-400"
-              }`}>
-              {s.n < currentStep ? <CheckCircle2 size={24} /> : s.icon}
-            </div>
-            <span className={`absolute -bottom-7 text-[10px] font-black uppercase tracking-widest ${s.n <= currentStep ? "text-cyan-400" : "text-slate-500"
-              }`}>
-              {s.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const STORAGE_KEY = "preinscripcion_videojuegos_v1";
-
-interface FormState {
-  apellido: string;
-  nombre: string;
-  email: string;
-  DNI: string;
-  cuit: string;
-  sexo: string;
-  fecha_nacimiento: string;
-  pais_nacimiento: string;
-  pais_nacimiento_otro: string;
-  nacionalidad: string;
-  nacionalidad_otra: string;
-  lugar_nacimiento: string;
-  domicilio: string;
-  barrio: string;
-  ciudad: string;
-  telefono: string;
-  nivel_educativo: string;
-  posee_pc: boolean;
-  posee_conectividad: boolean;
-  puede_traer_pc: boolean;
-  trabaja: boolean;
-  lugar_trabajo: string;
-  tutor_nombre: string;
-  tutor_dni: string;
-  tutor_telefono: string;
-}
-
-const INIT_FORM: FormState = {
-  apellido: "", nombre: "", email: "", DNI: "", cuit: "", sexo: "",
-  fecha_nacimiento: "", pais_nacimiento: "Argentina", pais_nacimiento_otro: "",
-  nacionalidad: "Argentina", nacionalidad_otra: "", lugar_nacimiento: "",
-  domicilio: "", barrio: "", ciudad: "", telefono: "", nivel_educativo: "Secundaria Completa",
-  posee_pc: false, posee_conectividad: false, puede_traer_pc: false, trabaja: false, lugar_trabajo: "",
-  tutor_nombre: "", tutor_dni: "", tutor_telefono: "",
-};
-
-interface SavedState {
-  form: FormState;
-  step: number;
-  bloquesSeleccionados: number[];
-}
-
-function loadSaved(): SavedState {
+function loadSaved(): { form: FormState; step: number; bloquesSeleccionados: number[] } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { form: INIT_FORM, step: 1, bloquesSeleccionados: [] };
-    const parsed = JSON.parse(raw) as { form?: Partial<FormState>; step?: number; bloquesSeleccionados?: number[]; expiresAt?: number } | null;
+    const parsed = JSON.parse(raw) as {
+      form?: Partial<FormState>;
+      step?: number;
+      bloquesSeleccionados?: number[];
+      expiresAt?: number;
+    } | null;
     if (!parsed) return { form: INIT_FORM, step: 1, bloquesSeleccionados: [] };
     if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
       localStorage.removeItem(STORAGE_KEY);
@@ -267,25 +58,6 @@ function loadSaved(): SavedState {
   } catch {
     return { form: INIT_FORM, step: 1, bloquesSeleccionados: [] };
   }
-}
-
-interface Bloque {
-  bloque_id: number;
-  bloque_nombre: string;
-  cohorte_nombre: string;
-}
-
-interface ProgramaOferta {
-  programa_id: number;
-  programa_nombre: string;
-  bloques?: Bloque[];
-}
-
-interface VideojuegosConfig {
-  abierta: boolean;
-  fecha_inicio?: string | null;
-  fecha_fin?: string | null;
-  mensaje_cierre?: string | null;
 }
 
 export default function PreinscripcionVideojuegos() {
@@ -317,7 +89,8 @@ export default function PreinscripcionVideojuegos() {
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true); setError("");
+      setLoading(true);
+      setError("");
       try {
         // 1. Cargar configuración de videojuegos
         try {
@@ -329,18 +102,18 @@ export default function PreinscripcionVideojuegos() {
 
         // 2. Cargar oferta del programa "VJ"
         const { data } = await apiClientV2.get<{ items?: ProgramaOferta[] }>("/preinscripcion/oferta", {
-          params: { programa_codigo: "VJ" }
+          params: { programa_codigo: "VJ" },
         });
-        
+
         const prog = data?.items?.[0] || null;
         setOfertaPrograma(prog);
 
         if (prog) {
           // Pre-seleccionar todos los bloques obligatorios (que no son optativos)
           const obligatoriosIds = (prog.bloques || [])
-            .filter(b => !isOptativo(b.bloque_nombre))
-            .map(b => b.bloque_id);
-          setBloquesSeleccionados(prev => {
+            .filter((b) => !isOptativo(b.bloque_nombre))
+            .map((b) => b.bloque_id);
+          setBloquesSeleccionados((prev) => {
             const combined = new Set([...obligatoriosIds, ...prev]);
             return Array.from(combined);
           });
@@ -356,31 +129,16 @@ export default function PreinscripcionVideojuegos() {
 
   const optativeBlocks = useMemo(() => {
     if (!ofertaPrograma) return [];
-    return (ofertaPrograma.bloques || []).filter(b => isOptativo(b.bloque_nombre));
+    return (ofertaPrograma.bloques || []).filter((b) => isOptativo(b.bloque_nombre));
   }, [ofertaPrograma]);
 
   const obligatoryBlocks = useMemo(() => {
     if (!ofertaPrograma) return [];
-    return (ofertaPrograma.bloques || []).filter(b => !isOptativo(b.bloque_nombre));
+    return (ofertaPrograma.bloques || []).filter((b) => !isOptativo(b.bloque_nombre));
   }, [ofertaPrograma]);
 
   const edad = useMemo(() => {
-    if (!form.fecha_nacimiento) return 18;
-    try {
-      const parts = form.fecha_nacimiento.split(/[-/]/).map(Number);
-      let y, m, d;
-      if (parts[0] > 1000) { [y, m, d] = parts; }
-      else { [d, m, y] = parts; }
-
-      const nac = new Date(y, m - 1, d);
-      if (isNaN(nac.getTime())) return 18;
-
-      const hoy = new Date();
-      let e = hoy.getFullYear() - nac.getFullYear();
-      const mm = hoy.getMonth() - nac.getMonth();
-      if (mm < 0 || (mm === 0 && hoy.getDate() < nac.getDate())) e--;
-      return e;
-    } catch { return 18; }
+    return calculateAge(form.fecha_nacimiento);
   }, [form.fecha_nacimiento]);
 
   const esMenor = edad < 18;
@@ -389,32 +147,50 @@ export default function PreinscripcionVideojuegos() {
     setError("");
     if (s === 1) {
       // Validar que se haya seleccionado al menos un bloque optativo
-      const optativosSeleccionados = bloquesSeleccionados.filter(id => 
-        optativeBlocks.some(ob => ob.bloque_id === id)
+      const optativosSeleccionados = bloquesSeleccionados.filter((id) =>
+        optativeBlocks.some((ob) => ob.bloque_id === id)
       );
       if (optativosSeleccionados.length === 0) {
-        return setError("Debés seleccionar al menos una especialidad optativa (Arte y Animación o Programación de Entornos Virtuales)."), false;
+        setError(
+          "Debés seleccionar al menos una especialidad optativa (Arte y Animación o Programación de Entornos Virtuales)."
+        );
+        return false;
       }
     }
     if (s === 2) {
       if (!form.apellido.trim() || !form.nombre.trim() || !form.DNI.trim() || !form.fecha_nacimiento) {
-        return setError("Completá los campos obligatorios (Nombre, Apellido, DNI y Fecha de Nacimiento)."), false;
+        setError("Completá los campos obligatorios (Nombre, Apellido, DNI y Fecha de Nacimiento).");
+        return false;
       }
       if (esMenor) {
-        if (edad < 15) return setError("La edad mínima para preinscribirse es de 15 años."), false;
+        if (edad < 15) {
+          setError("La edad mínima para preinscribirse es de 15 años.");
+          return false;
+        }
         if (!form.tutor_nombre.trim() || !form.tutor_dni.trim() || !form.tutor_telefono.trim()) {
-          return setError("Al ser menor de edad, debés completar todos los datos del tutor responsable."), false;
+          setError("Al ser menor de edad, debés completar todos los datos del tutor responsable.");
+          return false;
         }
       }
     }
     if (s === 3) {
-      if (!form.email.trim()) return setError("El email es obligatorio para el contacto."), false;
+      if (!form.email.trim()) {
+        setError("El email es obligatorio para el contacto.");
+        return false;
+      }
     }
     if (s === 4) {
-      if (!dniFile) return setError("Debés adjuntar la digitalización del DNI."), false;
-      if (esMenor && !dniTutorFile) return setError("Debés adjuntar la digitalización del DNI del Padre/Madre o Tutor."), false;
+      if (!dniFile) {
+        setError("Debés adjuntar la digitalización del DNI.");
+        return false;
+      }
+      if (esMenor && !dniTutorFile) {
+        setError("Debés adjuntar la digitalización del DNI del Padre/Madre o Tutor.");
+        return false;
+      }
       if (!esMenor && !tituloFile) {
-        return setError("Esta oferta requiere adjuntar el título secundario."), false;
+        setError("Esta oferta requiere adjuntar el título secundario.");
+        return false;
       }
     }
     return true;
@@ -422,29 +198,29 @@ export default function PreinscripcionVideojuegos() {
 
   const nextStep = () => {
     if (validateStep(step)) {
-      setStep(prev => Math.min(prev + 1, 4));
+      setStep((prev) => Math.min(prev + 1, 4));
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const prevStep = () => {
-    setStep(prev => Math.max(prev - 1, 1));
+    setStep((prev) => Math.max(prev - 1, 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    setForm(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
   const toggleBloqueOptativo = (bid: number) => {
-    setBloquesSeleccionados(prev => {
+    setBloquesSeleccionados((prev) => {
       if (prev.includes(bid)) {
         // No permitir deseleccionar si es el único optativo
-        const optativosRestantes = prev.filter(id => id !== bid && optativeBlocks.some(ob => ob.bloque_id === id));
+        const optativosRestantes = prev.filter((id) => id !== bid && optativeBlocks.some((ob) => ob.bloque_id === id));
         if (optativosRestantes.length === 0) return prev;
-        return prev.filter(x => x !== bid);
+        return prev.filter((x) => x !== bid);
       } else {
         return [...prev, bid];
       }
@@ -458,11 +234,19 @@ export default function PreinscripcionVideojuegos() {
     if (!validateStep(3)) return setStep(3);
 
     const dniErr = validateFile(dniFile, "DNI");
-    if (dniErr) return setError(dniErr), setStep(4);
-    
+    if (dniErr) {
+      setError(dniErr);
+      setStep(4);
+      return;
+    }
+
     if (!esMenor) {
       const tErr = validateFile(tituloFile, "Título secundario");
-      if (tErr) return setError(tErr), setStep(4);
+      if (tErr) {
+        setError(tErr);
+        setStep(4);
+        return;
+      }
     }
 
     if (!ofertaPrograma) return;
@@ -470,7 +254,7 @@ export default function PreinscripcionVideojuegos() {
     try {
       setSaving(true);
       const fd = new FormData();
-      
+
       // Mapear campos requeridos por el backend
       fd.append("apellido", form.apellido);
       fd.append("nombre", form.nombre);
@@ -494,7 +278,7 @@ export default function PreinscripcionVideojuegos() {
       fd.append("puede_traer_pc", String(form.puede_traer_pc));
       fd.append("trabaja", String(form.trabaja));
       fd.append("lugar_trabajo", form.lugar_trabajo || "");
-      
+
       if (esMenor) {
         fd.append("tutor_nombre", form.tutor_nombre);
         fd.append("tutor_dni", form.tutor_dni);
@@ -504,8 +288,8 @@ export default function PreinscripcionVideojuegos() {
       const seleccion = [
         {
           programa_id: Number(ofertaPrograma.programa_id),
-          bloque_ids: bloquesSeleccionados
-        }
+          bloque_ids: bloquesSeleccionados,
+        },
       ];
       fd.append("seleccion_programas_json", JSON.stringify(seleccion));
 
@@ -528,23 +312,24 @@ export default function PreinscripcionVideojuegos() {
       fd.append("recaptcha_token", "mock_token_vj");
 
       await apiClientV2.post("/preinscripcion", fd, {
-        headers: { "Content-Type": "multipart/form-data" }
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setOk(`¡Postulación registrada! Hemos recibido tus datos correctamente. Se ha enviado un correo a ${form.email} confirmando el registro.`);
+      setOk(
+        `¡Postulación registrada! Hemos recibido tus datos correctamente. Se ha enviado un correo a ${form.email} confirmando el registro.`
+      );
       localStorage.removeItem(STORAGE_KEY);
       setStep(1);
       setForm(INIT_FORM);
       setDniFile(null);
       setTituloFile(null);
       setDniTutorFile(null);
-      
+
       // Resetear bloques seleccionados con los obligatorios de nuevo
       const obligatoriosIds = (ofertaPrograma.bloques || [])
-        .filter(b => !isOptativo(b.bloque_nombre))
-        .map(b => b.bloque_id);
+        .filter((b) => !isOptativo(b.bloque_nombre))
+        .map((b) => b.bloque_id);
       setBloquesSeleccionados(obligatoriosIds);
-
     } catch (eReq) {
       console.error("Error al enviar formulario:", eReq);
       let msg = "Ocurrió un error al procesar tu preinscripción. Por favor verifica los datos ingresados.";
@@ -561,7 +346,7 @@ export default function PreinscripcionVideojuegos() {
         }
       }
       setError(msg);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
     }
@@ -570,8 +355,12 @@ export default function PreinscripcionVideojuegos() {
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen bg-[#050814] text-white items-center justify-center font-sans">
-        <div className="animate-spin text-cyan-400 mb-4"><Gamepad2 size={48} /></div>
-        <p className="text-indigo-300 font-bold uppercase tracking-wider">Cargando Oferta Académica de Videojuegos...</p>
+        <div className="animate-spin text-cyan-400 mb-4">
+          <Gamepad2 size={48} />
+        </div>
+        <p className="text-indigo-300 font-bold uppercase tracking-wider">
+          Cargando Oferta Académica de Videojuegos...
+        </p>
       </div>
     );
   }
@@ -586,7 +375,8 @@ export default function PreinscripcionVideojuegos() {
           </div>
           <h2 className="text-3xl font-black text-white">Inscripciones Cerradas</h2>
           <p className="text-indigo-300 text-sm leading-relaxed">
-            {config.mensaje_cierre || "Las inscripciones para la Certificación en Desarrollo de Videojuegos no están abiertas en este momento."}
+            {config.mensaje_cierre ||
+              "Las inscripciones para la Certificación en Desarrollo de Videojuegos no están abiertas en este momento."}
           </p>
           {config.fecha_inicio && (
             <p className="text-xs font-bold uppercase tracking-wider text-cyan-400">
@@ -611,16 +401,19 @@ export default function PreinscripcionVideojuegos() {
 
       <main className="relative z-10 flex-grow pt-28 pb-20 px-4 flex flex-col items-center">
         <div className="max-w-4xl w-full space-y-8">
-          
           {/* Header */}
           <header className="text-center space-y-4 animate-in fade-in slide-in-from-top-4 duration-700">
             <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight max-w-3xl mx-auto">
-              Certificación Profesional en <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-[#ff6600] to-cyan-400">Desarrollo de Videojuegos</span>
+              Certificación Profesional en{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-[#ff6600] to-cyan-400">
+                Desarrollo de Videojuegos
+              </span>
             </h1>
             <p className="text-indigo-200 text-lg font-medium max-w-2xl mx-auto">
-              Sumate a una capacitación integral que combina creatividad, tecnología y trabajo en equipo para crear los juegos del futuro.
+              Sumate a una capacitación integral que combina creatividad, tecnología y trabajo en equipo para crear los
+              juegos del futuro.
             </p>
-            
+
             {/* Logos convocantes */}
             <div className="pt-2 flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-xs font-bold text-indigo-400">
               <span>ADVA</span>
@@ -639,218 +432,44 @@ export default function PreinscripcionVideojuegos() {
             {error && (
               <div className="mb-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-3 text-red-400 font-medium text-sm">
-                  <div className="p-2 bg-red-500 rounded-lg text-white"><X size={16} /></div> {error}
+                  <div className="p-2 bg-red-500 rounded-lg text-white">
+                    <X size={16} />
+                  </div>{" "}
+                  {error}
                 </div>
               </div>
             )}
 
             <form onSubmit={onSubmit} className="space-y-10 min-h-[400px]">
-              
               {/* STEP 1: SELECTOR DE ESPECIALIDAD */}
               {step === 1 && (
-                <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black text-white">Especialización de Trayecto</h2>
-                    <p className="text-indigo-300">Seleccioná qué rama optativa querés cursar. Podés elegir una o ambas.</p>
-                  </div>
-
-                  {/* Especialidades optativas */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {optativeBlocks.map((b) => {
-                      const active = bloquesSeleccionados.includes(b.bloque_id);
-                      return (
-                        <div
-                          key={b.bloque_id}
-                          className={`group relative rounded-3xl border-2 p-6 transition-all duration-500 cursor-pointer overflow-hidden ${active
-                            ? "border-cyan-400 bg-[#00ccff]/5 shadow-lg shadow-cyan-400/5"
-                            : "border-indigo-500/20 bg-black/20 hover:border-cyan-400/50 hover:scale-[1.01]"
-                            }`}
-                          onClick={() => toggleBloqueOptativo(b.bloque_id)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">MÓDULO OPTATIVO</span>
-                              <h3 className="font-black text-xl leading-tight text-white">{b.bloque_nombre}</h3>
-                              <p className="text-xs text-indigo-300">Ingreso habilitado para la cohorte {b.cohorte_nombre}.</p>
-                            </div>
-                            <div className={`p-2 rounded-xl transition-colors ${active ? "bg-cyan-400 text-[#050814]" : "bg-indigo-500/10 text-indigo-400 group-hover:text-cyan-400"}`}>
-                              <CheckCircle2 size={24} />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Materias Obligatorias Informativas */}
-                  <div className="p-6 rounded-[2rem] bg-indigo-950/20 border border-indigo-500/20 space-y-4">
-                    <div className="flex items-center gap-2 text-orange-500">
-                      <Sparkles size={16} />
-                      <h4 className="text-xs font-black uppercase tracking-widest leading-none">Materias Comunes Obligatorias</h4>
-                    </div>
-                    <p className="text-xs text-indigo-300">
-                      Independientemente de la especialidad elegida, cursarás y te inscribirás automáticamente en las siguientes asignaturas transversales:
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {obligatoryBlocks.map((b) => (
-                        <div key={b.bloque_id} className="p-4 rounded-xl bg-black/40 border border-indigo-500/10 flex items-center gap-3">
-                          <CheckCircle2 size={16} className="text-[#a855f7] flex-none" />
-                          <span className="font-bold text-xs text-indigo-100">{b.bloque_nombre}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <StepEspecialidad
+                  bloquesSeleccionados={bloquesSeleccionados}
+                  optativeBlocks={optativeBlocks}
+                  obligatoryBlocks={obligatoryBlocks}
+                  onToggleBloqueOptativo={toggleBloqueOptativo}
+                />
               )}
 
               {/* STEP 2: IDENTIDAD */}
               {step === 2 && (
-                <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black text-white">Identidad del Aspirante</h2>
-                    <p className="text-indigo-300">Completá tus datos personales básicos tal cual figuran en tu documento.</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-cyan-400">Apellido</label>
-                      <input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white placeholder-indigo-300 focus:border-cyan-400/70 focus:ring-1 focus:ring-cyan-400/20 focus:outline-none transition-all" name="apellido" placeholder="Pérez" value={form.apellido} onChange={onChange} required />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-cyan-400">Nombre</label>
-                      <input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white placeholder-indigo-300 focus:border-cyan-400/70 focus:ring-1 focus:ring-cyan-400/20 focus:outline-none transition-all" name="nombre" placeholder="Juan" value={form.nombre} onChange={onChange} required />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-cyan-400">DNI (Documento)</label>
-                      <input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white placeholder-indigo-300 focus:border-cyan-400/70 focus:ring-1 focus:ring-cyan-400/20 focus:outline-none transition-all" name="DNI" placeholder="Sin puntos ni espacios" value={form.DNI} onChange={onChange} required />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">CUIT (Opcional)</label>
-                      <input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white placeholder-indigo-300 focus:border-cyan-400/70 focus:ring-1 focus:ring-cyan-400/20 focus:outline-none transition-all" name="cuit" placeholder="20XXXXXXXXX" value={form.cuit} onChange={onChange} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Sexo</label>
-                      <select className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:border-cyan-400/70 focus:ring-1 focus:ring-cyan-400/20 focus:outline-none transition-all" name="sexo" value={form.sexo} onChange={onChange}>
-                        <option value="">Seleccione...</option>
-                        <option value="M">Masculino</option>
-                        <option value="F">Femenino</option>
-                        <option value="O">Otro/X</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Fecha de Nacimiento *</label>
-                      <input type="date" className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:border-cyan-400/70 focus:ring-1 focus:ring-cyan-400/20 focus:outline-none transition-all" name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange} required />
-                      {form.fecha_nacimiento && (
-                        <div className="flex items-center justify-between mt-2 text-[10px] font-bold">
-                          <p className="text-cyan-400">EDAD: {edad} AÑOS</p>
-                          {esMenor && <p className="text-orange-500 animate-pulse">⚠️ REQUIERE AUTORIZACIÓN DEL TUTOR</p>}
-                        </div>
-                      )}
-                    </div>
-
-                    {esMenor && (
-                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/20 animate-in zoom-in-95 duration-300">
-                        <div className="md:col-span-2 flex items-start gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 mb-2">
-                          <Smartphone className="text-orange-500 mt-1 flex-none" size={18} />
-                          <div>
-                            <p className="text-xs font-bold uppercase tracking-tight text-orange-500">Autorización Parental Requerida</p>
-                            <p className="text-[11px] leading-relaxed text-indigo-200">
-                              Al ser menor de edad, el tutor responsable recibirá un enlace por WhatsApp para firmar y validar tu inscripción mediante firma digital.
-                            </p>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold text-orange-500">Nombre del Tutor responsable *</label>
-                          <input className="w-full rounded-xl px-4 py-3 bg-indigo-950/40 border border-orange-500/30 text-white focus:outline-none focus:ring-1 focus:ring-orange-500" name="tutor_nombre" placeholder="Nombre completo" value={form.tutor_nombre} onChange={onChange} required />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold text-orange-500">DNI del Tutor *</label>
-                          <input className="w-full rounded-xl px-4 py-3 bg-indigo-950/40 border border-orange-500/30 text-white focus:outline-none focus:ring-1 focus:ring-orange-500" name="tutor_dni" placeholder="DNI del tutor" value={form.tutor_dni} onChange={onChange} required />
-                        </div>
-                        <div className="md:col-span-2 space-y-2">
-                          <label className="text-xs font-semibold text-orange-500">WhatsApp del Tutor (Celular) *</label>
-                          <input className="w-full rounded-xl px-4 py-3 bg-indigo-950/40 border border-orange-500/30 text-white focus:outline-none focus:ring-1 focus:ring-orange-500" name="tutor_telefono" placeholder="2964 XXXXXX (Sin 0 ni 15)" value={form.tutor_telefono} onChange={onChange} required />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Nacionalidad</label><input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none" name="nacionalidad" value={form.nacionalidad} onChange={onChange} /></div>
-                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Provincia de Nacimiento</label><input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none" name="lugar_nacimiento" placeholder="Ej: Tierra del Fuego" value={form.lugar_nacimiento} onChange={onChange} /></div>
-                  </div>
-                </div>
+                <StepIdentidad form={form} onChange={onChange} edad={edad} esMenor={esMenor} />
               )}
 
               {/* STEP 3: CONTACTO */}
-              {step === 3 && (
-                <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black text-white">Contacto y Situación</h2>
-                    <p className="text-indigo-300">Medios de comunicación y perfil sociodemográfico.</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2 space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-cyan-400">Email (Correo Electrónico)</label>
-                      <input type="email" className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none focus:ring-1" name="email" placeholder="usuario@ejemplo.com" value={form.email} onChange={onChange} required />
-                    </div>
-                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Celular / Teléfono</label><input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none" name="telefono" placeholder="2964 XXXXXX" value={form.telefono} onChange={onChange} /></div>
-                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Nivel Educativo</label><select className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none" name="nivel_educativo" value={form.nivel_educativo} onChange={onChange}>{NIVEL_EDUCATIVO_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}</select></div>
-
-                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Ciudad</label><input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none" name="ciudad" placeholder="Ej: Río Grande" value={form.ciudad} onChange={onChange} /></div>
-                    <div className="space-y-2"><label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Barrio</label><input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none" name="barrio" placeholder="Ej: Chacra IV" value={form.barrio} onChange={onChange} /></div>
-
-                    <div className="md:col-span-2 space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Domicilio Particular</label>
-                      <input className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none" name="domicilio" placeholder="Calle y número" value={form.domicilio} onChange={onChange} />
-                    </div>
-
-                    <div className="md:col-span-2 p-6 rounded-[2rem] bg-indigo-950/20 border border-indigo-500/20 space-y-4">
-                      <p className="text-xs font-black uppercase tracking-tighter text-cyan-400">Equipamiento y Trabajo</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-5 h-5 rounded border-indigo-500/30 text-cyan-400" name="posee_pc" checked={form.posee_pc} onChange={onChange} /><span className="text-sm font-bold">Poseo PC</span></label>
-                        <label className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-5 h-5 rounded border-indigo-500/30 text-cyan-400" name="posee_conectividad" checked={form.posee_conectividad} onChange={onChange} /><span className="text-sm font-bold">Tengo Internet</span></label>
-                        <label className="flex items-center gap-2 cursor-pointer group"><input type="checkbox" className="w-5 h-5 rounded border-indigo-500/30 text-orange-500" name="trabaja" checked={form.trabaja} onChange={onChange} /><span className="text-sm font-bold">Actualmente Trabajo</span></label>
-                      </div>
-                      {form.trabaja && (
-                        <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                          <label className="text-xs font-black uppercase tracking-widest ml-1 text-orange-500">Lugar de Trabajo</label>
-                          <input className="w-full rounded-2xl px-5 py-4 mt-1 bg-indigo-950/40 border border-orange-500/35 text-white focus:outline-none" name="lugar_trabajo" placeholder="Nombre de la empresa o institución" value={form.lugar_trabajo} onChange={onChange} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
+              {step === 3 && <StepContacto form={form} onChange={onChange} />}
 
               {/* STEP 4: DOCUMENTACION */}
               {step === 4 && (
-                <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8">
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-black text-white">Documentación Digital</h2>
-                    <p className="text-indigo-300">Subí copias digitales legibles de la documentación requerida.</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <DropFileField label="Copia Frente y Dorso de tu DNI" required file={dniFile} onFileChange={setDniFile} />
-                    {esMenor ? (
-                      <DropFileField label="Copia DNI del Padre/Madre o Tutor (Obligatorio)" required file={dniTutorFile} onFileChange={setDniTutorFile} />
-                    ) : (
-                      <DropFileField
-                        label="Copia de Título Secundario / Analítico"
-                        required
-                        file={tituloFile}
-                        onFileChange={setTituloFile}
-                        description="Formatos permitidos: PDF o foto/imagen. Deben incluirse todas sus hojas, tanto el anverso como el reverso."
-                      />
-                    )}
-                  </div>
-                  <div className="p-6 rounded-3xl bg-emerald-500/5 border border-emerald-500/20">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-2xl bg-emerald-500 text-[#050814] shadow-lg shadow-emerald-500/20"><CheckCircle2 size={24} /></div>
-                      <div>
-                        <p className="font-black tracking-tight leading-none text-white">Postulación Lista para Enviar</p>
-                        <p className="text-sm text-indigo-300 mt-1">Al enviar, declarás que la información proporcionada es verídica.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <StepDocumentacion
+                  esMenor={esMenor}
+                  dniFile={dniFile}
+                  onDniFileChange={setDniFile}
+                  dniTutorFile={dniTutorFile}
+                  onDniTutorFileChange={setDniTutorFile}
+                  tituloFile={tituloFile}
+                  onTituloFileChange={setTituloFile}
+                />
               )}
 
               <footer className="pt-8 border-t border-white/5 flex flex-col-reverse sm:flex-row justify-between gap-4">
@@ -866,11 +485,20 @@ export default function PreinscripcionVideojuegos() {
                 )}
                 <div className="flex-grow" />
                 {step < 4 ? (
-                  <button type="button" onClick={nextStep} className="group relative flex items-center justify-center gap-3 px-10 py-4 bg-cyan-400 border-b-4 border-cyan-700 text-[#05011a] font-black uppercase tracking-widest text-xs rounded-2xl transition-all hover:scale-[1.02] hover:-translate-y-1 active:border-b-0 active:translate-y-0.5">
-                    Siguiente Paso <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    className="group relative flex items-center justify-center gap-3 px-10 py-4 bg-cyan-400 border-b-4 border-cyan-700 text-[#05011a] font-black uppercase tracking-widest text-xs rounded-2xl transition-all hover:scale-[1.02] hover:-translate-y-1 active:border-b-0 active:translate-y-0.5"
+                  >
+                    Siguiente Paso{" "}
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                 ) : (
-                  <button type="submit" disabled={saving} className="group relative flex items-center justify-center gap-3 px-12 py-4 bg-gradient-to-r from-cyan-400 to-orange-500 text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:scale-105 active:scale-95 disabled:grayscale">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="group relative flex items-center justify-center gap-3 px-12 py-4 bg-gradient-to-r from-cyan-400 to-orange-500 text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] hover:scale-105 active:scale-95 disabled:grayscale"
+                  >
                     {saving ? "Procesando..." : "Confirmar Preinscripción"} <CheckCircle2 size={16} />
                   </button>
                 )}
@@ -888,7 +516,12 @@ export default function PreinscripcionVideojuegos() {
                 </div>
                 <h3 className="text-3xl font-black tracking-tight">¡Genial!</h3>
                 <p className="text-indigo-200 text-sm font-medium leading-relaxed">{ok}</p>
-                <button onClick={() => setOk("")} className="w-full py-4 bg-cyan-400 text-[#05011a] font-black rounded-2xl uppercase tracking-widest text-xs hover:bg-cyan-400/80 transition-colors">Cerrar</button>
+                <button
+                  onClick={() => setOk("")}
+                  className="w-full py-4 bg-cyan-400 text-[#05011a] font-black rounded-2xl uppercase tracking-widest text-xs hover:bg-cyan-400/80 transition-colors"
+                >
+                  Cerrar
+                </button>
               </div>
             </div>
           )}
