@@ -71,9 +71,7 @@ export default function SecuenciaFormDialog({ open, onClose, bloque, onSaveSucce
     if (!bloque) return;
     setLoading(true);
     try {
-      console.log('Guardando secuencia:', { semanas });
-      const response = await api.post(`/bloques-de-fechas/${bloque.id}/guardar_secuencia`, { semanas });
-      console.log('Secuencia guardada:', response.data);
+      await api.post(`/bloques-de-fechas/${bloque.id}/guardar_secuencia`, { semanas });
       onSaveSuccess();
       onClose();
     } catch (error) {

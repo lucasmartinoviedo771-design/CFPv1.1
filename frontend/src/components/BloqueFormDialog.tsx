@@ -32,7 +32,6 @@ export default function BloqueFormDialog({ open, onClose, onSave, bloque }: Bloq
       alert('Por favor ingresa un nombre para la plantilla de calendario');
       return;
     }
-    console.log('Enviando datos:', form);
     onSave(form);
   };
 

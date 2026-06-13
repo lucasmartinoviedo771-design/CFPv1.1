@@ -29,7 +29,7 @@ def nota_parental_upload_path(instance, filename):
 
 
 class TimeStamped(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         abstract = True
