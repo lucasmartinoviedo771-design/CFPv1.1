@@ -454,6 +454,57 @@ class AsistenciaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class NotaSlimSerializer(serializers.ModelSerializer):
+    examen_modulo_nombre = serializers.CharField(source="examen.modulo.nombre", read_only=True, default=None)
+    examen_modulo_id = serializers.IntegerField(source="examen.modulo.id", read_only=True, default=None)
+    examen_bloque_nombre = serializers.SerializerMethodField()
+    examen_programa_nombre = serializers.SerializerMethodField()
+    examen_tipo_examen = serializers.CharField(source="examen.tipo_examen", read_only=True)
+    examen_fecha = serializers.DateField(source="examen.fecha", read_only=True)
+
+    class Meta:
+        model = Nota
+        fields = (
+            'id', 'examen', 'estudiante', 'calificacion', 'aprobado', 'fecha_calificacion',
+            'es_equivalencia', 'origen_equivalencia', 'fecha_ref_equivalencia',
+            'examen_modulo_nombre', 'examen_modulo_id', 'examen_bloque_nombre',
+            'examen_programa_nombre', 'examen_tipo_examen', 'examen_fecha',
+            'intento', 'es_nota_definitiva',
+        )
+
+    def get_examen_bloque_nombre(self, obj):
+        if obj.examen:
+            if obj.examen.bloque_id:
+                return obj.examen.bloque.nombre
+            if obj.examen.modulo and obj.examen.modulo.bloque:
+                return obj.examen.modulo.bloque.nombre
+        return None
+
+    def get_examen_programa_nombre(self, obj):
+        if obj.examen:
+            bloque = None
+            if obj.examen.bloque_id:
+                bloque = obj.examen.bloque
+            elif obj.examen.modulo and obj.examen.modulo.bloque:
+                bloque = obj.examen.modulo.bloque
+            if bloque and bloque.programa:
+                return bloque.programa.nombre
+        return None
+
+
+class AsistenciaSlimSerializer(serializers.ModelSerializer):
+    estudiante_id = serializers.IntegerField(read_only=True)
+    modulo_id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Asistencia
+        fields = (
+            'id', 'estudiante', 'modulo', 'estudiante_id', 'modulo_id',
+            'fecha', 'presente', 'archivo_origen',
+        )
+
+
+
 class ChangePasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)

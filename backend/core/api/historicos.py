@@ -4,7 +4,7 @@ from django.db.models import Q
 
 from core.models import Nota, Asistencia, Inscripcion
 from core.api.permissions import require_authenticated_group
-from core.serializers import NotaSerializer
+from core.serializers import NotaSerializer, NotaSlimSerializer
 
 router = Router(tags=["historicos"])
 
@@ -166,4 +166,4 @@ def historico_estudiante(request, estudiante_id: int):
         .filter(estudiante_id=estudiante_id)
         .order_by("-fecha_calificacion", "-created_at")
     )
-    return NotaSerializer(qs, many=True).data
+    return NotaSlimSerializer(qs, many=True).data

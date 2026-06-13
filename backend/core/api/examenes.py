@@ -7,7 +7,7 @@ from ninja.errors import HttpError
 from core.api.permissions import require_authenticated_group
 
 from core.models import Nota, Asistencia, Examen, Estudiante, Bloque
-from core.serializers import NotaSerializer, AsistenciaSerializer, ExamenSerializer
+from core.serializers import NotaSerializer, AsistenciaSerializer, ExamenSerializer, NotaSlimSerializer, AsistenciaSlimSerializer
 from .schemas import NotaIn, AsistenciaIn, ExamenIn
 from core.services.evaluacion_service import EvaluacionService
 
@@ -41,7 +41,7 @@ def listar_notas(
         qs = qs.filter(examen__modulo_id=modulo_id)
     if bloque_id:
         qs = qs.filter(examen__bloque_id=bloque_id)
-    return NotaSerializer(qs, many=True).data
+    return NotaSlimSerializer(qs, many=True).data
 
 
 @router.get("/notas/{nota_id}", response=dict)
@@ -76,7 +76,7 @@ def listar_asistencias(
         qs = qs.filter(presente=presente)
     if fecha:
         qs = qs.filter(fecha=fecha)
-    return AsistenciaSerializer(qs, many=True).data
+    return AsistenciaSlimSerializer(qs, many=True).data
 
 
 @router.get("/asistencias/{asistencia_id}", response=dict)
@@ -335,7 +335,7 @@ def obtener_estado_evaluacion(request, estudiante_id: int, bloque_id: int):
     estado = EvaluacionService.get_estado_evaluacion_bloque(estudiante, bloque)
     
     # Serializar historial
-    historial_serializado = NotaSerializer(estado['historial'], many=True).data
+    historial_serializado = NotaSlimSerializer(estado['historial'], many=True).data
     
     return {
         "aprobado": estado['aprobado'],
@@ -357,4 +357,4 @@ def obtener_historial_intentos(request, estudiante_id: int, bloque_id: int):
     bloque = get_object_or_404(Bloque, pk=bloque_id)
     
     historial = EvaluacionService.get_historial_intentos_bloque(estudiante, bloque)
-    return NotaSerializer(historial, many=True).data
+    return NotaSlimSerializer(historial, many=True).data

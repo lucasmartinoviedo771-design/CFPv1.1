@@ -16,7 +16,8 @@ from core.api.schemas import (
     InscripcionIn, AsistenciaIn, NotaIn, CohorteOut
 )
 from core.serializers import (
-    InscripcionSerializer, AsistenciaSerializer, NotaSerializer, ExamenSerializer, InscripcionListSerializer
+    InscripcionSerializer, AsistenciaSerializer, NotaSerializer, ExamenSerializer, InscripcionListSerializer,
+    NotaSlimSerializer, AsistenciaSlimSerializer
 )
 from functools import wraps
 
@@ -514,7 +515,7 @@ def listar_asistencia_videojuegos(
         qs = qs.filter(modulo_id=modulo_id)
     if fecha:
         qs = qs.filter(fecha=fecha)
-    return AsistenciaSerializer(qs, many=True).data
+    return AsistenciaSlimSerializer(qs, many=True).data
 
 
 @router.post("/asistencia", response=dict)
@@ -649,7 +650,7 @@ def listar_notas_videojuegos(
         qs = qs.filter(examen__modulo_id=modulo_id)
     if bloque_id:
         qs = qs.filter(examen__bloque_id=bloque_id)
-    return NotaSerializer(qs, many=True).data
+    return NotaSlimSerializer(qs, many=True).data
 
 
 @router.post("/notas", response=dict)
