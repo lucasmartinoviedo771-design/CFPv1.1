@@ -4,13 +4,13 @@ import type { Estudiante, EstudianteDetail, Inscripcion, Programa, Bloque, Modul
 
 // Keys helpers
 const keys = {
-  estudiantes: (params?: Record<string, any>) => ['estudiantes', params] as const,
+  estudiantes: (params?: Record<string, unknown>) => ['estudiantes', params] as const,
   estudiante: (id: number) => ['estudiante', id] as const,
   programas: ['programas'] as const,
   bloques: (programa_id?: number) => ['bloques', programa_id] as const,
   modulos: (bloque_id?: number) => ['modulos', bloque_id] as const,
   cohortes: (programa_id?: number) => ['cohortes', programa_id] as const,
-  inscripciones: (filters?: Record<string, any>) => ['inscripciones', filters] as const,
+  inscripciones: (filters?: Record<string, unknown>) => ['inscripciones', filters] as const,
 };
 
 // Estudiantes
