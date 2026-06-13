@@ -34,6 +34,7 @@ export const useEstudiantes = (params?: {
       const { data } = await apiClientV2.get<Estudiante[]>('/estudiantes', { params });
       return data;
     },
+    staleTime: 5 * 60 * 1000,
   });
 
 export const useEstudiante = (id: number) =>
