@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { ExtendedInscripcion, ExtendedEstudiante } from "../../pages/Inscripciones";
+import { ExtendedInscripcion, ExtendedEstudiante, calculateAge } from "./types";
 import { Button } from "../UI";
 import { Trash2, Edit2, X, Save, MessageCircle, Baby, Loader } from "lucide-react";
 import { formatDateDisplay } from "../../utils/dateFormat";
-import { calculateAge } from "../../pages/Inscripciones";
 
 interface InscripcionesTableProps {
     rows: ExtendedInscripcion[];

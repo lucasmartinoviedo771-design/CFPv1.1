@@ -7,7 +7,7 @@ import {
     DetailRow,
     YesNoIcon,
     DocumentLink,
-} from "../../pages/GestionPreinscripcionesVideojuegos";
+} from "./PreinscripcionesVJHelpers";
 
 interface DetailModalProps {
     student: PreinscripcionVJ;

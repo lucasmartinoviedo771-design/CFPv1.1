@@ -1,103 +1,26 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight, Trash2, CheckCircle, AlertCircle, Loader, Edit2, X, Save, Search, Baby, MessageCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, X } from 'lucide-react';
 
 import { useCohortes, useDeleteInscripcion, useInscripciones, useProgramas, useSaveInscripcion, useEstudiantes } from "../api/hooks";
 import { apiClientV2 } from "../api/client";
-import { Card, Select, Button, Input } from '../components/UI';
+import { Card } from '../components/UI';
 import { formatDateDisplay } from '../utils/dateFormat';
-import type { Estudiante, Cohorte, Programa, Bloque, Modulo, Inscripcion, EstudianteDetail } from "../api/types";
+import type { Cohorte, Programa, Bloque, Modulo, Estudiante } from "../api/types";
 import { ModalConfirmDelete } from "../components/Inscripciones/ModalConfirmDelete";
 import { InscripcionesTable } from "../components/Inscripciones/InscripcionesTable";
 import { InscripcionesFilters } from "../components/Inscripciones/InscripcionesFilters";
+import { AddInscripcionForm } from "../components/Inscripciones/AddInscripcionForm";
+import {
+    ExtendedEstudiante,
+    ExtendedCohorte,
+    ExtendedInscripcion,
+    LocalModulo,
+    LocalBloque,
+    calculateAge
+} from "../components/Inscripciones/types";
 
-// Custom Accordion Component
-interface AccordionProps {
-    title: string;
-    children: React.ReactNode;
-    defaultOpen?: boolean;
-    defaultExpanded?: boolean;
-}
-
-const Accordion: React.FC<AccordionProps> = ({ title, children, defaultOpen = false }) => {
-    const [isOpen, setIsOpen] = useState(defaultOpen);
-    return (
-        <div className="border border-indigo-500/30 rounded-lg bg-indigo-950/20 overflow-hidden mb-2">
-            <button
-                className="w-full flex items-center justify-between p-3 text-left hover:bg-white/5 transition-colors"
-                onClick={() => setIsOpen(!isOpen)}
-                type="button"
-            >
-                <span className="font-medium text-indigo-100">{title}</span>
-                {isOpen ? <ChevronDown size={18} className="text-indigo-400" /> : <ChevronRight size={18} className="text-indigo-400" />}
-            </button>
-            {isOpen && <div className="p-4 border-t border-indigo-500/20 bg-black/20">{children}</div>}
-        </div>
-    );
-};
-
-// Custom Checkbox
-interface CheckboxProps {
-    checked: boolean;
-    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    disabled?: boolean;
-    label: string;
-}
-
-const Checkbox: React.FC<CheckboxProps> = ({ checked, onChange, disabled, label }) => (
-    <label className={`flex items-center gap-3 p-2 rounded transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/5 cursor-pointer'}`}>
-        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${checked ? 'bg-brand-accent border-brand-accent' : 'border-indigo-500/50 bg-indigo-950/30'}`}>
-            {checked && <CheckCircle size={14} className="text-white" />}
-        </div>
-        <input type="checkbox" className="hidden" checked={checked} onChange={onChange} disabled={disabled} />
-        <span className={`text-sm ${checked ? 'text-white font-medium' : 'text-indigo-300'}`}>{label}</span>
-    </label>
-);
-
-// Modal defined in Estudiantes/Modal.tsx
-
-export const calculateAge = (birthDate: string | null | undefined): number | null => {
-    if (!birthDate) return null;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
-};
-
-interface LocalModulo {
-    id: number;
-    nombre: string;
-}
-
-interface LocalBloque {
-    id: number;
-    nombre: string;
-    modulos: LocalModulo[];
-}
-
-export type ExtendedEstudiante = Estudiante & {
-    tutor_nombre?: string | null;
-    tutor_dni?: string | null;
-    tutor_telefono?: string | null;
-    autorizacion_status?: string | null;
-    autorizacion_token?: string | null;
-    fecha_nacimiento?: string | null;
-};
-
-export type ExtendedCohorte = Cohorte & {
-    programa?: Programa;
-    bloque?: { id: number; nombre: string } | null;
-    bloque_fechas?: { id: number; nombre: string; descripcion?: string | null };
-};
-
-export type ExtendedInscripcion = Omit<Inscripcion, "estudiante" | "cohorte"> & {
-    estudiante?: ExtendedEstudiante;
-    cohorte?: ExtendedCohorte;
-};
+export type { ExtendedEstudiante, ExtendedCohorte, ExtendedInscripcion };
+export { calculateAge };
 
 export default function Inscripciones() {
     const [selectedStudent, setSelectedStudent] = useState<string>("");
@@ -461,7 +384,6 @@ export default function Inscripciones() {
                 }
                 return numA - numB; // Número ascendente (1, 2, 3, ...)
             }
-            // Fallback al ordenamiento alfabético original
             return a.localeCompare(b);
         });
     }, [inscripciones, filterListProgramaName, filterListBloqueName, filterListModuloName]);
@@ -492,11 +414,11 @@ export default function Inscripciones() {
         });
     }, [estudiantes, studentSearch]);
 
-    const studentOptions = filteredEstudiantes.map(s => {
+    const studentOptions = useMemo(() => filteredEstudiantes.map(s => {
         const age = calculateAge(s.fecha_nacimiento);
         const ageLabel = age !== null ? (age < 18 ? ` - ${age} años 👶` : ` - ${age} años`) : "";
         return { value: s.id, label: `${s.apellido}, ${s.nombre} (${s.dni})${ageLabel}` };
-    });
+    }), [filteredEstudiantes]);
 
     const todayIso = useMemo(() => {
         const d = new Date();
@@ -515,9 +437,6 @@ export default function Inscripciones() {
         if (filterPeriodo === "TODAS") return items;
         if (filterPeriodo === "VIGENTE_HOY") return items.filter(isVigenteHoy);
 
-        // ACTUAL_O_PROXIMO (default):
-        // 1) si hay vigentes hoy, mostrar esas
-        // 2) si no hay vigentes, mostrar la/s cohorte/s del próximo inicio más cercano
         const vigentes = items.filter(isVigenteHoy);
         if (vigentes.length > 0) return vigentes;
 
@@ -629,151 +548,42 @@ export default function Inscripciones() {
                 </div>
             </div>
 
-            <Card className="bg-indigo-900/20 border-indigo-500/30">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="max-w-md">
-                        <Input
-                            label="Buscar estudiante (DNI / Apellido / Nombre)"
-                            value={studentSearch}
-                            onChange={(e) => setStudentSearch(e.target.value)}
-                            placeholder="Ej: 3497, andrade, martin..."
-                            className="mb-2 bg-indigo-950/50 border-indigo-500/30 text-white"
-                        />
-                        <Select
-                            label="Estudiante"
-                            value={selectedStudent}
-                            onChange={handleStudentChange}
-                            options={[{ value: '', label: 'Seleccionar estudiante...' }, ...studentOptions]}
-                            className="bg-indigo-950/50 border-indigo-500/30 text-white"
-                        />
-                        <p className="mt-2 text-xs text-indigo-300">
-                            {filteredEstudiantes.length} resultado(s)
-                        </p>
-                    </div>
-
-                    {selectedStudent && (
-                        <div className="space-y-4 pt-4 border-t border-indigo-500/20">
-                            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                                <Select
-                                    label="Periodo"
-                                    value={filterPeriodo}
-                                    onChange={(e) => {
-                                        setFilterPeriodo(e.target.value);
-                                        setFilterProgramaId("");
-                                        setFilterBloqueId("");
-                                        setFilterCohorteId("");
-                                        setFilterInicio("");
-                                    }}
-                                    options={[
-                                        { value: "ACTUAL_O_PROXIMO", label: "Periodo vigente" },
-                                        { value: "TODAS", label: "Todas las cohortes" },
-                                    ]}
-                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
-                                />
-                                <Select
-                                    label="Programa"
-                                    value={filterProgramaId}
-                                    onChange={(e) => {
-                                        setFilterProgramaId(e.target.value);
-                                        setFilterBloqueId("");
-                                        setFilterCohorteId("");
-                                        setFilterInicio("");
-                                    }}
-                                    options={[{ value: "", label: "Todos" }, ...programas.map((p) => ({ value: p.id, label: p.nombre }))]}
-                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
-                                />
-                                <Select
-                                    label="Bloque"
-                                    value={filterBloqueId}
-                                    onChange={(e) => {
-                                        setFilterBloqueId(e.target.value);
-                                        setFilterCohorteId("");
-                                        setFilterInicio("");
-                                    }}
-                                    options={bloquesOptions}
-                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
-                                />
-                                <Select
-                                    label="Cohorte"
-                                    value={filterCohorteId}
-                                    onChange={(e) => {
-                                        setFilterCohorteId(e.target.value);
-                                        setFilterInicio("");
-                                    }}
-                                    options={cohortesOptions}
-                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
-                                />
-                                <Select
-                                    label="Inicio"
-                                    value={filterInicio}
-                                    onChange={(e) => setFilterInicio(e.target.value)}
-                                    options={inicioOptions}
-                                    className="bg-indigo-950/50 border-indigo-500/30 text-white"
-                                />
-                            </div>
-                            <h3 className="text-lg font-semibold text-white mb-2">Selecciona Cohortes:</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {cohortesFiltered.map((cohorte) => (
-                                    <Checkbox
-                                        key={cohorte.id}
-                                        label={`${programaMap[cohorte.programa_id]?.nombre || "Programa"} - ${bloquesMap[cohorte.bloque_id || 0]?.nombre || "Bloque"} - ${cohorte.nombre}`}
-                                        checked={selectedCohortes.includes(cohorte.id)}
-                                        onChange={() => handleCohorteToggle(cohorte.id)}
-                                    />
-                                ))}
-                            </div>
-                            <p className="text-xs text-indigo-300">{cohortesFiltered.length} cohorte(s) visibles</p>
-                        </div>
-                    )}
-
-                    {selectedCohortes.map((cohorteId) => (
-                        <div key={cohorteId} className="bg-white/5 rounded-xl p-4 border border-indigo-500/10">
-                            <div className="flex items-center gap-2 mb-3">
-                                <h4 className="text-md font-bold text-brand-cyan">
-                                    Módulos para {cohortes.find((c) => c.id === cohorteId)?.nombre}
-                                </h4>
-                                {loadingBloques[cohorteId] && <Loader size={16} className="animate-spin text-white" />}
-                            </div>
-
-                            {cohorteBloques[cohorteId]?.map((bloque) => (
-                                <Accordion key={bloque.id} title={bloque.nombre} defaultExpanded>
-                                    <div className="space-y-1 pl-2">
-                                        {visibleModulosByProgression(bloque.modulos).map((modulo) => {
-                                            const isApproved = approvedModuleIds.has(modulo.id);
-                                            const alreadyEnrolled = inscripcionesAlumnoSet.has(modulo.id);
-                                            const checked = isApproved || alreadyEnrolled || (selectedModulos[cohorteId]?.includes(modulo.id) ?? false);
-
-                                            let label = modulo.nombre;
-                                            if (isApproved) label += " (Aprobado)";
-                                            else if (alreadyEnrolled) label += " (Inscripto)";
-
-                                            return (
-                                                <Checkbox
-                                                    key={modulo.id}
-                                                    label={label}
-                                                    checked={checked}
-                                                    onChange={() => handleModuloToggle(cohorteId, modulo.id)}
-                                                    disabled={isApproved || alreadyEnrolled}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                </Accordion>
-                            ))}
-                        </div>
-                    ))}
-
-                    <div className="flex justify-end pt-4">
-                        <Button
-                            type="submit"
-                            className="bg-brand-accent hover:bg-orange-600 border-none px-8"
-                            disabled={!selectedStudent || selectedCohortes.length === 0 || saveInscripcion.isPending}
-                        >
-                            Inscribir Módulos
-                        </Button>
-                    </div>
-                </form>
-            </Card>
+            <AddInscripcionForm
+                studentSearch={studentSearch}
+                onStudentSearchChange={setStudentSearch}
+                selectedStudent={selectedStudent}
+                onStudentChange={handleStudentChange}
+                studentOptions={studentOptions}
+                filteredEstudiantesCount={filteredEstudiantes.length}
+                filterPeriodo={filterPeriodo}
+                onFilterPeriodoChange={setFilterPeriodo}
+                filterProgramaId={filterProgramaId}
+                onFilterProgramaIdChange={setFilterProgramaId}
+                filterBloqueId={filterBloqueId}
+                onFilterBloqueIdChange={setFilterBloqueId}
+                filterCohorteId={filterCohorteId}
+                onFilterCohorteIdChange={setFilterCohorteId}
+                filterInicio={filterInicio}
+                onFilterInicioChange={setFilterInicio}
+                programas={programas}
+                bloquesOptions={bloquesOptions}
+                cohortesOptions={cohortesOptions}
+                inicioOptions={inicioOptions}
+                cohortesFiltered={cohortesFiltered}
+                selectedCohortes={selectedCohortes}
+                onCohorteToggle={handleCohorteToggle}
+                programaMap={programaMap}
+                bloquesMap={bloquesMap}
+                cohorteBloques={cohorteBloques}
+                loadingBloques={loadingBloques}
+                approvedModuleIds={approvedModuleIds}
+                inscripcionesAlumnoSet={inscripcionesAlumnoSet}
+                selectedModulos={selectedModulos}
+                onModuloToggle={handleModuloToggle}
+                onModuloProgressionFilter={visibleModulosByProgression}
+                onSubmit={handleSubmit}
+                isSaving={saveInscripcion.isPending}
+            />
 
             {/* Tabla de Inscripciones */}
             <div className="space-y-4 pt-4 border-t border-indigo-500/20">

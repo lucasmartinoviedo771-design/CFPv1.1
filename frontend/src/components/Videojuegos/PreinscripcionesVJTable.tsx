@@ -1,6 +1,6 @@
 import React from "react";
 import { Laptop, Wifi, Eye, Gamepad2 } from "lucide-react";
-import { PreinscripcionVJ, StateBadge } from "../../pages/GestionPreinscripcionesVideojuegos";
+import { PreinscripcionVJ, StateBadge } from "./PreinscripcionesVJHelpers";
 
 interface PreinscripcionesVJTableProps {
     rows: PreinscripcionVJ[];

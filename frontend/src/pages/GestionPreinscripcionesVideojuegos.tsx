@@ -1,39 +1,23 @@
 import React, { useState, useEffect, useCallback, useMemo, useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiClientV2 } from "../api/client";
-import { getMediaUrl } from "../utils/media";
 import authService from "../services/authService";
 import { UserContext, ThemeModeContext } from "../App";
 import {
-  Search,
-  Eye,
-  X,
-  CheckCircle2,
-  XCircle,
-  Clock,
+  Users,
   Gamepad2,
-  Laptop,
-  Wifi,
-  User,
-  Smartphone,
   FileText,
   ShieldAlert,
-  Download,
-  Calendar,
-  MapPin,
-  Check,
-  Briefcase,
-  BarChart3,
-  Users,
-  LogOut,
-  ChevronRight,
   Sun,
   Moon,
   KeyRound,
   ExternalLink,
   Settings,
   ClipboardList,
-  CheckSquare
+  CheckSquare,
+  BarChart3,
+  LogOut,
+  ChevronRight
 } from "lucide-react";
 
 import AlumnosTab from "../components/Videojuegos/AlumnosTab";
@@ -46,6 +30,8 @@ import type { UserDetails } from "../api/types";
 import { PreinscripcionesVJDetailModal } from "../components/Videojuegos/PreinscripcionesVJDetailModal";
 import { PreinscripcionesVJTable } from "../components/Videojuegos/PreinscripcionesVJTable";
 import { PreinscripcionesVJFilters } from "../components/Videojuegos/PreinscripcionesVJFilters";
+import { PreinscripcionVJ } from "../components/Videojuegos/PreinscripcionesVJHelpers";
+import PreinscripcionesVJDashboardTab, { VideojuegosStats } from "../components/Videojuegos/PreinscripcionesVJDashboardTab";
 
 // States mapping
 const ESTADOS = [
@@ -55,171 +41,7 @@ const ESTADOS = [
   { value: "rechazado", label: "Rechazado" },
 ];
 
-const BADGE_CLASSES: Record<string, string> = {
-  pendiente: "border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]",
-  aprobado: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]",
-  rechazado: "border-rose-500/30 bg-rose-500/10 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.1)]",
-};
-
-const BADGE_ICONS: Record<string, React.ReactNode> = {
-  pendiente: <Clock size={12} className="animate-pulse" />,
-  aprobado: <CheckCircle2 size={12} />,
-  rechazado: <XCircle size={12} />,
-};
-
-export interface StateBadgeProps {
-  estado: string;
-}
-
-export function StateBadge({ estado }: StateBadgeProps) {
-  const norm = estado?.toLowerCase() || "pendiente";
-  const label = norm === "aprobado" ? "Aprobado" : norm === "rechazado" ? "Rechazado" : "Pendiente";
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-black uppercase tracking-wider ${BADGE_CLASSES[norm] || BADGE_CLASSES.pendiente}`}>
-      {BADGE_ICONS[norm] || BADGE_ICONS.pendiente}
-      {label}
-    </span>
-  );
-}
-
-export interface YesNoIconProps {
-  value?: boolean;
-  trueIcon: React.ReactNode;
-  falseIcon: React.ReactNode;
-}
-
-export function YesNoIcon({ value, trueIcon, falseIcon }: YesNoIconProps) {
-  if (value) {
-    return (
-      <span className="text-emerald-400 flex items-center gap-1 font-bold text-xs" title="Sí">
-        {trueIcon} <span className="hidden sm:inline">Sí</span>
-      </span>
-    );
-  }
-  return (
-    <span className="text-rose-400 flex items-center gap-1 font-bold text-xs" title="No">
-      {falseIcon} <span className="hidden sm:inline">No</span>
-    </span>
-  );
-}
-
-export interface DetailRowProps {
-  label: string;
-  value?: string | null;
-  icon?: React.ReactNode;
-}
-
-export function DetailRow({ label, value, icon }: DetailRowProps) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 py-2 border-b border-indigo-500/5 last:border-b-0">
-      <span className="text-xs font-black uppercase tracking-widest text-indigo-300 sm:w-48 flex-shrink-0 flex items-center gap-1.5">
-        {icon && <span className="text-[#00ccff]">{icon}</span>}
-        {label}
-      </span>
-      <span className="text-sm font-semibold text-white/90">{value ?? "—"}</span>
-    </div>
-  );
-}
-
-export interface DocumentLinkProps {
-  url?: string | null;
-  label: string;
-  colorClass: string;
-}
-
-export function DocumentLink({ url, label, colorClass }: DocumentLinkProps) {
-  if (!url) return null;
-  const fullUrl = getMediaUrl(url);
-  return (
-    <a
-      href={fullUrl}
-      target="_blank"
-      rel="noreferrer"
-      className={`flex items-center justify-between p-3.5 rounded-2xl transition-all duration-300 border hover:scale-[1.01] ${colorClass}`}
-    >
-      <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
-        <FileText size={18} /> {label}
-      </span>
-      <Download size={16} />
-    </a>
-  );
-}
-
-export interface PreinscripcionVJ {
-  id: number;
-  apellido: string;
-  nombre: string;
-  dni: string;
-  email: string;
-  sexo?: string | null;
-  fecha_nacimiento?: string | null;
-  nacionalidad?: string | null;
-  lugar_nacimiento?: string | null;
-  cuit?: string | null;
-  nivel_educativo?: string | null;
-  telefono?: string | null;
-  ciudad?: string | null;
-  barrio?: string | null;
-  domicilio?: string | null;
-  posee_pc?: boolean;
-  posee_conectividad?: boolean;
-  trabaja?: boolean;
-  lugar_trabajo?: string | null;
-  tutor_nombre?: string | null;
-  tutor_dni?: string | null;
-  tutor_telefono?: string | null;
-  autorizacion_status?: string | null;
-  dni_digitalizado?: string | null;
-  titulo_secundario_digitalizado?: string | null;
-  dni_tutor_digitalizado?: string | null;
-  nota_parental_firmada?: string | null;
-  estado_vj: string;
-  bloques_vj?: string[];
-}
-
-
-
-interface StatCardProps {
-  label: string;
-  value: number | string;
-  icon: React.ReactNode;
-  glowClass?: string;
-}
-
-function StatCard({ label, value, icon, glowClass }: StatCardProps) {
-  return (
-    <div className={`p-6 rounded-[2rem] bg-[#0c122c]/50 border border-indigo-500/10 backdrop-blur-xl relative overflow-hidden shadow-lg ${glowClass}`}>
-      <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full translate-x-8 -translate-y-8" />
-      <div className="flex justify-between items-center">
-        <div className="space-y-1">
-          <p className="text-indigo-300 text-xs font-black uppercase tracking-wider">{label}</p>
-          <p className="text-3xl font-black text-white">{value}</p>
-        </div>
-        <div className="p-3 rounded-2xl bg-indigo-950/60 text-[#00ccff]">
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface GeograficCity {
-  label: string;
-  value: number;
-}
-
-interface VideojuegosStats {
-  total: number;
-  pendiente: number;
-  aprobado: number;
-  rechazado: number;
-  conPC: number;
-  conInternet: number;
-  trabaja: number;
-  porCiudad: GeograficCity[];
-  menores: number;
-  mayores: number;
-}
+export type { PreinscripcionVJ };
 
 export default function GestionPreinscripcionesVideojuegos() {
   const navigate = useNavigate();
@@ -619,85 +441,10 @@ export default function GestionPreinscripcionesVideojuegos() {
 
           {/* DASHBOARD TAB CONTENT */}
           {tab === "dashboard" && (
-            <div className="space-y-8 animate-in fade-in duration-500">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-32 text-indigo-300 font-bold uppercase tracking-wider space-y-4">
-                  <div className="animate-spin text-[#00ccff]"><Gamepad2 size={40} /></div>
-                  <p className="text-xs">Cargando estadísticas del panel...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Stats Cards Row */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <StatCard label="Total Inscriptos" value={stats.total} icon={<Users size={20} />} glowClass="hover:shadow-[0_0_20px_rgba(0,255,255,0.05)] transition-shadow" />
-                    <StatCard label="Pendientes" value={stats.pendiente} icon={<Clock size={20} />} glowClass="hover:shadow-[0_0_20px_rgba(245,158,11,0.05)] border-amber-500/10" />
-                    <StatCard label="Aprobados" value={stats.aprobado} icon={<CheckCircle2 size={20} />} glowClass="hover:shadow-[0_0_20px_rgba(16,185,129,0.05)] border-emerald-500/10" />
-                    <StatCard label="Rechazados" value={stats.rechazado} icon={<XCircle size={20} />} glowClass="hover:shadow-[0_0_20px_rgba(244,63,94,0.05)] border-rose-500/10" />
-                  </div>
-
-                  {/* Breakdown details */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* PC/Internet Resources */}
-                    <div className="bg-[#0c122c]/40 border border-indigo-500/10 backdrop-blur-xl rounded-[2rem] p-6 space-y-4 shadow-xl">
-                      <h3 className="font-black text-white text-sm uppercase tracking-widest border-b border-indigo-500/10 pb-3 flex items-center gap-2">
-                        <Laptop size={16} className="text-[#00ccff]" /> Recursos de Alumnos
-                      </h3>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-indigo-200">Poseen Computadora (PC)</span>
-                          <span className="text-sm font-black text-white">{stats.conPC} / {stats.total}</span>
-                        </div>
-                        <div className="w-full h-2 rounded-full bg-indigo-950">
-                          <div className="h-2 rounded-full bg-gradient-to-r from-[#00ccff] to-cyan-500" style={{ width: `${stats.total > 0 ? (stats.conPC / stats.total) * 100 : 0}%` }} />
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2">
-                          <span className="text-sm text-indigo-200">Tienen Acceso a Internet</span>
-                          <span className="text-sm font-black text-white">{stats.conInternet} / {stats.total}</span>
-                        </div>
-                        <div className="w-full h-2 rounded-full bg-indigo-950">
-                          <div className="h-2 rounded-full bg-gradient-to-r from-[#00ccff] to-cyan-500" style={{ width: `${stats.total > 0 ? (stats.conInternet / stats.total) * 100 : 0}%` }} />
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2">
-                          <span className="text-sm text-indigo-200">Trabajan Actualmente</span>
-                          <span className="text-sm font-black text-white">{stats.trabaja} / {stats.total}</span>
-                        </div>
-                        <div className="w-full h-2 rounded-full bg-indigo-950">
-                          <div className="h-2 rounded-full bg-gradient-to-r from-[#FF6600] to-orange-500" style={{ width: `${stats.total > 0 ? (stats.trabaja / stats.total) * 100 : 0}%` }} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Breakdown by City / minors */}
-                    <div className="bg-[#0c122c]/40 border border-indigo-500/10 backdrop-blur-xl rounded-[2rem] p-6 space-y-4 shadow-xl">
-                      <h3 className="font-black text-white text-sm uppercase tracking-widest border-b border-indigo-500/10 pb-3 flex items-center gap-2">
-                        <MapPin size={16} className="text-[#FF6600]" /> Distribución Geográfica y Edad
-                      </h3>
-                      <div className="space-y-4">
-                        {stats.porCiudad.map((c, idx) => (
-                          <div key={idx} className="flex justify-between items-center text-sm">
-                            <span className="text-indigo-200">{c.label}</span>
-                            <span className="font-black text-white">{c.value}</span>
-                          </div>
-                        ))}
-
-                        <div className="pt-3 border-t border-indigo-500/10 grid grid-cols-2 gap-4">
-                          <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/5 text-center">
-                            <p className="text-[10px] font-black uppercase text-indigo-300 tracking-wider">Menores de edad</p>
-                            <p className="text-xl font-black text-white mt-1">{stats.menores}</p>
-                          </div>
-                          <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/5 text-center">
-                            <p className="text-[10px] font-black uppercase text-indigo-300 tracking-wider">Adultos</p>
-                            <p className="text-xl font-black text-white mt-1">{stats.mayores}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+            <PreinscripcionesVJDashboardTab
+              loading={loading}
+              stats={stats}
+            />
           )}
 
           {/* TABLE TAB CONTENT */}
