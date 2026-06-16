@@ -415,14 +415,8 @@ export default function PreinscripcionVideojuegos() {
             </p>
 
             {/* Logos convocantes */}
-            <div className="pt-2 flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-xs font-bold text-indigo-400">
-              <span>ADVA</span>
-              <span className="text-indigo-600">•</span>
-              <span>Agencia de Innovación de TDF</span>
-              <span className="text-indigo-600">•</span>
-              <span>CFI</span>
-              <span className="text-indigo-600">•</span>
-              <span>Centro Politécnico Superior</span>
+            <div className="pt-4 flex justify-center">
+              <img src="/logos_vj.png" alt="ADVA · Agencia de Innovación de TDF · CFI · Centro Politécnico Superior" className="max-h-16 w-auto object-contain" />
             </div>
           </header>
 
