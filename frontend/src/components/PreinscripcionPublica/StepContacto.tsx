@@ -39,9 +39,20 @@ export function StepContacto({ form, onChange, isDark }: StepContactoProps) {
         </div>
         <div className="space-y-2">
           <label className={`text-xs font-black uppercase tracking-widest ml-1 ${isDark ? "text-indigo-400" : "text-[#1e3a5f]"}`}>
-            Teléfono
+            Teléfono (sin espacios ni guiones)
           </label>
-          <input className={inputCls} name="telefono" value={form.telefono} onChange={onChange} />
+          <input
+            className={inputCls}
+            name="telefono"
+            value={form.telefono}
+            onChange={(e) => {
+              const only = e.target.value.replace(/\D/g, "").slice(0, 10);
+              onChange({ ...e, target: { ...e.target, name: "telefono", value: only } } as React.ChangeEvent<HTMLInputElement>);
+            }}
+            placeholder="Ej: 2964123456"
+            maxLength={10}
+            inputMode="numeric"
+          />
         </div>
         <div className="space-y-2">
           <label className={`text-xs font-black uppercase tracking-widest ml-1 ${isDark ? "text-indigo-400" : "text-[#1e3a5f]"}`}>

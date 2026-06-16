@@ -483,7 +483,6 @@ def crear_preinscripcion_publica(request):
     post = request.POST
     files = request.FILES
 
-    # Validación de Seguridad reCAPTCHA v3
     from core.utils.recaptcha import verify_recaptcha
     recaptcha_token = post.get("recaptcha_token", "")
     if not verify_recaptcha(recaptcha_token, action="preinscripcion_publica"):

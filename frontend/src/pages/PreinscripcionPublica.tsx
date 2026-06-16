@@ -1,4 +1,29 @@
 import React, { useEffect, useMemo, useState } from "react";
+
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
+
+function loadRecaptcha() {
+  if (document.querySelector(`script[src*="recaptcha"]`)) return;
+  const script = document.createElement("script");
+  script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+  script.async = true;
+  document.head.appendChild(script);
+}
+
+function getRecaptchaToken(action: string): Promise<string> {
+  return new Promise((resolve) => {
+    const w = window as unknown as { grecaptcha?: { ready: (cb: () => void) => void; execute: (key: string, opts: { action: string }) => Promise<string> } };
+    if (!w.grecaptcha) return resolve("");
+    w.grecaptcha.ready(async () => {
+      try {
+        const token = await w.grecaptcha!.execute(RECAPTCHA_SITE_KEY, { action });
+        resolve(token);
+      } catch {
+        resolve("");
+      }
+    });
+  });
+}
 import {
   ArrowRight,
   ArrowLeft,
@@ -84,6 +109,8 @@ export default function PreinscripcionPublica() {
   const [dniTutorFile, setDniTutorFile] = useState<File | null>(null);
 
   const [form, setForm] = useState<FormState>(saved.form);
+
+  useEffect(() => { loadRecaptcha(); }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -234,11 +261,12 @@ export default function PreinscripcionPublica() {
 
     try {
       setSaving(true);
+      const recaptchaToken = await getRecaptchaToken("preinscripcion_publica");
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, typeof v === "boolean" ? String(v) : (v || "")));
       const seleccion = selectedProgramaIds.map(pid => ({ programa_id: Number(pid), bloque_ids: bloquesPorPrograma[pid] }));
       fd.append("seleccion_programas_json", JSON.stringify(seleccion));
-      fd.append("recaptcha_token", "mock_token_vj");
+      fd.append("recaptcha_token", recaptchaToken);
 
       if (dniFile) {
         const processedDni = await compressImage(dniFile);

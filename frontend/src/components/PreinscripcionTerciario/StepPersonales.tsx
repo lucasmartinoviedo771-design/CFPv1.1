@@ -87,13 +87,18 @@ export function StepPersonales({
             />
           </Field>
         </div>
-        <Field label="Celular" required>
+        <Field label="Celular (sin espacios ni guiones)" required>
           <input
             name="celular"
             value={form.celular}
-            onChange={onChange}
+            onChange={(e) => {
+              const only = e.target.value.replace(/\D/g, "").slice(0, 10);
+              onChange({ ...e, target: { ...e.target, name: "celular", value: only } } as React.ChangeEvent<HTMLInputElement>);
+            }}
             className={inputCls}
-            placeholder="2964 XXXXXX"
+            placeholder="Ej: 2964123456"
+            maxLength={10}
+            inputMode="numeric"
           />
         </Field>
         <Field label="Fecha de Nacimiento" required>

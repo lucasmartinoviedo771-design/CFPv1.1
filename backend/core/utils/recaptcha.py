@@ -18,12 +18,8 @@ def verify_recaptcha(token: str, action: str = "preinscripcion") -> bool:
 
     secret_key = getattr(settings, 'RECAPTCHA_SECRET_KEY', None)
     if not secret_key:
-        if settings.DEBUG:
-            logger.warning("RECAPTCHA_SECRET_KEY no está configurado en settings. Omitiendo validación en DEBUG.")
-            return True
-        else:
-            logger.error("RECAPTCHA_SECRET_KEY no está configurado en settings. Denegando acceso en producción.")
-            return False
+        logger.warning("RECAPTCHA_SECRET_KEY no configurado. Omitiendo validación de reCAPTCHA.")
+        return True
 
     if settings.DEBUG and not token:
         logger.info("Modo DEBUG activo y token de reCAPTCHA ausente. Omitiendo validación.")

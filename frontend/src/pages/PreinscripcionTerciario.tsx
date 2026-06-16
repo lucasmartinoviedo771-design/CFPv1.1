@@ -2,6 +2,31 @@ import React, { useState, useEffect } from "react";
 import { ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { apiClientV2 } from "../api/client";
 
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
+
+function loadRecaptcha() {
+  if (document.querySelector(`script[src*="recaptcha"]`)) return;
+  const script = document.createElement("script");
+  script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+  script.async = true;
+  document.head.appendChild(script);
+}
+
+function getRecaptchaToken(action: string): Promise<string> {
+  return new Promise((resolve) => {
+    const w = window as unknown as { grecaptcha?: { ready: (cb: () => void) => void; execute: (key: string, opts: { action: string }) => Promise<string> } };
+    if (!w.grecaptcha) return resolve("");
+    w.grecaptcha.ready(async () => {
+      try {
+        const token = await w.grecaptcha!.execute(RECAPTCHA_SITE_KEY, { action });
+        resolve(token);
+      } catch {
+        resolve("");
+      }
+    });
+  });
+}
+
 import { STORAGE_KEY, FormState, INIT_FORM, PreinscripcionConfig } from "../components/PreinscripcionTerciario/types";
 import { getEmailPorLocalidad } from "../components/PreinscripcionTerciario/constants";
 import { ProgressBar } from "../components/PreinscripcionTerciario/ProgressBar";
@@ -39,6 +64,10 @@ export default function PreinscripcionTerciario() {
   const [rechazado, setRechazado] = useState(false);
   const [configLoading, setConfigLoading] = useState(true);
   const [config, setConfig] = useState<PreinscripcionConfig | null>(null);
+
+  useEffect(() => {
+    loadRecaptcha();
+  }, []);
 
   useEffect(() => {
     apiClientV2
@@ -87,6 +116,7 @@ export default function PreinscripcionTerciario() {
       if (!form.dni.trim()) return setError("El DNI es obligatorio."), false;
       if (!form.sexo) return setError("El sexo es obligatorio."), false;
       if (!form.celular.trim()) return setError("El celular es obligatorio."), false;
+      if (!/^\d{10}$/.test(form.celular)) return setError("El celular debe tener exactamente 10 dígitos numéricos. Ej: 2964123456"), false;
       if (!form.fecha_nacimiento) return setError("La fecha de nacimiento es obligatoria."), false;
       if (!form.provincia_nacimiento) return setError("La provincia de nacimiento es obligatoria."), false;
       if (!form.localidad_nacimiento) return setError("La localidad de nacimiento es obligatoria."), false;
@@ -148,8 +178,10 @@ export default function PreinscripcionTerciario() {
 
     setSaving(true);
     try {
+      const recaptchaToken = await getRecaptchaToken("preinscripcion_terciario");
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ""));
+      fd.append("recaptcha_token", recaptchaToken);
 
       await apiClientV2.post("/preinscripcion-terciario", fd, {
         headers: { "Content-Type": "multipart/form-data" },

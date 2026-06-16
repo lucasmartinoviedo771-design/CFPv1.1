@@ -105,7 +105,7 @@ def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
                 apellido=preinscripcion.apellido,
                 nombre=preinscripcion.nombre,
                 email=preinscripcion.email,
-                telefono=preinscripcion.celular,
+                telefono=(preinscripcion.celular or "")[:10],
                 domicilio=preinscripcion.domicilio,
                 fecha_nacimiento=preinscripcion.fecha_nacimiento,
                 sexo=preinscripcion.sexo,
@@ -372,7 +372,6 @@ def crear_preinscripcion_terciario(request):
     data = request.POST
     files = request.FILES
 
-    # Validación de Seguridad reCAPTCHA v3
     from core.utils.recaptcha import verify_recaptcha
     recaptcha_token = data.get("recaptcha_token", "")
     if not verify_recaptcha(recaptcha_token, action="preinscripcion_terciario"):
