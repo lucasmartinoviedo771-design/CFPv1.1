@@ -28,7 +28,7 @@ export const FooterVideojuegos: React.FC = () => {
               </li>
               <li className="flex items-center text-gray-300 text-sm">
                 <Mail size={18} className="mr-2 text-[#00ccff] shrink-0" />
-                <span>estudiante.cfp@malvinastdf.edu.ar</span>
+                <a href="mailto:estudiantes.cfp@malvinastdf.edu.ar" className="hover:text-[#00ccff] transition-colors">estudiantes.cfp@malvinastdf.edu.ar</a>
               </li>
             </ul>
           </div>
