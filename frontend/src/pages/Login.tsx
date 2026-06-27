@@ -26,7 +26,7 @@ export default function Login() {
         const groups = userData?.groups || [];
         const isSuperuser = userData?.is_superuser || userData?.is_staff;
         
-        const hasVJ = isSuperuser || groups.includes("Videojuegos") || groups.includes("Admin");
+        const hasVJ = isSuperuser || groups.includes("Videojuegos") || groups.some(g => GRUPOS_CFP.includes(g));
         const isTerciario = isSuperuser || groups.some(g => GRUPOS_TERCIARIO.includes(g));
         const isCFP = isSuperuser || (groups.some(g => GRUPOS_CFP.includes(g)) && !groups.includes("Sin CFP"));
 
@@ -73,7 +73,7 @@ export default function Login() {
         const isSuperuser = pendingUser?.is_superuser || pendingUser?.is_staff;
         const isCFP = isSuperuser || (groups.some(g => GRUPOS_CFP.includes(g)) && !groups.includes("Sin CFP"));
         const isTerciario = isSuperuser || groups.some(g => GRUPOS_TERCIARIO.includes(g));
-        const hasVJ = isSuperuser || groups.includes("Videojuegos") || groups.includes("Admin");
+        const hasVJ = isSuperuser || groups.includes("Videojuegos") || groups.some(g => GRUPOS_CFP.includes(g));
 
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">

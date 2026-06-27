@@ -8,6 +8,31 @@ import {
   Clock,
 } from "lucide-react";
 import { apiClientV2 } from "../api/client";
+
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
+
+function loadRecaptcha() {
+  if (document.querySelector(`script[src*="recaptcha"]`)) return;
+  const script = document.createElement("script");
+  script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+  script.async = true;
+  document.head.appendChild(script);
+}
+
+function getRecaptchaToken(action: string): Promise<string> {
+  return new Promise((resolve) => {
+    const w = window as unknown as { grecaptcha?: { ready: (cb: () => void) => void; execute: (key: string, opts: { action: string }) => Promise<string> } };
+    if (!w.grecaptcha) return resolve("");
+    w.grecaptcha.ready(async () => {
+      try {
+        const token = await w.grecaptcha!.execute(RECAPTCHA_SITE_KEY, { action });
+        resolve(token);
+      } catch {
+        resolve("");
+      }
+    });
+  });
+}
 import { NavbarVideojuegos } from "../components/NavbarVideojuegos";
 import { FooterVideojuegos } from "../components/FooterVideojuegos";
 import {
@@ -78,6 +103,8 @@ export default function PreinscripcionVideojuegos() {
   const [dniTutorFile, setDniTutorFile] = useState<File | null>(null);
 
   const [form, setForm] = useState<FormState>(saved.form);
+
+  useEffect(() => { loadRecaptcha(); }, []);
 
   useEffect(() => {
     const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
@@ -308,8 +335,8 @@ export default function PreinscripcionVideojuegos() {
         fd.append("dni_tutor_digitalizado", processedDniTutor);
       }
 
-      // Token reCAPTCHA v3 mockup o real
-      fd.append("recaptcha_token", "mock_token_vj");
+      const recaptchaToken = await getRecaptchaToken("preinscripcion_publica");
+      fd.append("recaptcha_token", recaptchaToken);
 
       await apiClientV2.post("/preinscripcion", fd, {
         headers: { "Content-Type": "multipart/form-data" },

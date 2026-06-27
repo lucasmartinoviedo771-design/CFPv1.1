@@ -12,7 +12,7 @@ from core.models import (
     Asistencia, Nota, Cohorte, Modulo, Examen
 )
 from core.api.schemas import (
-    EstudianteDetailOut, EstudianteListOut, EstudianteIn,
+    EstudianteDetailOut, EstudianteDetailVJOut, EstudianteListOut, EstudianteIn,
     InscripcionIn, AsistenciaIn, NotaIn, CohorteOut
 )
 from core.serializers import (
@@ -71,7 +71,11 @@ class VideojuegosEstudianteOut(EstudianteDetailOut):
 def _tiene_acceso_videojuegos(user):
     if user.is_superuser:
         return True
-    return user.groups.filter(name__in=["Admin", "Secretaría", "Regencia", "Videojuegos"]).exists()
+    allowed_groups = [
+        "Admin", "Secretaría", "Regencia", "Coordinación Docente",
+        "Docente", "Preceptor", "Bedel", "Rector", "Videojuegos"
+    ]
+    return user.groups.filter(name__in=allowed_groups).exists()
 
 def require_videojuegos_access(func):
     @wraps(func)
@@ -257,7 +261,7 @@ def actualizar_videojuegos_config(request, payload: VideojuegosConfigPatchIn):
 # Endpoints de Alumnos (Estudiantes) para Videojuegos (VJ)
 # -------------------------------------------------------------
 
-@router.get("/alumnos", response=List[EstudianteListOut])
+@router.get("/alumnos", response=List[EstudianteDetailVJOut])
 @require_videojuegos_access
 def listar_alumnos_videojuegos(
     request,
@@ -297,9 +301,9 @@ def listar_alumnos_videojuegos(
     if rango_edad:
         today = timezone.localdate()
         date_18 = today.replace(year=today.year - 18)
-        if rango_edad == "menores":
+        if rango_edad.lower() == "menores":
             qs = qs.filter(fecha_nacimiento__gt=date_18)
-        elif rango_edad == "mayores":
+        elif rango_edad.lower() == "mayores":
             qs = qs.filter(fecha_nacimiento__lte=date_18)
 
     return list(qs)

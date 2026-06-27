@@ -2,11 +2,13 @@ import React from "react";
 import { createPortal } from "react-dom";
 import { Card, Button } from '../UI';
 import {
-  XCircle, Search, FileText, Download, CheckCircle, UserCheck, Eye, AlertCircle
+  XCircle, Search, FileText, Download, CheckCircle, UserCheck, Eye, AlertCircle, Loader
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { getMediaUrl } from "../../utils/media";
 import { Aspirante } from "./types";
+import { formatDateDisplay } from "../../utils/dateFormat";
+import type { Inscripcion } from "../../api/types";
 
 interface SectionDividerProps {
   title: string;
@@ -20,26 +22,18 @@ const SectionDivider: React.FC<SectionDividerProps> = ({ title, icon: Icon }) =>
   </div>
 );
 
-const calculateAge = (birthDate?: string | null): number | null => {
-  if (!birthDate) return null;
-  const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-    age--;
-  }
-  return age;
-};
-
 export interface AspiranteDetailModalProps {
   viewStudent: Aspirante | null;
+  isLoadingDetail?: boolean;
+  inscriptions?: Inscripcion[];
   onClose: () => void;
   onApprove: () => void;
 }
 
 export default function AspiranteDetailModal({
   viewStudent,
+  isLoadingDetail = false,
+  inscriptions = [],
   onClose,
   onApprove,
 }: AspiranteDetailModalProps) {
@@ -97,68 +91,130 @@ export default function AspiranteDetailModal({
                 <p>
                   <span className="text-indigo-400">Domicilio:</span>{" "}
                   <span className="text-white">
-                    {viewStudent.domicilio || "-"}, {viewStudent.ciudad || "-"}
+                    {isLoadingDetail ? "Cargando..." : (viewStudent.domicilio || "-")}, {viewStudent.ciudad || "-"}
                   </span>
                 </p>
               </div>
 
               <SectionDivider title="Trayectos Solicitados" icon={FileText} />
-              <div className="flex flex-wrap gap-2">
-                {viewStudent.trayectos?.map((t, idx) => (
-                  <span
-                    key={idx}
-                    className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30 text-xs"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
+              {isLoadingDetail ? (
+                <div className="text-center py-6 text-indigo-300 flex items-center justify-center gap-2">
+                  <Loader className="animate-spin text-cyan-400" size={18} />
+                  <span>Cargando trayectos...</span>
+                </div>
+              ) : inscriptions.length > 0 ? (
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                  {inscriptions.map((i) => {
+                    const progNom = i.cohorte?.programa?.nombre || "Sin Programa";
+                    const bloqueNom = i.modulo?.nombre || i.cohorte?.bloque?.nombre || "";
+                    const label = bloqueNom ? `${progNom} (${bloqueNom})` : progNom;
+                    
+                    let statusClass = "bg-gray-500/20 text-gray-300 border-gray-500/30";
+                    if (i.estado === "PREINSCRIPTO") {
+                      statusClass = "bg-amber-500/20 text-amber-300 border-amber-500/30";
+                    } else if (i.estado === "CURSANDO") {
+                      statusClass = "bg-cyan-500/20 text-cyan-300 border-cyan-500/30";
+                    } else if (["EGRESADO", "APROBADO"].includes(i.estado)) {
+                      statusClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/30";
+                    } else if (["INACTIVO", "LIBRE", "DESAPROBADO"].includes(i.estado)) {
+                      statusClass = "bg-rose-500/20 text-rose-300 border-rose-500/30";
+                    }
+
+                    return (
+                      <div
+                        key={i.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/10 gap-2 hover:border-indigo-500/30 transition-colors"
+                      >
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-semibold text-white truncate" title={label}>{label}</span>
+                          <span className="text-[10px] text-indigo-400">
+                            Inscripción: {formatDateDisplay(i.created_at)}
+                          </span>
+                        </div>
+                        <div className="flex items-center shrink-0">
+                          <span className={`text-[9px] px-2 py-0.5 rounded-full border uppercase font-bold tracking-wider ${statusClass}`}>
+                            {i.estado}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {viewStudent.trayectos?.map((t, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30 text-xs"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                  {(!viewStudent.trayectos || viewStudent.trayectos.length === 0) && (
+                    <span className="text-xs text-gray-500">Sin trayectos registrados</span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
               <SectionDivider title="Documentación" icon={Download} />
-              <div className="space-y-3">
-                {viewStudent.dni_digitalizado ? (
-                  <a
-                    href={getMediaUrl(viewStudent.dni_digitalizado)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-cyan-300 transition-all border border-cyan-500/30"
-                  >
-                    <span className="flex items-center gap-2">
-                      <FileText size={18} /> DNI Digitalizado
-                    </span>
-                    <Download size={18} />
-                  </a>
-                ) : (
-                  <div className="p-3 rounded-lg border border-red-500/30 text-red-400 bg-red-900/20 text-sm">
-                    DNI no cargado
-                  </div>
-                )}
-
-                {viewStudent.titulo_secundario_digitalizado ? (
-                  <a
-                    href={getMediaUrl(viewStudent.titulo_secundario_digitalizado)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
-                  >
-                    <span className="flex items-center gap-2">
-                      <FileText size={18} /> Título Secundario
-                    </span>
-                    <Download size={18} />
-                  </a>
-                ) : (
-                  !esMenor && (
-                    <div className="p-3 rounded-lg border border-white/10 text-gray-500 bg-white/5 text-sm">
-                      Título no cargado
+              {isLoadingDetail ? (
+                <div className="text-center py-6 text-indigo-300 flex items-center justify-center gap-2">
+                  <Loader className="animate-spin text-cyan-400" size={18} />
+                  <span>Cargando documentos...</span>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {viewStudent.dni_digitalizado ? (
+                    <a
+                      href={getMediaUrl(viewStudent.dni_digitalizado)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-cyan-300 transition-all border border-cyan-500/30"
+                    >
+                      <span className="flex items-center gap-2">
+                        <FileText size={18} /> DNI Digitalizado
+                      </span>
+                      <Download size={18} />
+                    </a>
+                  ) : (
+                    <div className="p-3 rounded-lg border border-red-500/30 text-red-400 bg-red-900/20 text-sm">
+                      DNI no cargado
                     </div>
-                  )
-                )}
+                  )}
 
-                {esMenor && (
-                  <>
-                    <SectionDivider title="Datos del Tutor (Menor)" icon={UserCheck} />
+                  {viewStudent.titulo_secundario_digitalizado ? (
+                    <a
+                      href={getMediaUrl(viewStudent.titulo_secundario_digitalizado)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between bg-indigo-500/20 hover:bg-indigo-500/40 p-3 rounded-lg text-emerald-300 transition-all border border-emerald-500/30"
+                    >
+                      <span className="flex items-center gap-2">
+                        <FileText size={18} /> Título Secundario
+                      </span>
+                      <Download size={18} />
+                    </a>
+                  ) : (
+                    !esMenor && (
+                      <div className="p-3 rounded-lg border border-white/10 text-gray-500 bg-white/5 text-sm">
+                        Título no cargado
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+              {esMenor && (
+                <>
+                  <SectionDivider title="Datos del Tutor (Menor)" icon={UserCheck} />
+                  {isLoadingDetail ? (
+                    <div className="text-center py-6 text-orange-300 flex items-center justify-center gap-2">
+                      <Loader className="animate-spin text-orange-400" size={18} />
+                      <span>Cargando datos del tutor...</span>
+                    </div>
+                  ) : (
                     <div className="space-y-3 p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
                       <p className="text-sm">
                         <span className="text-orange-300/70">Nombre:</span>{" "}
@@ -224,28 +280,35 @@ export default function AspiranteDetailModal({
                         </div>
                       )}
                     </div>
-                  </>
-                )}
-              </div>
-
-              <SectionDivider title="Información Adicional" icon={AlertCircle} />
-              <div className="space-y-2 text-sm text-indigo-200">
-                <p>Posee PC: {viewStudent.posee_pc ? "Sí" : "No"}</p>
-                <p>Conectividad: {viewStudent.posee_conectividad ? "Sí" : "No"}</p>
-                <p>Trabaja: {viewStudent.trabaja ? "Sí" : "No"}</p>
-                <p>Nivel Educativo: {viewStudent.nivel_educativo || "-"}</p>
-              </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
-          <div className="mt-8 flex justify-end gap-3">
-            <Button variant="ghost" onClick={onClose}>
-              Cerrar
-            </Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-500" onClick={onApprove}>
-              Aprobar Estudiante
-            </Button>
-          </div>
+          <SectionDivider title="Información Adicional" icon={AlertCircle} />
+          {isLoadingDetail ? (
+            <div className="text-center py-4 text-indigo-300 flex items-center justify-center gap-2">
+              <Loader className="animate-spin text-cyan-400" size={16} />
+              <span>Cargando detalles...</span>
+            </div>
+          ) : (
+            <div className="space-y-2 text-sm text-indigo-200">
+              <p>Posee PC: {viewStudent.posee_pc ? "Sí" : "No"}</p>
+              <p>Conectividad: {viewStudent.posee_conectividad ? "Sí" : "No"}</p>
+              <p>Trabaja: {viewStudent.trabaja ? "Sí" : "No"}</p>
+              <p>Nivel Educativo: {viewStudent.nivel_educativo || "-"}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 flex justify-end gap-3 p-4 border-t border-indigo-500/20">
+          <Button variant="ghost" onClick={onClose}>
+            Cerrar
+          </Button>
+          <Button className="bg-emerald-600 hover:bg-emerald-500" onClick={onApprove}>
+            Aprobar Estudiante
+          </Button>
         </div>
       </Card>
     </div>,

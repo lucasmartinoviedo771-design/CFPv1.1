@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Tu postulación fue aceptada! - Desarrollo de Videojuegos</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333333; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f5; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; overflow: hidden; }
+        .header { background-color: #0b1c3c; color: #ffffff; padding: 25px 20px; text-align: center; border-bottom: 5px solid #f26b21; }
+        .header h1 { margin: 0; font-size: 24px; letter-spacing: 0.5px; }
+        .header h2 { margin: 5px 0 0 0; font-size: 16px; font-weight: normal; color: #cbd5e1; }
+        .content { padding: 30px 25px; }
+        .aceptacion-banner { background: linear-gradient(135deg, #0b1c3c 0%, #1e3a5f 100%); border-radius: 10px; padding: 22px 25px; margin-bottom: 25px; text-align: center; border: 1px solid #f26b21; }
+        .aceptacion-banner h2 { margin: 0; color: #f26b21; font-size: 22px; }
+        .aceptacion-banner p { margin: 8px 0 0 0; color: #cbd5e1; font-size: 14px; }
+        .badge-aceptado { display: inline-block; background-color: #f26b21; color: #ffffff; padding: 5px 18px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-top: 12px; letter-spacing: 0.5px; }
+        .info-box { background-color: #f8fafc; padding: 20px 25px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0; }
+        .info-box h3 { margin-top: 0; color: #0b1c3c; font-size: 16px; margin-bottom: 12px; }
+        .info-box ul { padding-left: 20px; margin: 0; }
+        .info-box li { margin-bottom: 9px; font-size: 14.5px; color: #374151; }
+        .especialidad-box { background-color: #fff7ed; padding: 18px 22px; border-radius: 8px; margin: 20px 0; border: 1px solid #fed7aa; }
+        .especialidad-box h3 { margin-top: 0; color: #c2410c; font-size: 16px; margin-bottom: 12px; }
+        .especialidad-box ul { padding-left: 20px; margin: 0; }
+        .especialidad-box li { margin-bottom: 8px; font-size: 14.5px; color: #431407; }
+        .info-pdf { background-color: #e0f2fe; padding: 20px 25px; border-radius: 8px; margin: 25px 0; border: 1px solid #bae6fd; }
+        .info-pdf h3 { margin-top: 0; color: #0284c7; font-size: 18px; margin-bottom: 15px; }
+        .info-pdf ul { padding-left: 20px; margin-bottom: 0; }
+        .info-pdf li { margin-bottom: 10px; font-size: 14.5px; color: #0c4a6e; }
+        .contacto-box { background-color: #f1f5f9; padding: 25px; border-radius: 8px; font-size: 15px; margin-top: 20px; border: 1px solid #e2e8f0; }
+        .contacto-item { margin-bottom: 12px; line-height: 1.5; }
+        .contacto-item:last-child { margin-bottom: 0; }
+        .instituciones { text-align: center; padding: 20px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; font-weight: 600; letter-spacing: 0.5px; }
+        .footer { background-color: #0f172a; color: #94a3b8; text-align: center; padding: 20px; font-size: 12px; }
+        .footer p { margin: 5px 0; }
+        a { color: #0284c7; text-decoration: none; font-weight: 600; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Centro Politécnico Superior</h1>
+            <h2>Certificación Profesional en Desarrollo de Videojuegos</h2>
+        </div>
+
+        <div class="content">
+            <p style="font-size: 17px; margin-top: 0;">Hola <strong>{{ nombre }}</strong>,</p>
+
+            <div class="aceptacion-banner">
+                <h2>¡Tu postulación fue aceptada! 🎉</h2>
+                <p>Quedás oficialmente confirmado/a en la Certificación Profesional en Desarrollo de Videojuegos.</p>
+                <span class="badge-aceptado">ESTADO: ACEPTADO/A</span>
+            </div>
+
+            <p style="font-size: 15px;">
+                Nos alegra comunicarte que tu documentación fue revisada y aprobada. A partir de ahora formás parte del programa.
+            </p>
+
+            <div class="info-box">
+                <h3>📅 Próximos Pasos</h3>
+                <ul>
+                    <li>En los próximos días recibirás información sobre el <strong>inicio de clases y horarios</strong>.</li>
+                    <li>Revisá el PDF adjunto con el <strong>cronograma detallado</strong> y las condiciones de cursada.</li>
+                    <li>Ante cualquier duda, comunicate por WhatsApp o email con nuestro equipo.</li>
+                </ul>
+            </div>
+
+            <div class="especialidad-box">
+                <h3>🕹️ Estructura de la Certificación</h3>
+                <ul>
+                    <li><strong>Materias Obligatorias:</strong> Producción de Videojuegos, Inteligencia Artificial aplicada y Diseño de Videojuegos.</li>
+                    <li><strong>Módulos de Especialidad (elegís uno):</strong> Arte y Animación <em>o</em> Programación de Entornos Virtuales.</li>
+                    <li><strong>Duración total:</strong> 8 a 9 meses — modalidad híbrida/sincrónica.</li>
+                </ul>
+            </div>
+
+            <div class="info-pdf">
+                <h3>📄 Revisá el PDF adjunto</h3>
+                <p style="margin-top: 0;">Adjuntamos el cronograma y las condiciones de cursada. Allí encontrarás:</p>
+                <ul>
+                    <li><strong>🗓️ Horarios de encuentros sincrónicos</strong> y fechas de eventos presenciales.</li>
+                    <li><strong>📅 Cronograma de evaluaciones</strong> y fechas de parciales y finales.</li>
+                    <li><strong>📋 Condiciones de cursado</strong> y requisitos para aprobar.</li>
+                    <li><strong>📌 Normas de Convivencia Digital</strong> del campus virtual.</li>
+                </ul>
+            </div>
+
+            <p style="font-size: 16px; margin-top: 30px;"><strong>Podés comunicarte con nosotros por cualquiera de estos canales:</strong></p>
+
+            <div class="contacto-box">
+                <div class="contacto-item">📍 <strong>Dirección:</strong> Monte Independencia 261, Barrio El Mirador (Margen Sur), Río Grande, Tierra del Fuego.</div>
+                <div class="contacto-item">📱 <strong>WhatsApp:</strong> <a href="https://wa.me/5492964355801">+54 9 2964 35-5801</a></div>
+                <div class="contacto-item">📞 <strong>Teléfono:</strong> 02964 69-7979</div>
+                <div class="contacto-item">✉️ <strong>Email:</strong> <a href="mailto:estudiantes.cfp@malvinastdf.edu.ar">estudiantes.cfp@malvinastdf.edu.ar</a></div>
+                <div class="contacto-item">🌐 <strong>Web:</strong> <a href="https://politecnico.ar">politecnico.ar</a></div>
+            </div>
+
+            <p style="margin-top: 35px; text-align: center; font-size: 18px; color: #f26b21;"><strong>¡Bienvenido/a al mundo del desarrollo de videojuegos!</strong></p>
+        </div>
+
+        <div class="instituciones">
+            INSTITUCIONES CONVOCANTES<br>
+            <span style="color: #94a3b8;">ADVA &nbsp;•&nbsp; Agencia de Innovación de TDF &nbsp;•&nbsp; CFI &nbsp;•&nbsp; Politécnico</span>
+        </div>
+
+        <div class="footer">
+            <p><strong>Centro Politécnico Superior "Malvinas Argentinas"</strong></p>
+            <p>Monte Independencia 261, Margen Sur, Río Grande, Tierra del Fuego</p>
+            <p>WhatsApp: <a href="https://wa.me/5492964355801" style="color: #94a3b8;">+54 9 2964 35-5801</a></p>
+            <p style="margin-top: 15px; font-size: 11px; color: #4b5563; font-style: italic;">
+                Este es un mensaje automático generado por el sistema de gestión. Por favor, no respondas a este correo.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

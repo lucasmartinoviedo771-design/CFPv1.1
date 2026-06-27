@@ -208,6 +208,39 @@ class ExamenIn(Schema):
     fecha: Optional[date] = None
     peso: Optional[float] = 0
 
+class ProgramaSlimOut(Schema):
+    id: int
+    nombre: str
+    codigo: str
+
+
+class BloqueNombreOut(Schema):
+    id: int
+    nombre: str
+
+
+class CohorteInscripcionOut(Schema):
+    id: int
+    nombre: str
+    programa: Optional[ProgramaSlimOut] = None
+    bloque: Optional[BloqueNombreOut] = None
+
+
+class ModuloInscripcionOut(Schema):
+    id: int
+    nombre: str
+    bloque: Optional[BloqueNombreOut] = None
+
+
+class InscripcionDetalleOut(Schema):
+    id: int
+    cohorte_id: int
+    modulo_id: Optional[int] = None
+    estado: str
+    cohorte: Optional[CohorteInscripcionOut] = None
+    modulo: Optional[ModuloInscripcionOut] = None
+
+
 class EstudianteOut(Schema):
     id: int
     apellido: str
@@ -237,6 +270,15 @@ class EstudianteListOut(Schema):
     telefono: Optional[str] = None
     fecha_nacimiento: Optional[date] = None
     trayectos: List[str] = []
+    created_at: Optional[datetime] = None
+
+    @staticmethod
+    def resolve_created_at(obj):
+        insc_dt = obj.created_at
+        for i in obj.inscripciones.all():
+            if i.created_at and (insc_dt is None or i.created_at < insc_dt):
+                insc_dt = i.created_at
+        return insc_dt
 
     @staticmethod
     def resolve_trayectos(obj):
@@ -304,6 +346,46 @@ class EstudianteDetailOut(EstudianteOut):
                 "respuestas_json": nd.respuestas_json
             }
         return None
+
+
+class EstudianteDetailVJOut(EstudianteDetailOut):
+    """EstudianteDetailOut extendido con inscripciones anidadas para el panel VJ."""
+    inscripciones: List[InscripcionDetalleOut] = []
+
+    @staticmethod
+    def resolve_inscripciones(obj):
+        result = []
+        for i in obj.inscripciones.all():
+            c = i.cohorte
+            m = i.modulo
+            result.append({
+                "id": i.id,
+                "cohorte_id": i.cohorte_id,
+                "modulo_id": i.modulo_id,
+                "estado": i.estado,
+                "cohorte": {
+                    "id": c.id,
+                    "nombre": c.nombre,
+                    "programa": {
+                        "id": c.programa.id,
+                        "nombre": c.programa.nombre,
+                        "codigo": c.programa.codigo,
+                    } if c and c.programa else None,
+                    "bloque": {
+                        "id": c.bloque.id,
+                        "nombre": c.bloque.nombre,
+                    } if c and c.bloque else None,
+                } if c else None,
+                "modulo": {
+                    "id": m.id,
+                    "nombre": m.nombre,
+                    "bloque": {
+                        "id": m.bloque.id,
+                        "nombre": m.bloque.nombre,
+                    } if m and m.bloque else None,
+                } if m else None,
+            })
+        return result
 
 
 class InscripcionOut(Schema):

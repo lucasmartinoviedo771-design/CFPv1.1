@@ -115,7 +115,7 @@ export default function Sidebar() {
   const userGroups = user?.groups || [];
   const isSuper = user?.is_superuser || user?.is_staff;
   
-  const hasVideojuegos = isSuper || userGroups.includes("Videojuegos") || userGroups.some(g => ['Admin', 'Secretaría', 'Regencia', 'Rector'].includes(g));
+  const hasVideojuegos = isSuper || userGroups.includes("Videojuegos") || userGroups.some(g => ['Admin', 'Secretaría', 'Regencia', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel', 'Rector'].includes(g));
   
   // Isolation: User exclusively belongs to the "Videojuegos" group
   const isOnlyVideojuegos = !isSuper && userGroups.includes("Videojuegos") && !userGroups.some(g => ['Admin', 'Secretaría', 'Regencia', 'Rector', 'Terciario', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel'].includes(g));

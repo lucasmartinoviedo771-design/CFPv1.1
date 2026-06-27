@@ -619,7 +619,7 @@ class EstudianteSlimSerializer(serializers.ModelSerializer):
 class ProgramaSlimSerializer(serializers.ModelSerializer):
     class Meta:
         model = Programa
-        fields = ['id', 'nombre']
+        fields = ['id', 'nombre', 'codigo']
 
 
 class BloqueSlimSerializer(serializers.ModelSerializer):

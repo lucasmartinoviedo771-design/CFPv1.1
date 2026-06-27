@@ -8,6 +8,7 @@ import { Aspirante, FeedbackState, OrderingState } from "../components/GestionPr
 import PreinscripcionesHeader from "../components/GestionPreinscripciones/PreinscripcionesHeader";
 import PreinscripcionesTable from "../components/GestionPreinscripciones/PreinscripcionesTable";
 import AspiranteDetailModal from "../components/GestionPreinscripciones/AspiranteDetailModal";
+import type { Inscripcion } from "../api/types";
 
 export default function GestionPreinscripciones() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -15,6 +16,8 @@ export default function GestionPreinscripciones() {
     const [approving, setApproving] = useState<boolean>(false);
     const [feedback, setFeedback] = useState<FeedbackState>({ open: false, message: "", severity: "success" });
     const [viewStudent, setViewStudent] = useState<Aspirante | null>(null);
+    const [viewStudentInscriptions, setViewStudentInscriptions] = useState<Inscripcion[]>([]);
+    const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false);
     const { user } = useContext(UserContext);
     const isAdmin = user?.groups?.includes('Admin');
     const isPreceptor = user?.groups?.includes('Preceptor');
@@ -67,10 +70,6 @@ export default function GestionPreinscripciones() {
                 case 'created_at':
                     valA = a.created_at || "";
                     valB = b.created_at || "";
-                    break;
-                case 'archivos':
-                    valA = (a.dni_digitalizado ? 1 : 0) + (a.titulo_secundario_digitalizado ? 1 : 0);
-                    valB = (b.dni_digitalizado ? 1 : 0) + (b.titulo_secundario_digitalizado ? 1 : 0);
                     break;
                 default:
                     return 0;
@@ -226,6 +225,25 @@ export default function GestionPreinscripciones() {
         }
     };
 
+    const handleOpenDetail = async (student: Aspirante) => {
+        setViewStudent(student);
+        setViewStudentInscriptions([]);
+        setIsLoadingDetail(true);
+        try {
+            const [studentRes, inscriptionsRes] = await Promise.all([
+                apiClientV2.get<Aspirante>(`/estudiantes/${student.id}`),
+                apiClientV2.get<Inscripcion[]>(`/inscripciones`, { params: { estudiante_id: student.id } })
+            ]);
+            setViewStudent(prev => prev && prev.id === student.id ? { ...prev, ...studentRes.data } : prev);
+            setViewStudentInscriptions(inscriptionsRes.data);
+        } catch (error) {
+            console.error("Error al cargar detalle del aspirante:", error);
+            setFeedback({ open: true, message: "Error al cargar los documentos y detalles del aspirante.", severity: "error" });
+        } finally {
+            setIsLoadingDetail(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in-up">
             <PreinscripcionesHeader
@@ -259,7 +277,7 @@ export default function GestionPreinscripciones() {
                     viewArchived={viewArchived}
                     canDelete={!!canDelete}
                     isAdmin={!!isAdmin}
-                    onViewStudent={setViewStudent}
+                    onViewStudent={handleOpenDetail}
                     onArchive={handleSingleArchive}
                     onDeletePhysical={handleSingleDeletePhysical}
                     onRestore={handleSingleRestore}
@@ -277,6 +295,8 @@ export default function GestionPreinscripciones() {
             {viewStudent && (
                 <AspiranteDetailModal
                     viewStudent={viewStudent}
+                    isLoadingDetail={isLoadingDetail}
+                    inscriptions={viewStudentInscriptions}
                     onClose={() => setViewStudent(null)}
                     onApprove={handleApproveSingleFromModal}
                 />

@@ -538,6 +538,18 @@ def crear_preinscripcion_publica(request):
     with transaction.atomic():
         estudiante = Estudiante.objects.filter(dni=dni).first()
         if not estudiante:
+            # Verificar si el email ya está registrado con otro DNI
+            email_incoming = (post.get("email", "") or "").strip().lower()
+            if email_incoming:
+                conflicto = Estudiante.objects.filter(email__iexact=email_incoming).first()
+                if conflicto:
+                    raise HttpError(
+                        400,
+                        "El correo electrónico ingresado ya está registrado con un DNI diferente. "
+                        "Si ya sos estudiante, ingresá el DNI asociado a ese correo. "
+                        "Si usás un correo diferente, volvé al paso anterior y modificalo."
+                    )
+        if not estudiante:
             estudiante = Estudiante(dni=dni)
 
         serializer_data = {

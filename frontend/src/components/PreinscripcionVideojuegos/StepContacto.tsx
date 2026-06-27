@@ -53,6 +53,11 @@ export function StepContacto({ form, onChange }: StepContactoProps) {
               </option>
             ))}
           </select>
+          {(form.nivel_educativo === "Primaria Completa" || form.nivel_educativo === "Secundaria Incompleta") && (
+            <div className="mt-2 p-4 rounded-2xl bg-orange-500/10 border border-orange-500/30 text-orange-300 text-sm font-medium animate-in fade-in duration-300">
+              ⚠️ Esta certificación requiere título secundario completo. Podés continuar con tu postulación, pero deberás presentarlo para completar tu inscripción.
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">

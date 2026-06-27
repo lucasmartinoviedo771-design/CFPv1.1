@@ -34,6 +34,8 @@ build/
 dist/
 .vite/
 *.local
+frontend/.pnpm-store/
+frontend/package-lock.json
 
 # Environment variables
 .env

@@ -87,9 +87,9 @@ def listar_estudiantes(
     if rango_edad:
         today = timezone.localdate()
         date_18 = today.replace(year=today.year - 18)
-        if rango_edad == "menores":
+        if rango_edad.lower() == "menores":
             qs = qs.filter(fecha_nacimiento__gt=date_18)
-        elif rango_edad == "mayores":
+        elif rango_edad.lower() == "mayores":
             qs = qs.filter(fecha_nacimiento__lte=date_18)
             
     return qs
@@ -130,9 +130,9 @@ def export_estudiantes(request, payload: ExportIn):
     if payload.rango_edad:
         today = timezone.localdate()
         date_18 = today.replace(year=today.year - 18)
-        if payload.rango_edad == "menores":
+        if payload.rango_edad.lower() == "menores":
             qs = qs.filter(fecha_nacimiento__gt=date_18)
-        elif payload.rango_edad == "mayores":
+        elif payload.rango_edad.lower() == "mayores":
             qs = qs.filter(fecha_nacimiento__lte=date_18)
     
     # 2. Preparar datos

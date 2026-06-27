@@ -4,10 +4,14 @@ import { apiClientV2 } from "../../api/client";
 import { User } from "../../api/types";
 
 const ROLES_VIDEOJUEGOS = [
-  { nombre: "Videojuegos", label: "Coordinador Videojuegos", color: "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30" },
   { nombre: "Admin", label: "Administrador General", color: "bg-purple-500/20 text-purple-300 border border-purple-500/30" },
   { nombre: "Secretaría", label: "Secretaría General", color: "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" },
+  { nombre: "Regencia", label: "Regencia", color: "bg-pink-500/20 text-pink-300 border border-pink-500/30" },
+  { nombre: "Coordinación Docente", label: "Coordinación Docente", color: "bg-amber-500/20 text-amber-300 border border-amber-500/30" },
   { nombre: "Docente", label: "Docente / Instructor", color: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" },
+  { nombre: "Preceptor", label: "Preceptor", color: "bg-blue-500/20 text-blue-300 border border-blue-500/30" },
+  { nombre: "Bedel", label: "Bedel", color: "bg-orange-500/20 text-orange-300 border border-orange-500/30" },
+  { nombre: "Rector", label: "Rector", color: "bg-red-500/20 text-red-300 border border-red-500/30" },
 ];
 
 interface RoleBadgeProps {
@@ -107,7 +111,7 @@ interface NuevoUsuarioModalProps {
 
 function NuevoUsuarioModal({ onClose, onSaved }: NuevoUsuarioModalProps) {
   const [form, setForm] = useState({ username: "", email: "", first_name: "", last_name: "", password: "" });
-  const [grupos, setGrupos] = useState<string[]>(["Videojuegos"]);
+  const [grupos, setGrupos] = useState<string[]>([]);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");

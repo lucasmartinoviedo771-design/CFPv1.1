@@ -17,6 +17,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
+ARG CACHEBUST=1
 COPY . .
 
 COPY entrypoint.sh /entrypoint.sh

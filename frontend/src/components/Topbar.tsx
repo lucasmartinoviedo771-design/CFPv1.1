@@ -20,7 +20,7 @@ export default function Topbar({ title }: TopbarProps) {
 
   const tieneCFP = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_CFP.includes(g)));
   const tieneTerciario = user && (user.is_superuser || user.is_staff || user.groups?.some(g => GRUPOS_TERCIARIO.includes(g)));
-  const tieneVJ = user && (user.is_superuser || user.is_staff || user.groups?.includes("Videojuegos"));
+  const tieneVJ = user && (user.is_superuser || user.is_staff || user.groups?.some(g => ['Admin', 'Secretaría', 'Regencia', 'Coordinación Docente', 'Docente', 'Preceptor', 'Bedel', 'Rector', 'Videojuegos'].includes(g)));
 
   let areas = 0;
   if (tieneCFP) areas++;

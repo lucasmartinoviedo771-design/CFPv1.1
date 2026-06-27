@@ -4,6 +4,9 @@ WORKDIR /app
 RUN npm install -g pnpm@10
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
+
+ARG CACHEBUST=1
+
 COPY . .
 # En producción, el proxy de nginx redigirá /api al backend
 ENV VITE_API_BASE=/api

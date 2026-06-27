@@ -47,6 +47,7 @@ export default function CalificacionesTab() {
   const [selectedModulo, setSelectedModulo] = useState("");
   const [selectedExamen, setSelectedExamen] = useState("");
 
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -86,14 +87,14 @@ export default function CalificacionesTab() {
       const exObj = examenes.find(e => String(e.id) === selectedExamen);
       if (!exObj) return;
 
-      // 1. Fetch students eligible for this examen (enrolled in the modulo or program)
-      const params: Record<string, string | number> = {};
+      // 1. Fetch students eligible for this examen — solo CURSANDO (excluye preinscriptos)
+      const params: Record<string, string | number> = { estado: "CURSANDO" };
       if (exObj.modulo_id) {
         params.modulo_id = exObj.modulo_id;
       } else if (exObj.bloque_id) {
         params.bloque_id = exObj.bloque_id;
       }
-      
+
       const { data: inscs } = await apiClientV2.get("/videojuegos/inscripciones", { params });
       const listInscs = Array.isArray(inscs) ? inscs : [];
       
@@ -137,6 +138,7 @@ export default function CalificacionesTab() {
         }
       });
 
+      setSearch("");
       setStudents(studentList);
       setNotas(initialGrid);
     } catch (err) {
@@ -220,6 +222,15 @@ export default function CalificacionesTab() {
     }
   };
 
+  const filteredStudents = useMemo(() => {
+    if (!search.trim()) return students;
+    const q = search.toLowerCase().trim();
+    return students.filter(s =>
+      `${s.apellido} ${s.nombre}`.toLowerCase().includes(q) ||
+      s.dni.includes(q)
+    );
+  }, [students, search]);
+
   return (
     <div className="space-y-6">
       {error && (
@@ -235,7 +246,7 @@ export default function CalificacionesTab() {
 
       {/* Selectors card */}
       <div className="p-6 rounded-[2rem] bg-[#0c122c]/50 border border-indigo-500/10 backdrop-blur-xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-indigo-300">Módulo (Filtro)</label>
             <select
@@ -248,6 +259,20 @@ export default function CalificacionesTab() {
                 <option key={m.id} value={m.id} className="bg-[#0c122c]">{m.nombre}</option>
               ))}
             </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-indigo-300">Buscar Alumno</label>
+            <div className="relative">
+              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Nombre, apellido o DNI..."
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-[#0c122c] border border-indigo-500/15 text-white text-sm font-semibold focus:border-[#00ccff]/70 focus:outline-none placeholder-indigo-600"
+              />
+            </div>
           </div>
 
           <div className="space-y-1">
@@ -296,7 +321,13 @@ export default function CalificacionesTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-indigo-500/5 bg-transparent">
-                {students.map((student) => {
+                {filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-10 text-center text-indigo-400 italic text-sm">
+                      No se encontraron alumnos con esa búsqueda.
+                    </td>
+                  </tr>
+                ) : filteredStudents.map((student) => {
                   const record = notas[student.id];
                   const calif = record?.calificacion || "";
                   const approved = record?.aprobado || false;

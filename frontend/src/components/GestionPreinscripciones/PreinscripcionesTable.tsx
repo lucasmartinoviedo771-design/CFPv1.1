@@ -94,18 +94,8 @@ export default function PreinscripcionesTable({
             </th>
             <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => onSort("created_at")}>
               <div className="flex items-center gap-1">
-                Fecha{" "}
+                Alumno desde{" "}
                 {ordering.field === "created_at" ? (
-                  ordering.direction === "asc" ? "↑" : "↓"
-                ) : (
-                  <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>
-                )}
-              </div>
-            </th>
-            <th className="px-6 py-3 cursor-pointer hover:text-white group" onClick={() => onSort("archivos")}>
-              <div className="flex items-center gap-1">
-                Archivos{" "}
-                {ordering.field === "archivos" ? (
                   ordering.direction === "asc" ? "↑" : "↓"
                 ) : (
                   <span className="opacity-0 group-hover:opacity-50 text-[10px]">⇅</span>
@@ -118,7 +108,7 @@ export default function PreinscripcionesTable({
         <tbody className="divide-y divide-indigo-500/10">
           {isLoading ? (
             <tr>
-              <td colSpan={7} className="text-center py-8 text-indigo-300">
+              <td colSpan={6} className="text-center py-8 text-indigo-300">
                 <Loader className="animate-spin inline mr-2" />
                 Cargando aspirantes...
               </td>
@@ -179,38 +169,6 @@ export default function PreinscripcionesTable({
                   </div>
                 </td>
                 <td className="px-6 py-3 text-indigo-300">{formatDateDisplay(s.created_at)}</td>
-                <td className="px-6 py-3">
-                  <div className="flex gap-2">
-                    {s.dni_digitalizado ? (
-                      <a
-                        href={getMediaUrl(s.dni_digitalizado)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/40 px-2 py-1 rounded text-cyan-300 transition-colors"
-                      >
-                        <FileText size={12} /> DNI
-                      </a>
-                    ) : (
-                      <span className="text-xs text-red-400/60 flex items-center gap-1">
-                        <XCircle size={12} /> DNI
-                      </span>
-                    )}
-                    {s.titulo_secundario_digitalizado ? (
-                      <a
-                        href={getMediaUrl(s.titulo_secundario_digitalizado)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/40 px-2 py-1 rounded text-emerald-300 transition-colors"
-                      >
-                        <FileText size={12} /> Título
-                      </a>
-                    ) : (
-                      <span className="text-xs text-gray-500 flex items-center gap-1">
-                        <XCircle size={12} /> Título
-                      </span>
-                    )}
-                  </div>
-                </td>
                 <td className="px-6 py-3 text-right">
                   <div className="flex justify-end gap-1">
                     <button
@@ -254,7 +212,7 @@ export default function PreinscripcionesTable({
           )}
           {!isLoading && sortedAndFiltered.length === 0 && (
             <tr>
-              <td colSpan={7} className="text-center py-12 text-indigo-300">
+              <td colSpan={6} className="text-center py-12 text-indigo-300">
                 {viewArchived ? "No hay estudiantes en la papelera." : "No hay preinscripciones pendientes."}
               </td>
             </tr>
