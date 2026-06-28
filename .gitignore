@@ -101,3 +101,7 @@ Temporal/
 id_rsa_temp
 institutional_web/
 
+# Backup scripts and files
+create_full_backup.sh
+RESTORE_INSTRUCTIONS.md
+
