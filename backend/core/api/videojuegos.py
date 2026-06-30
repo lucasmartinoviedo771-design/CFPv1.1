@@ -142,12 +142,12 @@ def actualizar_preinscripcion_videojuegos(
                 updated_at=timezone.now()
             )
             
-            # Disparar correo de bienvenida del campus
+            # Disparar correo de aceptación VJ con claves de campus
             try:
-                from core.services.email_service import enviar_correo_bienvenida
-                enviar_correo_bienvenida(estudiante.id)
+                from core.services.email_service import enviar_correo_aceptacion_videojuegos
+                enviar_correo_aceptacion_videojuegos(estudiante.id)
             except Exception as e:
-                logger.error(f"Error al enviar correo de bienvenida de Moodle: {e}")
+                logger.error(f"Error al enviar correo de aceptación VJ: {e}")
                 
         elif estado == "rechazado":
             # Cambiar inscripciones de VJ a INACTIVO

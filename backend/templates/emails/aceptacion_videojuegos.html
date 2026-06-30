@@ -76,11 +76,38 @@
                 <p style="margin: 10px 0;">
                     <a href="https://drive.google.com/file/d/1yeBuJ3bHig6-pLYmiqZ0UW1mx9r81Mpe/view" style="color: #0284c7; font-weight: 700; font-size: 14px;">📽️ Ver tutorial: cómo crear tu usuario →</a>
                 </p>
-                <p style="margin: 14px 0 10px 0; font-size: 14.5px; color: #0c4a6e;"><strong>Paso 2:</strong> Una vez que tengas tu usuario activo, ingresá al campus y buscá los cursos de Videojuegos:</p>
-                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 8px;">
+                <p style="margin: 14px 0 10px 0; font-size: 14.5px; color: #0c4a6e;"><strong>Paso 2:</strong> Una vez que tengas tu usuario activo, ingresá al campus con el siguiente enlace y buscá los cursos de Videojuegos. Usá la clave de automatriculación correspondiente:</p>
+
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 12px 0; background-color: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+                    <tr>
+                        <td style="padding: 14px 18px; border-bottom: 1px solid #bae6fd;">
+                            <p style="margin: 0 0 4px 0; font-size: 13px; color: #0c4a6e; font-weight: 700;">🔑 Materias obligatorias (Diseño, IA y Producción de Videojuegos):</p>
+                            <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 15px; color: #0284c7; font-weight: 700; letter-spacing: 0.5px;">{{ clave_transversal }}</p>
+                        </td>
+                    </tr>
+                    {% if clave_arte %}
+                    <tr>
+                        <td style="padding: 12px 18px; border-bottom: 1px solid #bae6fd;">
+                            <p style="margin: 0 0 4px 0; font-size: 13px; color: #0c4a6e; font-weight: 700;">🔑 Módulo de especialidad — Arte y Animación:</p>
+                            <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 15px; color: #0284c7; font-weight: 700; letter-spacing: 0.5px;">{{ clave_arte }}</p>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% if clave_prog %}
+                    <tr>
+                        <td style="padding: 12px 18px;">
+                            <p style="margin: 0 0 4px 0; font-size: 13px; color: #0c4a6e; font-weight: 700;">🔑 Módulo de especialidad — Programación de Entornos Virtuales:</p>
+                            <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 15px; color: #0284c7; font-weight: 700; letter-spacing: 0.5px;">{{ clave_prog }}</p>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+                <p style="font-size: 12px; color: #0c4a6e; font-style: italic; margin: 6px 0 14px 0;">Copiá y pegá las claves tal como aparecen para evitar errores. Solo usá la clave del módulo en el que te inscribiste.</p>
+
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 4px;">
                     <tr>
                         <td align="center" bgcolor="#0284c7" style="border-radius: 8px; padding: 12px 24px;">
-                            <a href="https://politecnico.ar/campus/course/index.php?categoryid=31" style="color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px;">Ingresar al Campus →</a>
+                            <a href="{{ curso_vj_url }}" style="color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px;">Ingresar al Campus →</a>
                         </td>
                     </tr>
                 </table>
@@ -97,15 +124,15 @@
             </div>
 
             <p style="margin-top: 35px; text-align: center; font-size: 18px; color: #f26b21;"><strong>¡Bienvenido/a al mundo del desarrollo de videojuegos!</strong></p>
-        </div>
 
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr>
-                    <td align="center" bgcolor="#0b1c3c" style="padding:15px 20px;">
-                      <img src="https://gestion.politecnico.ar/logos_vj_inst_v2.png" width="560" style="display:block; border:0; max-width:100%;" alt="Instituciones Convocantes">
-                    </td>
-                  </tr>
-                </table>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 -25px; width: calc(100% + 50px);">
+              <tr>
+                <td align="center" bgcolor="#0b1c3c" style="padding:15px 20px;">
+                  <img src="https://gestion.politecnico.ar/logos_vj_inst_v2.png" width="560" style="display:block; border:0; max-width:100%;" alt="Instituciones Convocantes">
+                </td>
+              </tr>
+            </table>
+        </div>
 
         <div class="footer">
             <p><strong>Centro Politécnico Superior "Malvinas Argentinas"</strong></p>

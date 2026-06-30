@@ -339,8 +339,23 @@ def enviar_correo_aceptacion_videojuegos(estudiante_id: int) -> bool:
         from django.core.mail.backends.smtp import EmailBackend
 
         estudiante = Estudiante.objects.get(id=estudiante_id)
+
+        clave_arte = None
+        clave_prog = None
+        for insc in estudiante.inscripciones.select_related('cohorte__bloque').all():
+            bloque = (insc.cohorte.bloque.nombre if insc.cohorte and insc.cohorte.bloque else "") or ""
+            b = bloque.lower()
+            if "arte" in b or "animaci" in b:
+                clave_arte = "AniD.VP.2026"
+            elif "programaci" in b or "entornos" in b:
+                clave_prog = "ProgV#$2026"
+
         html_content = render_to_string('emails/aceptacion_videojuegos.html', {
-            'nombre': estudiante.nombre
+            'nombre': estudiante.nombre,
+            'clave_transversal': 'Diñ.Vjg.&',
+            'clave_arte': clave_arte,
+            'clave_prog': clave_prog,
+            'curso_vj_url': 'https://politecnico.ar/campus/course/index.php?categoryid=31',
         })
 
         connection = EmailBackend(
@@ -362,7 +377,7 @@ def enviar_correo_aceptacion_videojuegos(estudiante_id: int) -> bool:
         email.content_subtype = "html"
 
         resources_dir = os.path.join(settings.BASE_DIR, "core", "resources", "emails")
-        for pdf_name in ["Normas de Convivencia Digital.pdf", "CPDDVJ.pdf"]:
+        for pdf_name in ["Normas de Convivencia Digital.pdf", "VDJ PARA CORREO act.pdf"]:
             pdf_path = os.path.join(resources_dir, pdf_name)
             if os.path.exists(pdf_path):
                 email.attach_file(pdf_path)
