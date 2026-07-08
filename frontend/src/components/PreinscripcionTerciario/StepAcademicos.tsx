@@ -40,7 +40,7 @@ export function StepAcademicos({ form, onChange, onSelect }: StepAcademicosProps
       </Field>
       {form.posee_estudios_superiores === "si" && (
         <div className="space-y-5 p-5 rounded-2xl bg-[#b8ccd8]/30 border border-[#b8ccd8] animate-in fade-in duration-300">
-          <Field label="¿Los finalizaste?">
+          <Field label="¿Los finalizaste?" required>
             <RadioGroup
               name="estudios_superiores_finalizado"
               value={form.estudios_superiores_finalizado}
@@ -51,7 +51,7 @@ export function StepAcademicos({ form, onChange, onSelect }: StepAcademicosProps
               ]}
             />
           </Field>
-          <Field label="Nombre de la carrera">
+          <Field label="Nombre de la carrera" required>
             <input
               name="estudios_superiores_carrera"
               value={form.estudios_superiores_carrera}

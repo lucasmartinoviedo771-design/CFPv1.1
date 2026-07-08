@@ -97,27 +97,55 @@ def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
             return  # No hay cohorte activa ni próxima
         mod2 = Modulo.objects.get(id=MODULO_HD2_ID)
 
+        # Mapear nivel educativo
+        nivel = "Secundaria Completa"
+        if preinscripcion.finalizo_secundaria == "no":
+            nivel = "Secundaria Incompleta"
+        elif preinscripcion.posee_estudios_superiores:
+            if preinscripcion.estudios_superiores_finalizado:
+                nivel = "Terciaria/Universitaria Completa"
+            else:
+                nivel = "Terciaria/Universitaria Incompleta"
+
+        # Mapear ciudad a partir de localidad
+        ciudad_map = {
+            "ushuaia": "Ushuaia",
+            "rg_sur": "Río Grande",
+            "rg_norte": "Río Grande",
+            "tolhuin": "Tolhuin",
+            "zona_rural": "Zona Rural",
+        }
+        ciudad = ciudad_map.get(preinscripcion.localidad, "")
+
+        fields_to_update = {
+            "apellido": preinscripcion.apellido,
+            "nombre": preinscripcion.nombre,
+            "email": preinscripcion.email,
+            "telefono": (preinscripcion.celular or "")[:10],
+            "domicilio": preinscripcion.domicilio,
+            "fecha_nacimiento": preinscripcion.fecha_nacimiento,
+            "sexo": preinscripcion.sexo,
+            "nacionalidad": preinscripcion.nacionalidad,
+            "cuit": preinscripcion.cuil,
+            "posee_pc": preinscripcion.posee_pc,
+            "posee_conectividad": preinscripcion.posee_internet,
+            "nivel_educativo": nivel,
+            "ciudad": ciudad,
+        }
+
         # Buscar o crear estudiante por DNI
         estudiante = Estudiante.objects.filter(dni=preinscripcion.dni).first()
         if not estudiante:
             estudiante = Estudiante.objects.create(
                 dni=preinscripcion.dni,
-                apellido=preinscripcion.apellido,
-                nombre=preinscripcion.nombre,
-                email=preinscripcion.email,
-                telefono=(preinscripcion.celular or "")[:10],
-                domicilio=preinscripcion.domicilio,
-                fecha_nacimiento=preinscripcion.fecha_nacimiento,
-                sexo=preinscripcion.sexo,
-                nacionalidad=preinscripcion.nacionalidad,
                 estatus="Preinscripto",
+                **fields_to_update
             )
         else:
-            # Actualizar datos de contacto con la nueva preinscripción
-            estudiante.email = preinscripcion.email
-            estudiante.telefono = preinscripcion.celular
-            estudiante.domicilio = preinscripcion.domicilio
-            estudiante.save(update_fields=["email", "telefono", "domicilio", "updated_at"])
+            # Actualizar todos los campos
+            for k, v in fields_to_update.items():
+                setattr(estudiante, k, v)
+            estudiante.save()
 
         # Crear inscripción si no existe
         inscripcion, created = Inscripcion.objects.get_or_create(
@@ -243,11 +271,22 @@ def _enviar_confirmacion(preinscripcion: PreinscripcionTerciario):
         </html>
         """
         
+        from django.core.mail.backends.smtp import EmailBackend
+        connection = EmailBackend(
+            host=settings.CFP_EMAIL_HOST,
+            port=settings.CFP_EMAIL_PORT,
+            username=settings.CFP_EMAIL_HOST_USER,
+            password=settings.CFP_EMAIL_HOST_PASSWORD,
+            use_tls=settings.CFP_EMAIL_USE_TLS,
+            use_ssl=settings.CFP_EMAIL_USE_SSL,
+        )
+        
         email = EmailMessage(
             subject=subject,
             body=html_content,
-            from_email=settings.TERCIARIO_FROM_EMAIL,
+            from_email=settings.CFP_FROM_EMAIL,
             to=[preinscripcion.email],
+            connection=connection,
         )
         email.content_subtype = "html"
         email.send(fail_silently=True)
@@ -361,16 +400,71 @@ def set_config_preinscripcion(
 
 from core.utils.rate_limit import ip_rate_limit
 
+from django.core.signing import Signer, BadSignature
+
+@router.get("/preinscripcion-terciario/data", auth=None)
+def get_preinscripcion_data_by_token(request, token: str):
+    try:
+        dni = Signer().unsign(token)
+    except BadSignature:
+        raise HttpError(400, "El enlace de completado de datos es inválido o ha expirado.")
+    
+    # Usar get_object_or_404 de django.shortcuts (ya importado o ninja tiene su wrapper)
+    from django.shortcuts import get_object_or_404
+    preinscripcion = get_object_or_404(PreinscripcionTerciario, dni=dni)
+    
+    return {
+        "email": preinscripcion.email,
+        "apellido": preinscripcion.apellido,
+        "nombre": preinscripcion.nombre,
+        "dni": preinscripcion.dni,
+        "cuil": preinscripcion.cuil,
+        "sexo": preinscripcion.sexo,
+        "celular": preinscripcion.celular,
+        "fecha_nacimiento": str(preinscripcion.fecha_nacimiento) if preinscripcion.fecha_nacimiento else "",
+        "localidad_nacimiento": preinscripcion.localidad_nacimiento,
+        "provincia_nacimiento": preinscripcion.provincia_nacimiento,
+        "nacionalidad": preinscripcion.nacionalidad,
+        "domicilio": preinscripcion.domicilio,
+        "localidad": preinscripcion.localidad,
+        "finalizo_secundaria": preinscripcion.finalizo_secundaria,
+        "posee_estudios_superiores": preinscripcion.posee_estudios_superiores,
+        "estudios_superiores_finalizado": preinscripcion.estudios_superiores_finalizado,
+        "estudios_superiores_carrera": preinscripcion.estudios_superiores_carrera,
+        "posee_pc": preinscripcion.posee_pc,
+        "posee_internet": preinscripcion.posee_internet,
+        "pueblo_originario": preinscripcion.pueblo_originario,
+        "posee_discapacidad": preinscripcion.posee_discapacidad,
+        "tipo_discapacidad": preinscripcion.tipo_discapacidad,
+        "posee_cud": preinscripcion.posee_cud,
+        "apoyo_inclusion": preinscripcion.apoyo_inclusion,
+        "requiere_apoyo_especifico": preinscripcion.requiere_apoyo_especifico,
+        "descripcion_apoyo": preinscripcion.descripcion_apoyo,
+    }
+
+
+from core.utils.rate_limit import ip_rate_limit
+
 @router.post("/preinscripcion-terciario", auth=None)
 @ip_rate_limit(limit=10, period=3600)
 def crear_preinscripcion_terciario(request):
     """Acepta multipart/form-data con archivos opcionales."""
-    cfg = ConfiguracionPreinscripcionTerciario.get()
-    if not _esta_abierta(cfg):
-        raise HttpError(403, cfg.mensaje_cierre or "Las preinscripciones están cerradas.")
-
     data = request.POST
     files = request.FILES
+
+    token = data.get("token", "")
+    is_update = False
+    token_dni = ""
+    if token:
+        try:
+            token_dni = Signer().unsign(token)
+            is_update = True
+        except BadSignature:
+            raise HttpError(400, "El enlace de completado de datos es inválido o ha expirado.")
+
+    cfg = ConfiguracionPreinscripcionTerciario.get()
+    if not _esta_abierta(cfg) and not is_update:
+        raise HttpError(403, cfg.mensaje_cierre or "Las preinscripciones están cerradas.")
 
     from core.utils.recaptcha import verify_recaptcha
     recaptcha_token = data.get("recaptcha_token", "")
@@ -387,8 +481,12 @@ def crear_preinscripcion_terciario(request):
     if len(dni) != 8:
         raise HttpError(400, "El DNI debe tener 8 dígitos.")
 
-    if PreinscripcionTerciario.objects.filter(dni=dni).exists():
-        raise HttpError(400, "Ya existe una preinscripción registrada con ese DNI.")
+    if is_update and token_dni != dni:
+        raise HttpError(400, "El DNI no coincide con el del enlace de completado.")
+
+    if not is_update:
+        if PreinscripcionTerciario.objects.filter(dni=dni).exists():
+            raise HttpError(400, "Ya existe una preinscripción registrada con ese DNI.")
 
     email = data.get("email", "").strip().lower()
     if email:
@@ -410,49 +508,88 @@ def crear_preinscripcion_terciario(request):
 
     _validar_archivo(files.get("dni_digitalizado"), "DNI")
     _validar_archivo(files.get("titulo_digitalizado"), "Título secundario")
+    loc_nac = data.get("localidad_nacimiento", "").strip()
+    if loc_nac == "Otra":
+        loc_nac = data.get("localidad_nacimiento_otra", "").strip()
 
     try:
-        preinscripcion = PreinscripcionTerciario.objects.create(
-            email=data.get("email", "").strip(),
-            apellido=data.get("apellido", "").strip(),
-            nombre=data.get("nombre", "").strip(),
-            dni=dni,
-            cuil=data.get("cuil", "").strip(),
-            sexo=data.get("sexo", ""),
-            celular=data.get("celular", "").strip(),
-            fecha_nacimiento=data.get("fecha_nacimiento", ""),
-            localidad_nacimiento=data.get("localidad_nacimiento", "").strip(),
-            provincia_nacimiento=data.get("provincia_nacimiento", "").strip(),
-            nacionalidad=data.get("nacionalidad", "Argentina").strip(),
-            domicilio=data.get("domicilio", "").strip(),
-            localidad=localidad,
-            finalizo_secundaria=data.get("finalizo_secundaria", ""),
-            posee_estudios_superiores=to_bool(data.get("posee_estudios_superiores", False)),
-            estudios_superiores_finalizado=to_bool_or_none(data.get("estudios_superiores_finalizado")),
-            estudios_superiores_carrera=data.get("estudios_superiores_carrera", ""),
-            posee_pc=to_bool(data.get("posee_pc", False)),
-            posee_internet=to_bool(data.get("posee_internet", False)),
-            pueblo_originario=to_bool(data.get("pueblo_originario", False)),
-            posee_discapacidad=to_bool(data.get("posee_discapacidad", False)),
-            tipo_discapacidad=data.get("tipo_discapacidad", ""),
-            posee_cud=to_bool_or_none(data.get("posee_cud")),
-            apoyo_inclusion=data.get("apoyo_inclusion", ""),
-            requiere_apoyo_especifico=to_bool_or_none(data.get("requiere_apoyo_especifico")),
-            descripcion_apoyo=data.get("descripcion_apoyo", ""),
-            dni_digitalizado=files.get("dni_digitalizado") or None,
-            titulo_digitalizado=files.get("titulo_digitalizado") or None,
-            estado="aprobada",  # Se auto-aprueba
-        )
+        if is_update:
+            preinscripcion = PreinscripcionTerciario.objects.get(dni=dni)
+            preinscripcion.email = data.get("email", "").strip()
+            preinscripcion.apellido = data.get("apellido", "").strip()
+            preinscripcion.nombre = data.get("nombre", "").strip()
+            preinscripcion.cuil = data.get("cuil", "").strip()
+            preinscripcion.sexo = data.get("sexo", "")
+            preinscripcion.celular = data.get("celular", "").strip()
+            preinscripcion.fecha_nacimiento = data.get("fecha_nacimiento", "")
+            preinscripcion.localidad_nacimiento = loc_nac
+            preinscripcion.provincia_nacimiento = data.get("provincia_nacimiento", "").strip()
+            preinscripcion.nacionalidad = data.get("nacionalidad", "Argentina").strip()
+            preinscripcion.domicilio = data.get("domicilio", "").strip()
+            preinscripcion.localidad = localidad
+            preinscripcion.finalizo_secundaria = data.get("finalizo_secundaria", "")
+            preinscripcion.posee_estudios_superiores = to_bool(data.get("posee_estudios_superiores", False))
+            preinscripcion.estudios_superiores_finalizado = to_bool_or_none(data.get("estudios_superiores_finalizado"))
+            preinscripcion.estudios_superiores_carrera = data.get("estudios_superiores_carrera", "")
+            preinscripcion.posee_pc = to_bool(data.get("posee_pc", False))
+            preinscripcion.posee_internet = to_bool(data.get("posee_internet", False))
+            preinscripcion.pueblo_originario = to_bool(data.get("pueblo_originario", False))
+            preinscripcion.posee_discapacidad = to_bool(data.get("posee_discapacidad", False))
+            preinscripcion.tipo_discapacidad = data.get("tipo_discapacidad", "")
+            preinscripcion.posee_cud = to_bool_or_none(data.get("posee_cud"))
+            preinscripcion.apoyo_inclusion = data.get("apoyo_inclusion", "")
+            preinscripcion.requiere_apoyo_especifico = to_bool_or_none(data.get("requiere_apoyo_especifico"))
+            preinscripcion.descripcion_apoyo = data.get("descripcion_apoyo", "")
+            if files.get("dni_digitalizado"):
+                preinscripcion.dni_digitalizado = files.get("dni_digitalizado")
+            if files.get("titulo_digitalizado"):
+                preinscripcion.titulo_digitalizado = files.get("titulo_digitalizado")
+            preinscripcion.save()
+        else:
+            preinscripcion = PreinscripcionTerciario.objects.create(
+                email=data.get("email", "").strip(),
+                apellido=data.get("apellido", "").strip(),
+                nombre=data.get("nombre", "").strip(),
+                dni=dni,
+                cuil=data.get("cuil", "").strip(),
+                sexo=data.get("sexo", ""),
+                celular=data.get("celular", "").strip(),
+                fecha_nacimiento=data.get("fecha_nacimiento", ""),
+                localidad_nacimiento=loc_nac,
+                provincia_nacimiento=data.get("provincia_nacimiento", "").strip(),
+                nacionalidad=data.get("nacionalidad", "Argentina").strip(),
+                domicilio=data.get("domicilio", "").strip(),
+                localidad=localidad,
+                finalizo_secundaria=data.get("finalizo_secundaria", ""),
+                posee_estudios_superiores=to_bool(data.get("posee_estudios_superiores", False)),
+                estudios_superiores_finalizado=to_bool_or_none(data.get("estudios_superiores_finalizado")),
+                estudios_superiores_carrera=data.get("estudios_superiores_carrera", ""),
+                posee_pc=to_bool(data.get("posee_pc", False)),
+                posee_internet=to_bool(data.get("posee_internet", False)),
+                pueblo_originario=to_bool(data.get("pueblo_originario", False)),
+                posee_discapacidad=to_bool(data.get("posee_discapacidad", False)),
+                tipo_discapacidad=data.get("tipo_discapacidad", ""),
+                posee_cud=to_bool_or_none(data.get("posee_cud")),
+                apoyo_inclusion=data.get("apoyo_inclusion", ""),
+                requiere_apoyo_especifico=to_bool_or_none(data.get("requiere_apoyo_especifico")),
+                descripcion_apoyo=data.get("descripcion_apoyo", ""),
+                dni_digitalizado=files.get("dni_digitalizado") or None,
+                titulo_digitalizado=files.get("titulo_digitalizado") or None,
+                estado="aprobada",
+            )
     except HttpError:
         raise
     except Exception:
         raise HttpError(400, "Error al guardar la preinscripción. Revisá los datos e intentá nuevamente.")
 
-    # 1. Enviar el correo de confirmación de preinscripción inmediatamente
-    threading.Thread(target=_enviar_confirmacion, args=(preinscripcion,)).start()
-    
-    # 2. Inscribir en Habilidades Digitales y enviar el segundo correo con 30 segundos de retraso
-    threading.Thread(target=_inscribir_hd_con_retraso, args=(preinscripcion,)).start()
+    if is_update:
+        # Si es una actualización, sincronizar inmediatamente los datos con Estudiante
+        _inscribir_hd(preinscripcion)
+    else:
+        # Enviar el correo de confirmación de preinscripción inmediatamente
+        threading.Thread(target=_enviar_confirmacion, args=(preinscripcion,)).start()
+        # Inscribir en Habilidades Digitales y enviar el segundo correo con 30 segundos de retraso
+        threading.Thread(target=_inscribir_hd_con_retraso, args=(preinscripcion,)).start()
 
     return {"id": preinscripcion.id, "mensaje": "Preinscripción registrada correctamente."}
 
@@ -748,13 +885,12 @@ def listar_alumnos_terciario(
             "apellido": e.apellido,
             "nombre": e.nombre,
             "dni": e.dni,
+            "cuit": e.cuit,
             "email": e.email,
             "telefono": e.telefono,
             "sexo": e.sexo,
             "fecha_nacimiento": str(e.fecha_nacimiento) if e.fecha_nacimiento else None,
             "domicilio": e.domicilio,
-            "barrio": e.barrio,
-            "ciudad": e.ciudad,
             "nacionalidad": e.nacionalidad,
             "nivel_educativo": e.nivel_educativo,
             "estatus": e.estatus,
@@ -768,11 +904,15 @@ def listar_alumnos_terciario(
             "provincia_nacimiento": preinsc.provincia_nacimiento if preinsc else "",
             "finalizo_secundaria": preinsc.finalizo_secundaria if preinsc else "",
             "posee_estudios_superiores": preinsc.posee_estudios_superiores if preinsc else False,
+            "estudios_superiores_finalizado": ("si" if preinsc.estudios_superiores_finalizado else "no") if preinsc and preinsc.estudios_superiores_finalizado is not None else "",
             "carrera_superior": preinsc.estudios_superiores_carrera if preinsc else "",
             "pueblo_originario": preinsc.pueblo_originario if preinsc else False,
             "posee_discapacidad": preinsc.posee_discapacidad if preinsc else False,
             "tipo_discapacidad": preinsc.tipo_discapacidad if preinsc else "",
             "posee_cud": preinsc.posee_cud if preinsc else None,
+            "apoyo_inclusion": preinsc.apoyo_inclusion if preinsc else "",
+            "requiere_apoyo_especifico": preinsc.requiere_apoyo_especifico if preinsc else None,
+            "descripcion_apoyo": preinsc.descripcion_apoyo if preinsc else "",
             "estado_preinscripcion": preinsc.estado if preinsc else "",
             "observaciones": preinsc.observaciones if preinsc else "",
         })
@@ -807,13 +947,12 @@ def exportar_cohorte_terciario(request, cohorte_id: Optional[int] = None):
             "apellido": e.apellido,
             "nombre": e.nombre,
             "dni": e.dni,
+            "cuit": e.cuit,
             "email": e.email,
             "telefono": e.telefono,
             "sexo": e.sexo,
             "fecha_nacimiento": str(e.fecha_nacimiento) if e.fecha_nacimiento else None,
             "domicilio": e.domicilio,
-            "barrio": e.barrio,
-            "ciudad": e.ciudad,
             "nacionalidad": e.nacionalidad,
             "nivel_educativo": e.nivel_educativo,
             "posee_pc": e.posee_pc,
@@ -827,12 +966,16 @@ def exportar_cohorte_terciario(request, cohorte_id: Optional[int] = None):
             "provincia_nacimiento": preinsc.provincia_nacimiento if preinsc else "",
             "finalizo_secundaria": preinsc.get_finalizo_secundaria_display() if preinsc else "",
             "posee_estudios_superiores": preinsc.posee_estudios_superiores if preinsc else "",
+            "estudios_superiores_finalizado": ("si" if preinsc.estudios_superiores_finalizado else "no") if preinsc and preinsc.estudios_superiores_finalizado is not None else "",
             "carrera_superior": preinsc.estudios_superiores_carrera if preinsc else "",
             "posee_internet": preinsc.posee_internet if preinsc else "",
             "pueblo_originario": preinsc.pueblo_originario if preinsc else "",
             "posee_discapacidad": preinsc.posee_discapacidad if preinsc else "",
             "tipo_discapacidad": (preinsc.get_tipo_discapacidad_display() if preinsc.posee_discapacidad else "") if preinsc else "",
             "posee_cud": preinsc.posee_cud if preinsc else "",
+            "apoyo_inclusion": preinsc.apoyo_inclusion if preinsc else "",
+            "requiere_apoyo_especifico": preinsc.requiere_apoyo_especifico if preinsc else None,
+            "descripcion_apoyo": preinsc.descripcion_apoyo if preinsc else "",
             "observaciones": preinsc.observaciones if preinsc else "",
             "estado_preinscripcion": preinsc.estado if preinsc else "",
         })

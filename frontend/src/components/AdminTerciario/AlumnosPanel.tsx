@@ -30,20 +30,20 @@ interface TerciarioAlumno {
   apellido: string;
   nombre: string;
   dni: string;
+  cuit?: string | null;
   email: string;
   telefono?: string | null;
   celular_preinsc?: string | null;
   sexo?: string | null;
   fecha_nacimiento?: string | null;
   domicilio?: string | null;
-  barrio?: string | null;
-  ciudad?: string | null;
   localidad?: string | null;
   localidad_nacimiento?: string | null;
   provincia_nacimiento?: string | null;
   nacionalidad?: string | null;
   finalizo_secundaria?: string | null;
   posee_estudios_superiores?: boolean;
+  estudios_superiores_finalizado?: string | null;
   carrera_superior?: string | null;
   nivel_educativo?: string | null;
   posee_pc?: boolean;
@@ -52,6 +52,9 @@ interface TerciarioAlumno {
   posee_discapacidad?: boolean;
   tipo_discapacidad?: string | null;
   posee_cud?: boolean | null;
+  apoyo_inclusion?: string | null;
+  requiere_apoyo_especifico?: boolean | null;
+  descripcion_apoyo?: string | null;
   estado_hd?: string | null;
   estado: string;
   estado_preinscripcion?: string | null;
@@ -91,28 +94,30 @@ export function AlumnosPanel() {
       Apellido: a.apellido,
       Nombre: a.nombre,
       DNI: a.dni,
+      CUIL: a.cuit || "—",
       Email: a.email,
       Teléfono: a.telefono || "—",
       Celular: a.celular_preinsc || "—",
       Sexo: a.sexo || "—",
-      "Fecha Nacimiento": a.fecha_nacimiento || "—",
+      "Fecha de Nacimiento": a.fecha_nacimiento || "—",
       Domicilio: a.domicilio || "—",
-      Barrio: a.barrio || "—",
-      Ciudad: a.ciudad || "—",
       Localidad: a.localidad || "—",
-      "Loc. Nacimiento": a.localidad_nacimiento || "—",
-      "Prov. Nacimiento": a.provincia_nacimiento || "—",
+      "Loc. de Nacimiento": a.localidad_nacimiento || "—",
+      "Prov. de Nacimiento": a.provincia_nacimiento || "—",
       Nacionalidad: a.nacionalidad || "—",
-      "Finalizó Secundaria": a.finalizo_secundaria || "—",
-      "Estudios Superiores": a.posee_estudios_superiores ? "Sí" : "No",
-      "Carrera Superior": a.carrera_superior || "—",
-      "Nivel Educativo": a.nivel_educativo || "—",
+      "Secundaria Completa": a.finalizo_secundaria || "—",
+      "¿Posee Estudios Superiores?": a.posee_estudios_superiores ? "Sí" : "No",
+      "Estudios Superiores Finalizados": a.posee_estudios_superiores ? (a.estudios_superiores_finalizado === "si" ? "Sí" : a.estudios_superiores_finalizado === "no" ? "No" : a.estudios_superiores_finalizado || "—") : "No aplica",
+      "Carrera de Estudios Superiores": a.posee_estudios_superiores ? (a.carrera_superior || "—") : "No aplica",
       "Posee PC": a.posee_pc ? "Sí" : "No",
       "Posee Internet": a.posee_conectividad ? "Sí" : "No",
       "Pueblo Originario": a.pueblo_originario ? "Sí" : "No",
       "Posee Discapacidad": a.posee_discapacidad ? "Sí" : "No",
-      "Tipo Discapacidad": a.tipo_discapacidad || "—",
-      "Posee CUD": a.posee_cud === true ? "Sí" : a.posee_cud === false ? "No" : "—",
+      "Tipo Discapacidad": a.posee_discapacidad ? (a.tipo_discapacidad || "—") : "No aplica",
+      "Posee CUD": a.posee_discapacidad ? (a.posee_cud === true ? "Sí" : a.posee_cud === false ? "No" : "—") : "No aplica",
+      "Apoyo Inclusión": a.posee_discapacidad ? (a.apoyo_inclusion || "—") : "No aplica",
+      "Requiere Apoyo Específico": a.posee_discapacidad ? (a.requiere_apoyo_especifico === true ? "Sí" : a.requiere_apoyo_especifico === false ? "No" : "—") : "No aplica",
+      "Descripción Apoyo": a.posee_discapacidad ? (a.descripcion_apoyo || "—") : "No aplica",
       "Estado HD": HD_ESTADO_LABELS[a.estado_hd || ""] || a.estado_hd || "—",
       "Estado Inscripción": ESTADO_INSCRIPCION_LABELS[a.estado] || a.estado,
       "Estado Preinscripción": a.estado_preinscripcion || "—",
@@ -253,16 +258,18 @@ export function AlumnosPanel() {
                         <td colSpan={8} className="px-6 py-4">
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                             {[
+                              ["CUIL", a.cuit],
                               ["Sexo", a.sexo],
-                              ["Fecha Nacimiento", formatDateDisplay(a.fecha_nacimiento)],
+                              ["Fecha de Nacimiento", formatDateDisplay(a.fecha_nacimiento)],
                               ["Domicilio", a.domicilio],
-                              ["Barrio", a.barrio],
-                              ["Ciudad", a.ciudad],
                               ["Nacionalidad", a.nacionalidad],
-                              ["Nivel Educativo", a.nivel_educativo],
-                              ["Estatus", a.estatus],
+                              ["¿Estudios Superiores?", a.posee_estudios_superiores ? "Sí" : "No"],
+                              ["Carrera Superior", a.carrera_superior],
                               ["Posee PC", a.posee_pc ? "Sí" : "No"],
                               ["Conectividad", a.posee_conectividad ? "Sí" : "No"],
+                              ["Discapacidad", a.posee_discapacidad ? "Sí" : "No"],
+                              ["Tipo Discapacidad", a.tipo_discapacidad],
+                              ["Apoyo Inclusión", a.apoyo_inclusion],
                             ].map(([label, val]) => (
                               <div key={label} className="bg-white rounded-xl p-3 border border-[#b8ccd8]/50">
                                 <p className="text-[#1a1f4e]/40 font-semibold uppercase tracking-wide mb-0.5">{label}</p>

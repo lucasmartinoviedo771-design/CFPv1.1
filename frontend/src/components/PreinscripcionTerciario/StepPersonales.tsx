@@ -64,13 +64,18 @@ export function StepPersonales({
             placeholder="Sin puntos ni espacios"
           />
         </Field>
-        <Field label="CUIL">
+        <Field label="CUIL" required>
           <input
             name="cuil"
             value={form.cuil}
-            onChange={onChange}
+            onChange={(e) => {
+              const only = e.target.value.replace(/\D/g, "").slice(0, 11);
+              onChange({ ...e, target: { ...e.target, name: "cuil", value: only } } as React.ChangeEvent<HTMLInputElement>);
+            }}
             className={inputCls}
-            placeholder="20XXXXXXXXX"
+            placeholder="Ej: 20123456789"
+            maxLength={11}
+            inputMode="numeric"
           />
         </Field>
         <div className="md:col-span-2">
@@ -158,7 +163,7 @@ export function StepPersonales({
             <input disabled className={inputCls} placeholder="Primero seleccioná una provincia" />
           )}
         </Field>
-        <Field label="Nacionalidad">
+        <Field label="Nacionalidad" required>
           <input name="nacionalidad" value={form.nacionalidad} onChange={onChange} className={inputCls} />
         </Field>
         <div className="md:col-span-2">

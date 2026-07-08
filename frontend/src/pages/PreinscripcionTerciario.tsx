@@ -64,9 +64,33 @@ export default function PreinscripcionTerciario() {
   const [rechazado, setRechazado] = useState(false);
   const [configLoading, setConfigLoading] = useState(true);
   const [config, setConfig] = useState<PreinscripcionConfig | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     loadRecaptcha();
+    
+    // Buscar token en la URL
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("token");
+    if (t) {
+      setToken(t);
+      apiClientV2
+        .get<FormState>(`/preinscripcion-terciario/data`, { params: { token: t } })
+        .then(({ data }) => {
+          // Normalizar valores booleanos a strings esperados por los inputs
+          const normalizedData = { ...data } as Record<string, unknown>;
+          Object.keys(normalizedData).forEach(key => {
+            if (normalizedData[key] === true) normalizedData[key] = "si";
+            if (normalizedData[key] === false) normalizedData[key] = "no";
+            if (normalizedData[key] === null) normalizedData[key] = "";
+          });
+          setForm((p) => ({ ...p, ...normalizedData }));
+        })
+        .catch((err) => {
+          console.error("Error al cargar datos del token:", err);
+          setError("El enlace de completado de datos es inválido o ha expirado.");
+        });
+    }
   }, []);
 
   useEffect(() => {
@@ -77,11 +101,12 @@ export default function PreinscripcionTerciario() {
       .finally(() => setConfigLoading(false));
   }, []);
 
-  // Persistir en localStorage con expiración de 24 horas
+  // Persistir en localStorage con expiración de 24 horas (solo si no estamos usando un token)
   useEffect(() => {
+    if (token) return;
     const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ form, step, expiresAt }));
-  }, [form, step]);
+  }, [form, step, token]);
 
   const onSelect = (name: string, value: string) =>
     setForm((p) => {
@@ -105,8 +130,6 @@ export default function PreinscripcionTerciario() {
     setForm((p) => ({ ...p, [name]: value }));
   };
 
-
-
   const validate = (s: number): boolean => {
     setError("");
     if (s === 1) {
@@ -114,6 +137,8 @@ export default function PreinscripcionTerciario() {
       if (!form.apellido.trim()) return setError("El apellido es obligatorio."), false;
       if (!form.nombre.trim()) return setError("El nombre es obligatorio."), false;
       if (!form.dni.trim()) return setError("El DNI es obligatorio."), false;
+      if (!form.cuil.trim()) return setError("El CUIL es obligatorio."), false;
+      if (!/^\d{11}$/.test(form.cuil)) return setError("El CUIL debe tener exactamente 11 dígitos numéricos."), false;
       if (!form.sexo) return setError("El sexo es obligatorio."), false;
       if (!form.celular.trim()) return setError("El celular es obligatorio."), false;
       if (!/^\d{10}$/.test(form.celular)) return setError("El celular debe tener exactamente 10 dígitos numéricos. Ej: 2964123456"), false;
@@ -122,6 +147,7 @@ export default function PreinscripcionTerciario() {
       if (!form.localidad_nacimiento) return setError("La localidad de nacimiento es obligatoria."), false;
       if (form.localidad_nacimiento === "Otra" && !form.localidad_nacimiento_otra.trim())
         return setError("Especificá tu localidad de nacimiento."), false;
+      if (!form.nacionalidad.trim()) return setError("La nacionalidad es obligatoria."), false;
       if (!form.domicilio.trim()) return setError("El domicilio es obligatorio."), false;
       if (!form.provincia_residencia) return setError("La provincia de residencia es obligatoria."), false;
       if (!form.localidad) return setError("La localidad de residencia es obligatoria."), false;
@@ -129,6 +155,10 @@ export default function PreinscripcionTerciario() {
     if (s === 2) {
       if (!form.finalizo_secundaria) return setError("Indicá si finalizaste el secundario."), false;
       if (!form.posee_estudios_superiores) return setError("Indicá si poseés estudios superiores."), false;
+      if (form.posee_estudios_superiores === "si") {
+        if (!form.estudios_superiores_finalizado) return setError("Indicá si finalizaste los estudios superiores."), false;
+        if (!form.estudios_superiores_carrera.trim()) return setError("Especificá el nombre de la carrera de estudios superiores."), false;
+      }
     }
     if (s === 3) {
       if (!form.posee_pc) return setError("Indicá si poseés PC o notebook."), false;
@@ -182,12 +212,17 @@ export default function PreinscripcionTerciario() {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ""));
       fd.append("recaptcha_token", recaptchaToken);
+      if (token) {
+        fd.append("token", token);
+      }
 
       await apiClientV2.post("/preinscripcion-terciario", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      localStorage.removeItem(STORAGE_KEY);
+      if (!token) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
       setDone(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -288,7 +323,7 @@ export default function PreinscripcionTerciario() {
     );
   }
 
-  if (!config?.abierta) {
+  if (!config?.abierta && !token) {
     return (
       <div className="min-h-screen bg-[#b8ccd8] flex flex-col">
         <Header />
