@@ -130,6 +130,13 @@ export default function Sidebar() {
     { label: 'Preinscripciones CFP', icon: <ClipboardList size={20} />, href: '/gestion-preinscripciones' },
     { label: 'Preinscripciones Terciario', icon: <GraduationCap size={20} />, href: '/preinscripciones-terciario' },
     ...(hasVideojuegos ? [{ label: 'Preinscripciones Video Juegos', icon: <Gamepad2 size={20} />, href: '/admin-videojuegos?tab=preinscripciones' }] : []),
+    { label: 'Confirmar Bloques', icon: <Layers size={20} />, href: '/confirmar-bloques' },
+  ];
+
+  const paginasPreinscripcionItems: MenuItem[] = [
+    ...(!isOnlyVideojuegos ? [{ label: 'Página de Preinscripción', icon: <FileCheck size={20} />, href: '/preinscripcion' }] : []),
+    ...(hasVideojuegos ? [{ label: 'Preinscripción Videojuegos', icon: <Gamepad2 size={20} />, href: '/preinscripcion-videojuegos' }] : []),
+    ...(!isOnlyVideojuegos ? [{ label: 'Preinscripción Terciario', icon: <GraduationCap size={20} />, href: '/preinscripcion-terciario' }] : []),
   ];
 
   const filteredPreinscripciones = preinscripcionesItems.filter(item => {
@@ -144,6 +151,7 @@ export default function Sidebar() {
     if (dataItems.some(item => item.href === currentPath)) setOpenSection('datos');
     else if (cargaDatosItems.some(item => item.href === currentPath)) setOpenSection('carga');
     else if (preinscripcionesItems.some(item => item.href === currentPath)) setOpenSection('preinscripciones');
+    else if (paginasPreinscripcionItems.some(item => item.href === currentPath)) setOpenSection('paginasPreinscripciones');
     else if (calificacionesItems.some(item => item.href === currentPath)) setOpenSection('calificaciones');
     else if (adminCursosItems.some(item => item.href === currentPath)) setOpenSection('admin');
     else if (secretariaItems.some(item => item.href === currentPath)) setOpenSection('secretaria');
@@ -168,65 +176,21 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-2 scrollbar-thin scrollbar-thumb-indigo-900">
-        {activePanel === 'cfp' && (
-          <>
-            {!isOnlyVideojuegos && (
-              <Link
-                to="/preinscripcion"
-                className={cn(
-                  "flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors",
-                  location.pathname === '/preinscripcion'
-                    ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
-                    : "bg-indigo-900/30 text-indigo-100 hover:bg-indigo-900/45"
-                )}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <FileCheck size={18} />
-                  Página de Preinscripción
-                </span>
-                <ExternalLink size={14} />
-              </Link>
-            )}
-
-            {hasVideojuegos && (
-              <Link
-                to="/preinscripcion-videojuegos"
-                className={cn(
-                  "flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors",
-                  location.pathname === '/preinscripcion-videojuegos'
-                    ? "bg-brand-cyan text-[#050814] shadow-[0_0_10px_rgba(0,255,255,0.3)] font-semibold"
-                    : "bg-indigo-900/30 text-indigo-100 hover:bg-indigo-900/45"
-                )}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <Gamepad2 size={18} />
-                  Preinscripción Videojuegos
-                </span>
-                <ExternalLink size={14} />
-              </Link>
-            )}
-          </>
-        )}
-
-        {activePanel === 'terciario' && (
-          <a
-            href="/preinscripcion-terciario"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium rounded-lg transition-colors bg-indigo-900/30 text-indigo-100 hover:bg-indigo-900/45"
-          >
-            <span className="inline-flex items-center gap-2">
-              <GraduationCap size={18} />
-              Ver Formulario Terciario
-            </span>
-            <ExternalLink size={14} />
-          </a>
+        {paginasPreinscripcionItems.length > 0 && (
+          <MenuSection
+            title="Páginas de Preinscripciones"
+            icon={<FileCheck size={20} />}
+            items={paginasPreinscripcionItems}
+            isOpen={openSection === 'paginasPreinscripciones'}
+            onToggle={() => toggleSection('paginasPreinscripciones')}
+            currentPath={location.pathname}
+          />
         )}
 
         {!isOnlyVideojuegos && (
           <>
             <MenuSection
-              title="Preinscripciones"
+              title="Confirmar Estudiantes"
               icon={<ClipboardList size={20} />}
               items={filteredPreinscripciones}
               isOpen={openSection === 'preinscripciones'}
@@ -236,7 +200,7 @@ export default function Sidebar() {
             {activePanel === 'cfp' && (
               <>
                 <MenuSection
-                  title="Datos"
+                  title="Dashboard"
                   icon={<Database size={20} />}
                   items={dataItems}
                   isOpen={openSection === 'datos'}
@@ -244,7 +208,7 @@ export default function Sidebar() {
                   currentPath={location.pathname}
                 />
                 <MenuSection
-                  title="Carga de Datos"
+                  title="Estudiantes"
                   icon={<FileText size={20} />}
                   items={cargaDatosItems}
                   isOpen={openSection === 'carga'}
@@ -260,7 +224,7 @@ export default function Sidebar() {
                   currentPath={location.pathname}
                 />
                 <MenuSection
-                  title="Administración"
+                  title="Crear Estructura"
                   icon={<UserCog size={20} />}
                   items={adminCursosItems}
                   isOpen={openSection === 'admin'}
@@ -268,7 +232,7 @@ export default function Sidebar() {
                   currentPath={location.pathname}
                 />
                 <MenuSection
-                  title="Secretaría"
+                  title="Crear Usuario"
                   icon={<Users size={20} />}
                   items={secretariaItems}
                   isOpen={openSection === 'secretaria'}
