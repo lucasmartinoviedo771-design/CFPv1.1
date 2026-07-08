@@ -130,7 +130,6 @@ export default function Sidebar() {
     { label: 'Preinscripciones CFP', icon: <ClipboardList size={20} />, href: '/gestion-preinscripciones' },
     { label: 'Preinscripciones Terciario', icon: <GraduationCap size={20} />, href: '/preinscripciones-terciario' },
     ...(hasVideojuegos ? [{ label: 'Preinscripciones Video Juegos', icon: <Gamepad2 size={20} />, href: '/admin-videojuegos?tab=preinscripciones' }] : []),
-    { label: 'Confirmar Bloques', icon: <Layers size={20} />, href: '/confirmar-bloques' },
   ];
 
   const paginasPreinscripcionItems: MenuItem[] = [
@@ -197,6 +196,19 @@ export default function Sidebar() {
               onToggle={() => toggleSection('preinscripciones')}
               currentPath={location.pathname}
             />
+
+            <Link
+              to="/confirmar-bloques"
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-2",
+                location.pathname === '/confirmar-bloques'
+                  ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
+                  : "text-indigo-200 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <Layers size={20} />
+              <span>Confirmar Bloques</span>
+            </Link>
             {activePanel === 'cfp' && (
               <>
                 <MenuSection
