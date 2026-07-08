@@ -35,10 +35,6 @@ const dataItems: MenuItem[] = [
   { label: 'Egresados', icon: <GraduationCap size={20} />, href: '/egresados' },
 ];
 
-const calificacionesItems: MenuItem[] = [
-  { label: 'Notas / Equivalencias', icon: <ClipboardList size={20} />, href: '/notas' },
-];
-
 const adminCursosItems: MenuItem[] = [
   { label: 'Estructura Académica', icon: <GitBranch size={20} />, href: '/estructura' },
   { label: 'Calendario Académico', icon: <Calendar size={20} />, href: '/calendario' },
@@ -124,6 +120,7 @@ export default function Sidebar() {
     { label: 'Estudiantes', icon: <Users size={20} />, href: '/estudiantes' },
     { label: 'Inscripciones', icon: <FileText size={20} />, href: '/inscripciones' },
     { label: 'Asistencia', icon: <CheckSquare size={20} />, href: '/asistencia' },
+    { label: 'Notas / Equivalencias', icon: <ClipboardList size={20} />, href: '/notas' },
   ];
 
   const preinscripcionesItems: MenuItem[] = [
@@ -151,7 +148,6 @@ export default function Sidebar() {
     else if (cargaDatosItems.some(item => item.href === currentPath)) setOpenSection('carga');
     else if (preinscripcionesItems.some(item => item.href === currentPath)) setOpenSection('preinscripciones');
     else if (paginasPreinscripcionItems.some(item => item.href === currentPath)) setOpenSection('paginasPreinscripciones');
-    else if (calificacionesItems.some(item => item.href === currentPath)) setOpenSection('calificaciones');
     else if (adminCursosItems.some(item => item.href === currentPath)) setOpenSection('admin');
     else if (secretariaItems.some(item => item.href === currentPath)) setOpenSection('secretaria');
   }, [location.pathname]);
@@ -175,6 +171,19 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-2 scrollbar-thin scrollbar-thumb-indigo-900">
+        {/* 1. Dashboard */}
+        {activePanel === 'cfp' && (
+          <MenuSection
+            title="Dashboard"
+            icon={<Database size={20} />}
+            items={dataItems}
+            isOpen={openSection === 'datos'}
+            onToggle={() => toggleSection('datos')}
+            currentPath={location.pathname}
+          />
+        )}
+
+        {/* 2. Páginas de Preinscripciones */}
         {paginasPreinscripcionItems.length > 0 && (
           <MenuSection
             title="Páginas de Preinscripciones"
@@ -186,74 +195,68 @@ export default function Sidebar() {
           />
         )}
 
+        {/* 3. Confirmar Estudiantes */}
         {!isOnlyVideojuegos && (
-          <>
-            <MenuSection
-              title="Confirmar Estudiantes"
-              icon={<ClipboardList size={20} />}
-              items={filteredPreinscripciones}
-              isOpen={openSection === 'preinscripciones'}
-              onToggle={() => toggleSection('preinscripciones')}
-              currentPath={location.pathname}
-            />
+          <MenuSection
+            title="Confirmar Estudiantes"
+            icon={<ClipboardList size={20} />}
+            items={filteredPreinscripciones}
+            isOpen={openSection === 'preinscripciones'}
+            onToggle={() => toggleSection('preinscripciones')}
+            currentPath={location.pathname}
+          />
+        )}
 
-            <Link
-              to="/confirmar-bloques"
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-2",
-                location.pathname === '/confirmar-bloques'
-                  ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
-                  : "text-indigo-200 hover:text-white hover:bg-white/5"
-              )}
-            >
-              <Layers size={20} />
-              <span>Confirmar Bloques</span>
-            </Link>
-            {activePanel === 'cfp' && (
-              <>
-                <MenuSection
-                  title="Dashboard"
-                  icon={<Database size={20} />}
-                  items={dataItems}
-                  isOpen={openSection === 'datos'}
-                  onToggle={() => toggleSection('datos')}
-                  currentPath={location.pathname}
-                />
-                <MenuSection
-                  title="Estudiantes"
-                  icon={<FileText size={20} />}
-                  items={cargaDatosItems}
-                  isOpen={openSection === 'carga'}
-                  onToggle={() => toggleSection('carga')}
-                  currentPath={location.pathname}
-                />
-                <MenuSection
-                  title="Calificaciones"
-                  icon={<ClipboardList size={20} />}
-                  items={calificacionesItems}
-                  isOpen={openSection === 'calificaciones'}
-                  onToggle={() => toggleSection('calificaciones')}
-                  currentPath={location.pathname}
-                />
-                <MenuSection
-                  title="Crear Estructura"
-                  icon={<UserCog size={20} />}
-                  items={adminCursosItems}
-                  isOpen={openSection === 'admin'}
-                  onToggle={() => toggleSection('admin')}
-                  currentPath={location.pathname}
-                />
-                <MenuSection
-                  title="Crear Usuario"
-                  icon={<Users size={20} />}
-                  items={secretariaItems}
-                  isOpen={openSection === 'secretaria'}
-                  onToggle={() => toggleSection('secretaria')}
-                  currentPath={location.pathname}
-                />
-              </>
+        {/* 4. Confirmar Bloques */}
+        {!isOnlyVideojuegos && (
+          <Link
+            to="/confirmar-bloques"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-2",
+              location.pathname === '/confirmar-bloques'
+                ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
+                : "text-indigo-200 hover:text-white hover:bg-white/5"
             )}
-          </>
+          >
+            <Layers size={20} />
+            <span>Confirmar Bloques</span>
+          </Link>
+        )}
+
+        {/* 5. Estudiantes */}
+        {activePanel === 'cfp' && (
+          <MenuSection
+            title="Estudiantes"
+            icon={<FileText size={20} />}
+            items={cargaDatosItems}
+            isOpen={openSection === 'carga'}
+            onToggle={() => toggleSection('carga')}
+            currentPath={location.pathname}
+          />
+        )}
+
+        {/* 6. Crear Estructura */}
+        {activePanel === 'cfp' && (
+          <MenuSection
+            title="Crear Estructura"
+            icon={<UserCog size={20} />}
+            items={adminCursosItems}
+            isOpen={openSection === 'admin'}
+            onToggle={() => toggleSection('admin')}
+            currentPath={location.pathname}
+          />
+        )}
+
+        {/* 7. Crear Usuario */}
+        {activePanel === 'cfp' && (
+          <MenuSection
+            title="Crear Usuario"
+            icon={<Users size={20} />}
+            items={secretariaItems}
+            isOpen={openSection === 'secretaria'}
+            onToggle={() => toggleSection('secretaria')}
+            currentPath={location.pathname}
+          />
         )}
       </nav>
 
