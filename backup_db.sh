@@ -11,8 +11,8 @@ fi
 MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-"root"}
 MYSQL_DATABASE=${MYSQL_DATABASE:-"CFP"}
 
-# Almacenamiento seguro FUERA del directorio del proyecto (en la raíz /opt/backups)
-BACKUP_DIR="/opt/backups"
+# Almacenamiento seguro en el directorio del proyecto
+BACKUP_DIR="/opt/CFP/backups"
 mkdir -p "$BACKUP_DIR"
 FILENAME="$BACKUP_DIR/cfp_backup_$(date +%Y%m%d_%H%M%S).sql.gz"
 

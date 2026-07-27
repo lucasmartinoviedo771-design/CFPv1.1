@@ -29,4 +29,6 @@ exec gunicorn academia.wsgi:application \
   --bind 0.0.0.0:8000 \
   --workers "${WEB_CONCURRENCY}" \
   --threads "${GUNICORN_THREADS}" \
-  --timeout "${GUNICORN_TIMEOUT}"
+  --timeout "${GUNICORN_TIMEOUT}" \
+  --access-logfile /app/logs/gunicorn_access.log \
+  --error-logfile /app/logs/gunicorn_error.log
