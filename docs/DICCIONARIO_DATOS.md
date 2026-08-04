@@ -3,9 +3,9 @@
 **Base de datos:** `CFP` (MySQL, 8.0, Puerto 3306 [interno] / 3308 [host])
 **Backend / ORM:** Django ORM — Python
 **Entorno:** producción
-**Última actualización:** 2026-05-26
+**Última actualización:** 2026-08-04
 **Autor/Responsable:** Lucasmartinoviedo771-design / CFP Development Team
-**Versión del documento:** v1.0
+**Versión del documento:** v1.1
 
 ---
 
@@ -15,7 +15,7 @@
 2. [Ciclos Académicos y Cursada](#2-ciclos-académicos-y-cursada)
 3. [Gestión de Estudiantes e Inscripciones](#3-gestión-de-estudiantes-e-inscripciones)
 4. [Evaluación y Calificaciones](#4-evaluación-y-calificaciones)
-5. [Preinscripciones y Admisión Terciaria](#5-preinscripciones-y-admisión-terciaria)
+5. [Preinscripciones y Admisión (Terciario y Videojuegos)](#5-preinscripciones-y-admisión-terciario-y-videojuegos)
 6. [Usuarios y Seguridad (Autenticación)](#6-usuarios-y-seguridad-autenticación)
 7. [Tablas del Framework (Django)](#7-tablas-del-framework-django)
 
@@ -565,6 +565,32 @@ Configuración global tipo Singleton (exactamente un registro con `id=1`) que re
 - **Forzar Singleton:** Se sobreescribe el método `save()` del modelo para asegurar que el registro siempre guarde `pk=1`, previniendo que existan múltiples configuraciones en la base de datos (soluciona L3).
 
 **Política de borrado:** Ninguna (es un Singleton estático en base). SET_NULL en su relación con la cohorte destino en caso de su eliminación.
+
+**Estimación de volumen:** Baja (Exactamente 1 registro en la base de datos).
+
+---
+
+#### `core_configuracionpreinscripcionvideojuegos`
+
+Configuración global tipo Singleton (exactamente un registro con `id=1`) que regula la apertura, cierre y cohorte activa para las preinscripciones de la Certificación Profesional en Desarrollo de Videojuegos (`VJ`).
+
+| Columna | Tipo | Restricciones | Flags | Descripción |
+|---------|------|---------------|-------|-------------|
+| `id` | bigint | PK, NN, AUTO | — | Clave primaria. ID forzado a `1`. |
+| `preinscripcion_abierta` | tinyint(1) | NN | DEF | Habilita o deshabilita públicamente el formulario de preinscripción de Videojuegos. Default: `False` (0). |
+| `fecha_inicio` | date | NULL | — | Fecha planificada de apertura del portal. |
+| `fecha_fin` | date | NULL | — | Fecha planificada de cierre del portal. |
+| `mensaje_cierre` | varchar(300) | NN | DEF | Mensaje expuesto cuando las preinscripciones están cerradas. Default: `"Las preinscripciones de Videojuegos están cerradas en este momento."`. |
+| `cohorte_activa_id` | bigint | FK → `core_cohorte.id`, NULL | — | Cohorte de Videojuegos en la que se matricula automáticamente a los aspirantes al ser aprobados. |
+
+**Reglas de negocio y validaciones del módulo de admisión:**
+- **Filtro de Residencia (Tierra del Fuego):** Las preinscripciones públicas (tanto CFP general como Videojuegos) están restringidas a postulantes residentes en la provincia de Tierra del Fuego, Antártida e Islas del Atlántico Sur. El formulario utiliza selectores desplegables (comboboxes) unificados para Provincia y Localidad de Residencia (`Ushuaia`, `Río Grande - Margen Sur`, `Río Grande - Margen Norte`, `Tolhuin`, `Zona Rural`). La API backend valida que la provincia sea exactamente la provincia de Tierra del Fuego (`HttpError 400`).
+- **Restricción de Edad:**
+  - Menores de 15 años: Bloqueados totalmente del sistema.
+  - Entre 15 y 17 años: Únicamente se les permite postularse al trayecto de *Programación Nivel III*. Se les bloquea el acceso a *Desarrollo de Videojuegos* u otras certificaciones.
+- **Aprobación Masiva y Anti-Spam:** Las solicitudes pendientes de Videojuegos se procesan mediante comandos administrativos (`python manage.py aprobar_y_enviar_videojuegos`), enviando las invitaciones a Campus/Discord con un delay configurable (por defecto 15 segundos entre envíos) para evitar bloqueos por spam en servidores SMTP.
+
+**Política de borrado:** Ninguna (es un Singleton estático en base). SET_NULL en caso de eliminarse la cohorte vinculada.
 
 **Estimación de volumen:** Baja (Exactamente 1 registro en la base de datos).
 
