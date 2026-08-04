@@ -1,41 +1,40 @@
-# Django & Frameworks
-Django==5.2.15
-djangorestframework==3.16.1
+# Django & Core Framework
+Django==5.2.17
+djangorestframework==3.17.1
 django-ninja==1.4.3
-django-cors-headers==4.8.0
+django-cors-headers==4.9.0
 django-filter==25.1
 django-environ==0.12.0
+django-redis==5.4.0
 
-# Auth & JWT
+# Auth & Security
 djangorestframework-simplejwt==5.5.1
 
-# Documentation
+# API Documentation
 drf-spectacular==0.29.0
 drf-spectacular-sidecar==2025.12.1
 
-# Server
+# WSGI Server & Database
 gunicorn==26.0.0
+mysqlclient==2.2.8
 
-# Database
-mysqlclient==2.2.7
-
-# Data Processing
+# Data Processing & Reports
 pandas==2.3.3
 openpyxl==3.1.5
-tzdata==2025.2
+reportlab==4.3.1
+tzdata==2026.3
 
-# Validation
+# Image & File Processing
+Pillow==12.3.0
 python-magic==0.4.27
-pydantic==2.11.9
-pydantic-core==2.33.2
+
+# Data Validation
+pydantic==2.13.4
+pydantic-core==2.46.4
 typing_extensions==4.15.0
 
-# Image processing
-Pillow==12.2.0
-
-# Google API
-google-api-python-client==2.197.0
+# Google Services (Gmail & API Integration)
+google-api-python-client==2.198.0
 google-auth-httplib2==0.4.0
 google-auth-oauthlib==1.4.0
-reportlab==4.3.1
-django-redis==5.4.0
+requests==2.34.2
