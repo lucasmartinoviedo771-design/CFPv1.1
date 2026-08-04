@@ -1,13 +1,15 @@
 import React from "react";
 import { FormState } from "./types";
 import { NIVEL_EDUCATIVO_OPTIONS } from "../Preinscripcion/formHelpers";
+import { PROVINCIAS_AR, LOCALIDADES } from "../PreinscripcionTerciario/constants";
 
 interface StepContactoProps {
   form: FormState;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  setRechazado?: (val: boolean) => void;
 }
 
-export function StepContacto({ form, onChange }: StepContactoProps) {
+export function StepContacto({ form, onChange, setRechazado }: StepContactoProps) {
   return (
     <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-8 text-left">
       <div className="space-y-2">
@@ -61,15 +63,62 @@ export function StepContacto({ form, onChange }: StepContactoProps) {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Ciudad</label>
-          <input
+          <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">
+            Provincia de Residencia
+          </label>
+          <select
             className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none"
-            name="ciudad"
-            placeholder="Ej: Río Grande"
-            value={form.ciudad}
-            onChange={onChange}
-          />
+            name="provincia_residencia"
+            value={form.provincia_residencia}
+            onChange={(e) => {
+              const prov = e.target.value;
+              onChange(e);
+              if (prov && prov !== "Tierra del Fuego, Antártida e Islas del Atlántico Sur") {
+                if (setRechazado) setRechazado(true);
+              }
+            }}
+          >
+            <option value="">Seleccioná una provincia...</option>
+            {PROVINCIAS_AR.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {form.provincia_residencia === "Tierra del Fuego, Antártida e Islas del Atlántico Sur" ? (
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">
+              Localidad de Residencia
+            </label>
+            <select
+              className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none"
+              name="ciudad"
+              value={form.ciudad}
+              onChange={onChange}
+            >
+              <option value="">Seleccioná tu localidad...</option>
+              {LOCALIDADES.map((l) => (
+                <option key={l.value} value={l.label}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Localidad / Ciudad</label>
+            <input
+              className="w-full rounded-2xl px-5 py-4 bg-indigo-950/40 border border-indigo-500/30 text-white focus:outline-none"
+              name="ciudad"
+              placeholder="Primero seleccioná una provincia"
+              value={form.ciudad}
+              onChange={onChange}
+              disabled
+            />
+          </div>
+        )}
         <div className="space-y-2">
           <label className="text-xs font-black uppercase tracking-widest ml-1 text-indigo-400">Barrio</label>
           <input

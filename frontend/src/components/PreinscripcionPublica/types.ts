@@ -13,6 +13,7 @@ export interface FormState {
   nacionalidad: string;
   nacionalidad_otra: string;
   lugar_nacimiento: string;
+  provincia_residencia: string;
   domicilio: string;
   barrio: string;
   ciudad: string;
@@ -41,6 +42,7 @@ export const INIT_FORM: FormState = {
   nacionalidad: "Argentina",
   nacionalidad_otra: "",
   lugar_nacimiento: "",
+  provincia_residencia: "",
   domicilio: "",
   barrio: "",
   ciudad: "",

@@ -1,14 +1,16 @@
 import React from "react";
 import { FormState } from "./types";
 import { NIVEL_EDUCATIVO_OPTIONS } from "../Preinscripcion/formHelpers";
+import { PROVINCIAS_AR, LOCALIDADES } from "../PreinscripcionTerciario/constants";
 
 interface StepContactoProps {
   form: FormState;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   isDark: boolean;
+  setRechazado?: (val: boolean) => void;
 }
 
-export function StepContacto({ form, onChange, isDark }: StepContactoProps) {
+export function StepContacto({ form, onChange, isDark, setRechazado }: StepContactoProps) {
   const textTitleCls = isDark ? "text-white" : "text-[#0f172a]";
   const textHelpCls = isDark ? "text-indigo-200" : "text-[#1e3a5f]";
 
@@ -69,10 +71,52 @@ export function StepContacto({ form, onChange, isDark }: StepContactoProps) {
 
         <div className="space-y-2">
           <label className={`text-xs font-black uppercase tracking-widest ml-1 ${isDark ? "text-indigo-400" : "text-[#1e3a5f]"}`}>
-            Ciudad
+            Provincia de Residencia
           </label>
-          <input className={inputCls} name="ciudad" placeholder="Ej: Río Grande" value={form.ciudad} onChange={onChange} />
+          <select
+            className={inputCls}
+            name="provincia_residencia"
+            value={form.provincia_residencia}
+            onChange={(e) => {
+              const prov = e.target.value;
+              onChange(e);
+              if (prov && prov !== "Tierra del Fuego, Antártida e Islas del Atlántico Sur") {
+                if (setRechazado) setRechazado(true);
+              }
+            }}
+          >
+            <option value="">Seleccioná una provincia...</option>
+            {PROVINCIAS_AR.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {form.provincia_residencia === "Tierra del Fuego, Antártida e Islas del Atlántico Sur" ? (
+          <div className="space-y-2">
+            <label className={`text-xs font-black uppercase tracking-widest ml-1 ${isDark ? "text-indigo-400" : "text-[#1e3a5f]"}`}>
+              Localidad de Residencia
+            </label>
+            <select className={inputCls} name="ciudad" value={form.ciudad} onChange={onChange}>
+              <option value="">Seleccioná tu localidad...</option>
+              {LOCALIDADES.map((l) => (
+                <option key={l.value} value={l.label}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <label className={`text-xs font-black uppercase tracking-widest ml-1 ${isDark ? "text-indigo-400" : "text-[#1e3a5f]"}`}>
+              Localidad / Ciudad
+            </label>
+            <input className={inputCls} name="ciudad" placeholder="Primero seleccioná una provincia" value={form.ciudad} onChange={onChange} disabled />
+          </div>
+        )}
+
         <div className="space-y-2">
           <label className={`text-xs font-black uppercase tracking-widest ml-1 ${isDark ? "text-indigo-400" : "text-[#1e3a5f]"}`}>
             Barrio

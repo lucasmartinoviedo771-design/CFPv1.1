@@ -6,6 +6,7 @@ import {
   X,
   Gamepad2,
   Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { apiClientV2 } from "../api/client";
 
@@ -101,6 +102,7 @@ export default function PreinscripcionVideojuegos() {
   const [dniFile, setDniFile] = useState<File | null>(null);
   const [tituloFile, setTituloFile] = useState<File | null>(null);
   const [dniTutorFile, setDniTutorFile] = useState<File | null>(null);
+  const [rechazado, setRechazado] = useState(false);
 
   const [form, setForm] = useState<FormState>(saved.form);
 
@@ -415,6 +417,40 @@ export default function PreinscripcionVideojuegos() {
     );
   }
 
+  if (rechazado) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-[#050814]">
+        <div className="max-w-lg w-full text-center space-y-8 animate-in fade-in zoom-in-95 duration-400">
+          <div className="mx-auto w-28 h-28 bg-red-500/20 rounded-full flex items-center justify-center border-4 border-red-500/40 shadow-2xl shadow-red-500/20">
+            <AlertTriangle size={60} className="text-red-400" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-4xl font-black text-white leading-tight">
+              Solo residentes de
+              <br />
+              Tierra del Fuego
+            </h2>
+            <p className="text-white/60 text-lg leading-relaxed">
+              La <span className="text-orange-500 font-semibold">Certificación Profesional en Desarrollo de Videojuegos</span> es exclusiva para personas que residan en la provincia de Tierra del Fuego, Antártida e Islas del Atlántico Sur.
+            </p>
+            <p className="text-white/40 text-sm">
+              Si creés que esto es un error o tu situación es especial, comunicate con la institución.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setRechazado(false);
+              setForm((prev) => ({ ...prev, provincia_residencia: "", ciudad: "" }));
+            }}
+            className="px-8 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-black text-sm uppercase tracking-widest transition-all hover:scale-105"
+          >
+            Volver a intentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen font-sans selection:bg-cyan-400/30 text-white bg-[#050814] relative overflow-hidden">
       {/* Background radial effects */}
@@ -478,7 +514,7 @@ export default function PreinscripcionVideojuegos() {
               )}
 
               {/* STEP 3: CONTACTO */}
-              {step === 3 && <StepContacto form={form} onChange={onChange} />}
+              {step === 3 && <StepContacto form={form} onChange={onChange} setRechazado={setRechazado} />}
 
               {/* STEP 4: DOCUMENTACION */}
               {step === 4 && (
