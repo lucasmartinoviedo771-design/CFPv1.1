@@ -82,6 +82,7 @@ export type Inscripcion = {
   estudiante?: Estudiante;
   cohorte?: Cohorte & {
     programa?: Programa;
+    bloque?: { id: number; nombre: string } | null;
     bloque_fechas?: { id: number; nombre: string; descripcion?: string | null };
   };
   modulo?: (Modulo & { bloque?: { id: number; nombre: string } | null }) | null;
