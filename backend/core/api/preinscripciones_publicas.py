@@ -505,7 +505,7 @@ def crear_preinscripcion_publica(request):
         raise HttpError(400, "Debe seleccionar al menos una oferta formativa.")
 
     provincia_residencia = post.get("provincia_residencia", "").strip()
-    if provincia_residencia and provincia_residencia != "Tierra del Fuego, Antártida e Islas del Atlántico Sur":
+    if provincia_residencia and "tierra del fuego" not in provincia_residencia.lower():
         raise HttpError(400, "Las preinscripciones son exclusivas para residentes de la provincia de Tierra del Fuego.")
 
     # Validar que si es menor solo se anote a Nivel III

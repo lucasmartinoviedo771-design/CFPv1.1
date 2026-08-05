@@ -31,9 +31,10 @@ class VideojuegosTests(TestCase):
             bloque=self.cfp_bloque,
             nombre="Cohorte CFP 2026",
             fecha_inicio="2026-06-25",
-            fecha_fin="2026-07-31",
+            fecha_fin="2026-12-31",
             bloque_fechas=self.bloque_fechas
         )
+        Cohorte.objects.all().update(fecha_fin="2026-12-31")
 
         # 4. Users & Groups Setup
         # General admin
@@ -70,6 +71,10 @@ class VideojuegosTests(TestCase):
             self.assertNotIn(vj_prog.id, program_ids)
 
         # Request with programa_codigo=VJ
+        vj_config = ConfiguracionPreinscripcionVideojuegos.get()
+        vj_config.preinscripcion_abierta = True
+        vj_config.save()
+
         resp = self.client.get("/api/v2/preinscripcion/oferta?programa_codigo=VJ")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
@@ -82,6 +87,9 @@ class VideojuegosTests(TestCase):
         """Verify VJ pre-inscription rules (optatives validation and auto-assignment)."""
         mock_recaptcha.return_value = True
         vj_prog = Programa.objects.get(codigo="VJ")
+        vj_config = ConfiguracionPreinscripcionVideojuegos.get()
+        vj_config.preinscripcion_abierta = True
+        vj_config.save()
         
         from django.core.files.uploadedfile import SimpleUploadedFile
         pdf_content = b"%PDF-1.4 mock content"
@@ -94,6 +102,7 @@ class VideojuegosTests(TestCase):
             "email": "vjtest@example.com",
             "dni": "99999991",
             "fecha_nacimiento": "2000-01-01",
+            "provincia_residencia": "Tierra del Fuego",
             "programa_id": vj_prog.id,
             "dni_digitalizado": dni_file,
             "recaptcha_token": "mock_token_vj"
