@@ -1,39 +1,41 @@
-import React, { useState, useEffect, createContext } from "react";
+import React, { useState, useEffect, createContext, Suspense, lazy } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider, CircularProgress, Box } from "@mui/material";
 import theme from "./theme";
 import AppLayout from "./layout/AppLayout";
+import LoadingFallback from "./components/LoadingFallback";
 
-// Page Components
-import Landing from "./pages/Landing";
-import Asistencia from "./pages/Asistencia";
-import Estudiantes from "./pages/Estudiantes";
-import Notas from "./pages/Notas.jsx";
-import CursoDetail from "./pages/CursoDetail";
-import DashboardPage from "./pages/Dashboard"; // Check extension if needed, safe to add .jsx if it is jsx
-import Login from "./pages/Login";
-import SetPassword from './pages/SetPassword.jsx';
-import Inscripciones from './pages/Inscripciones';
-import Programas from './pages/Programas'; // Still .tsx based on file list
-import Estructura from './pages/Estructura'; // Still .jsx based on file list
-import Calendario from './pages/Calendario';
-import Cohortes from './pages/Cohortes';
-import HorariosCursada from './pages/HorariosCursada';
-import HistoricoCursos from './pages/HistoricoCursos';
-import HistoricoEstudiante from './pages/HistoricoEstudiante.jsx';
-import GraficoCursos from './pages/GraficoCursos';
-import Egresados from './pages/Egresados.jsx';
-import Usuarios from './pages/Usuarios.jsx';
-import Resoluciones from './pages/Resoluciones';
-import PreinscripcionPublica from './pages/PreinscripcionPublica';
-import PreinscripcionTerciario from './pages/PreinscripcionTerciario';
-import PreinscripcionVideojuegos from './pages/PreinscripcionVideojuegos';
-import GestionPreinscripciones from './pages/GestionPreinscripciones';
-import GestionPreinscripcionesTerciario from './pages/GestionPreinscripcionesTerciario';
-import GestionPreinscripcionesVideojuegos from './pages/GestionPreinscripcionesVideojuegos';
-import AdminTerciario from './pages/AdminTerciario';
-import AutorizacionParental from './pages/AutorizacionParental';
-import NivelacionDigital from './pages/NivelacionDigital';
+// Lazy-loaded Page Components
+const Landing = lazy(() => import("./pages/Landing"));
+const Asistencia = lazy(() => import("./pages/Asistencia"));
+const Estudiantes = lazy(() => import("./pages/Estudiantes"));
+const Notas = lazy(() => import("./pages/Notas.jsx"));
+const CursoDetail = lazy(() => import("./pages/CursoDetail"));
+const DashboardPage = lazy(() => import("./pages/Dashboard"));
+const Login = lazy(() => import("./pages/Login"));
+const SetPassword = lazy(() => import("./pages/SetPassword.jsx"));
+const Inscripciones = lazy(() => import("./pages/Inscripciones"));
+const Programas = lazy(() => import("./pages/Programas"));
+const Estructura = lazy(() => import("./pages/Estructura"));
+const Calendario = lazy(() => import("./pages/Calendario"));
+const Cohortes = lazy(() => import("./pages/Cohortes"));
+const HorariosCursada = lazy(() => import("./pages/HorariosCursada"));
+const HistoricoCursos = lazy(() => import("./pages/HistoricoCursos"));
+const HistoricoEstudiante = lazy(() => import("./pages/HistoricoEstudiante.jsx"));
+const GraficoCursos = lazy(() => import("./pages/GraficoCursos"));
+const Egresados = lazy(() => import("./pages/Egresados.jsx"));
+const Usuarios = lazy(() => import("./pages/Usuarios.jsx"));
+const Resoluciones = lazy(() => import("./pages/Resoluciones"));
+const PreinscripcionPublica = lazy(() => import("./pages/PreinscripcionPublica"));
+const PreinscripcionTerciario = lazy(() => import("./pages/PreinscripcionTerciario"));
+const PreinscripcionVideojuegos = lazy(() => import("./pages/PreinscripcionVideojuegos"));
+const GestionPreinscripciones = lazy(() => import("./pages/GestionPreinscripciones"));
+const GestionPreinscripcionesTerciario = lazy(() => import("./pages/GestionPreinscripcionesTerciario"));
+const GestionPreinscripcionesVideojuegos = lazy(() => import("./pages/GestionPreinscripcionesVideojuegos"));
+const AdminTerciario = lazy(() => import("./pages/AdminTerciario"));
+const AutorizacionParental = lazy(() => import("./pages/AutorizacionParental"));
+const NivelacionDigital = lazy(() => import("./pages/NivelacionDigital"));
+const ConfirmarBloques = lazy(() => import("./pages/ConfirmarBloques"));
 
 // Services
 import authService from "./services/authService";
@@ -103,9 +105,9 @@ export default function App() {
 
   useEffect(() => {
     const path = location.pathname;
-    if (path.startsWith('/admin-terciario')) {
+    if (path.startsWith('/admin-terciario') || path.startsWith('/preinscripciones-terciario') || path.startsWith('/confirmar-bloques-terciario')) {
       setActivePanel('terciario');
-    } else if (path.startsWith('/admin-videojuegos')) {
+    } else if (path.startsWith('/admin-videojuegos') || path.startsWith('/confirmar-bloques-vj')) {
       setActivePanel('videojuegos');
     } else {
       setActivePanel('cfp');
@@ -156,44 +158,49 @@ export default function App() {
       <ThemeModeContext.Provider value={{ mode: themeMode, toggleMode: toggleThemeMode }}>
         <ActivePanelContext.Provider value={{ activePanel, setActivePanel }}>
           <UserContext.Provider value={{ user, setUser }}>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/preinscripcion" element={<PreinscripcionPublica />} />
-            <Route path="/preinscripcion-terciario" element={<PreinscripcionTerciario />} />
-            <Route path="/preinscripcion-videojuegos" element={<PreinscripcionVideojuegos />} />
-            <Route path="/autorizar/:token" element={<AutorizacionParental />} />
-            <Route path="/nivelacion/:token" element={<NivelacionDigital />} />
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/preinscripcion" element={<PreinscripcionPublica />} />
+                <Route path="/preinscripcion-terciario" element={<PreinscripcionTerciario />} />
+                <Route path="/preinscripcion-videojuegos" element={<PreinscripcionVideojuegos />} />
+                <Route path="/autorizar/:token" element={<AutorizacionParental />} />
+                <Route path="/nivelacion/:token" element={<NivelacionDigital />} />
 
-            <Route path="/admin-terciario" element={<PrivateRoute><AdminTerciario /></PrivateRoute>} />
+                <Route path="/admin-terciario" element={<PrivateRoute><AdminTerciario /></PrivateRoute>} />
 
-            {/* Protected Routes */}
-            <Route path="/set-password" element={<PrivateRoute><WithLayout title="Actualizar Contraseña"><SetPassword /></WithLayout></PrivateRoute>} />
-            <Route path="/dashboard" element={<PrivateRoute><WithLayout title="Dashboard"><DashboardPage /></WithLayout></PrivateRoute>} />
-            <Route path="/estudiantes" element={<PrivateRoute><WithLayout title="Estudiantes"><Estudiantes /></WithLayout></PrivateRoute>} />
-            <Route path="/gestion-preinscripciones" element={<PrivateRoute><WithLayout title="Preinscripciones CFP"><GestionPreinscripciones /></WithLayout></PrivateRoute>} />
-            <Route path="/preinscripciones-terciario" element={<PrivateRoute><WithLayout title="Preinscripciones Terciario"><GestionPreinscripcionesTerciario /></WithLayout></PrivateRoute>} />
-            <Route path="/admin-videojuegos" element={<PrivateRoute><GestionPreinscripcionesVideojuegos /></PrivateRoute>} />
-            <Route path="/asistencia" element={<PrivateRoute><WithLayout title="Asistencia"><Asistencia /></WithLayout></PrivateRoute>} />
-            <Route path="/notas" element={<PrivateRoute><WithLayout title="Notas / Equivalencias"><Notas /></WithLayout></PrivateRoute>} />
-            <Route path="/cursos/:id" element={<PrivateRoute><WithLayout title="Detalle del Curso"><CursoDetail /></WithLayout></PrivateRoute>} />
-            <Route path="/inscripciones" element={<PrivateRoute><WithLayout title="Inscripciones"><Inscripciones /></WithLayout></PrivateRoute>} />
-            <Route path="/programas" element={<PrivateRoute><WithLayout title="Programas"><Programas /></WithLayout></PrivateRoute>} />
-            <Route path="/estructura" element={<PrivateRoute><WithLayout title="Estructura Académica"><Estructura /></WithLayout></PrivateRoute>} />
-            <Route path="/calendario" element={<PrivateRoute><WithLayout title="Calendario Académico"><Calendario /></WithLayout></PrivateRoute>} />
-            <Route path="/cohortes" element={<PrivateRoute><WithLayout title="Cohortes"><Cohortes /></WithLayout></PrivateRoute>} />
-            <Route path="/horarios-cursada" element={<PrivateRoute><WithLayout title="Horarios de Cursada"><HorariosCursada /></WithLayout></PrivateRoute>} />
-            <Route path="/historico-cursos" element={<PrivateRoute><WithLayout title="Histórico por Cursos"><HistoricoCursos /></WithLayout></PrivateRoute>} />
-            <Route path="/historico-estudiante" element={<PrivateRoute><WithLayout title="Histórico por Estudiante"><HistoricoEstudiante /></WithLayout></PrivateRoute>} />
-            <Route path="/grafico-cursos" element={<PrivateRoute><WithLayout title="Gráfico de Cursos"><GraficoCursos /></WithLayout></PrivateRoute>} />
-            <Route path="/egresados" element={<PrivateRoute><WithLayout title="Egresados"><Egresados /></WithLayout></PrivateRoute>} />
-            <Route path="/usuarios" element={<PrivateRoute><WithLayout title="Usuarios"><Usuarios /></WithLayout></PrivateRoute>} />
-            <Route path="/resoluciones" element={<PrivateRoute><WithLayout title="Resoluciones"><Resoluciones /></WithLayout></PrivateRoute>} />
+                {/* Protected Routes */}
+                <Route path="/set-password" element={<PrivateRoute><WithLayout title="Actualizar Contraseña"><SetPassword /></WithLayout></PrivateRoute>} />
+                <Route path="/dashboard" element={<PrivateRoute><WithLayout title="Dashboard"><DashboardPage /></WithLayout></PrivateRoute>} />
+                <Route path="/estudiantes" element={<PrivateRoute><WithLayout title="Estudiantes"><Estudiantes /></WithLayout></PrivateRoute>} />
+                <Route path="/gestion-preinscripciones" element={<PrivateRoute><WithLayout title="Preinscripciones CFP"><GestionPreinscripciones /></WithLayout></PrivateRoute>} />
+                <Route path="/confirmar-bloques" element={<PrivateRoute><WithLayout title="Confirmar Bloques / Materias"><ConfirmarBloques /></WithLayout></PrivateRoute>} />
+                <Route path="/confirmar-bloques-vj" element={<PrivateRoute><WithLayout title="Confirmar Bloques VJ"><ConfirmarBloques /></WithLayout></PrivateRoute>} />
+                <Route path="/confirmar-bloques-terciario" element={<PrivateRoute><WithLayout title="Confirmar Bloques Terciario"><ConfirmarBloques /></WithLayout></PrivateRoute>} />
+                <Route path="/preinscripciones-terciario" element={<PrivateRoute><WithLayout title="Preinscripciones Terciario"><GestionPreinscripcionesTerciario /></WithLayout></PrivateRoute>} />
+                <Route path="/admin-videojuegos" element={<PrivateRoute><GestionPreinscripcionesVideojuegos /></PrivateRoute>} />
+                <Route path="/asistencia" element={<PrivateRoute><WithLayout title="Asistencia"><Asistencia /></WithLayout></PrivateRoute>} />
+                <Route path="/notas" element={<PrivateRoute><WithLayout title="Notas / Equivalencias"><Notas /></WithLayout></PrivateRoute>} />
+                <Route path="/cursos/:id" element={<PrivateRoute><WithLayout title="Detalle del Curso"><CursoDetail /></WithLayout></PrivateRoute>} />
+                <Route path="/inscripciones" element={<PrivateRoute><WithLayout title="Inscripciones"><Inscripciones /></WithLayout></PrivateRoute>} />
+                <Route path="/programas" element={<PrivateRoute><WithLayout title="Programas"><Programas /></WithLayout></PrivateRoute>} />
+                <Route path="/estructura" element={<PrivateRoute><WithLayout title="Estructura Académica"><Estructura /></WithLayout></PrivateRoute>} />
+                <Route path="/calendario" element={<PrivateRoute><WithLayout title="Calendario Académico"><Calendario /></WithLayout></PrivateRoute>} />
+                <Route path="/cohortes" element={<PrivateRoute><WithLayout title="Cohortes"><Cohortes /></WithLayout></PrivateRoute>} />
+                <Route path="/horarios-cursada" element={<PrivateRoute><WithLayout title="Horarios de Cursada"><HorariosCursada /></WithLayout></PrivateRoute>} />
+                <Route path="/historico-cursos" element={<PrivateRoute><WithLayout title="Histórico por Cursos"><HistoricoCursos /></WithLayout></PrivateRoute>} />
+                <Route path="/historico-estudiante" element={<PrivateRoute><WithLayout title="Histórico por Estudiante"><HistoricoEstudiante /></WithLayout></PrivateRoute>} />
+                <Route path="/grafico-cursos" element={<PrivateRoute><WithLayout title="Gráfico de Cursos"><GraficoCursos /></WithLayout></PrivateRoute>} />
+                <Route path="/egresados" element={<PrivateRoute><WithLayout title="Egresados"><Egresados /></WithLayout></PrivateRoute>} />
+                <Route path="/usuarios" element={<PrivateRoute><WithLayout title="Usuarios"><Usuarios /></WithLayout></PrivateRoute>} />
+                <Route path="/resoluciones" element={<PrivateRoute><WithLayout title="Resoluciones"><Resoluciones /></WithLayout></PrivateRoute>} />
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </UserContext.Provider>
         </ActivePanelContext.Provider>
       </ThemeModeContext.Provider>
