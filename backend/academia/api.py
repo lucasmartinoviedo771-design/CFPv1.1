@@ -24,6 +24,7 @@ from core.api import (
     nivelacion_router,
     preinscripcion_terciario_router,
     videojuegos_router,
+    confirmar_bloques_router,
 )
 from core.api.auth import jwt_auth
 
@@ -76,5 +77,6 @@ api.add_router("/autorizaciones", autorizaciones_router, auth=None)
 api.add_router("/nivelacion", nivelacion_router)
 api.add_router("", preinscripcion_terciario_router)
 api.add_router("/videojuegos", videojuegos_router)
+api.add_router("/confirmar-bloques", confirmar_bloques_router)
 
 

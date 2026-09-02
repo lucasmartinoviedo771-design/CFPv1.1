@@ -208,12 +208,42 @@ export default function Sidebar() {
         )}
 
         {/* 4. Confirmar Bloques */}
-        {!isOnlyVideojuegos && (
+        {activePanel === 'cfp' && (
           <Link
             to="/confirmar-bloques"
             className={cn(
               "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-2",
               location.pathname === '/confirmar-bloques'
+                ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
+                : "text-indigo-200 hover:text-white hover:bg-white/5"
+            )}
+          >
+            <Layers size={20} />
+            <span>Confirmar Bloques</span>
+          </Link>
+        )}
+
+        {activePanel === 'videojuegos' && hasVideojuegos && (
+          <Link
+            to="/confirmar-bloques-vj"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-2",
+              location.pathname === '/confirmar-bloques-vj'
+                ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
+                : "text-indigo-200 hover:text-white hover:bg-white/5"
+            )}
+          >
+            <Layers size={20} />
+            <span>Confirmar Bloques</span>
+          </Link>
+        )}
+
+        {activePanel === 'terciario' && (
+          <Link
+            to="/confirmar-bloques-terciario"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors mb-2",
+              location.pathname === '/confirmar-bloques-terciario'
                 ? "bg-brand-accent text-white shadow-[0_0_10px_rgba(255,102,0,0.3)]"
                 : "text-indigo-200 hover:text-white hover:bg-white/5"
             )}

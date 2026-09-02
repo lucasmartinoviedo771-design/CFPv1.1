@@ -68,7 +68,7 @@ def listar_inscripciones(
         "cohorte__bloque",
         "estudiante",
         "modulo__bloque",
-    ).order_by("-created_at")
+    ).exclude(estado=Inscripcion.PREINSCRIPTO).order_by("-created_at")
     if cohorte_id:
         qs = qs.filter(cohorte_id=cohorte_id)
     if estudiante_id:

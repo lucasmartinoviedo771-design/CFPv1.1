@@ -309,15 +309,7 @@ def bulk_approve(request, data: BulkIdsIn):
             enviar_correo_bienvenida(estudiante.id)
             updated_count += 1
         
-        # Actualizamos Inscripciones de esos estudiantes: Inscripto -> Activo
-        from core.models import Inscripcion
-        Inscripcion.objects.filter(
-            estudiante_id__in=estudiantes_ids,
-            estado=Inscripcion.PREINSCRIPTO
-        ).update(
-            estado=Inscripcion.CURSANDO,
-            updated_at=timezone.now()
-        )
+
     return {"updated": updated_count}
 
 
