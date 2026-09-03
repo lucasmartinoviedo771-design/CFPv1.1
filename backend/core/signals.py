@@ -2,8 +2,9 @@ import os
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.db.models import Q
 
-from .models import UserProfile, Estudiante, Bloque, Cohorte
+from .models import UserProfile, Estudiante, Bloque, Cohorte, Nota, Inscripcion, Examen
 
 
 @receiver(post_save, sender=User)
@@ -46,11 +47,38 @@ def activate_inscripciones_on_regular(sender, instance, created, **kwargs):
     que estén en estado 'INSCRIPTO'.
     """
     if instance.estatus == 'Regular':
-        from .models import Inscripcion
         Inscripcion.objects.filter(
             estudiante=instance,
             estado=Inscripcion.PREINSCRIPTO
         ).update(estado=Inscripcion.CURSANDO)
+
+
+@receiver(post_save, sender=Nota)
+def update_inscripcion_on_nota(sender, instance, created, **kwargs):
+    """
+    Cuando un estudiante aprueba un examen final o equivalente,
+    actualiza su inscripción activa a APROBADO y asegura su estatus Regular.
+    """
+    if instance.aprobado:
+        # Asegurar que el estudiante no quede en Preinscripto
+        if instance.estudiante.estatus == "Preinscripto":
+            instance.estudiante.estatus = "Regular"
+            instance.estudiante.save(update_fields=["estatus", "updated_at"])
+
+        # Si el examen pertenece a un bloque o módulo, actualizar inscripciones activas
+        examen = instance.examen
+        if examen:
+            insc_qs = Inscripcion.objects.filter(estudiante=instance.estudiante)
+            if examen.modulo:
+                insc_qs = insc_qs.filter(modulo=examen.modulo)
+            elif examen.bloque:
+                insc_qs = insc_qs.filter(
+                    Q(modulo__bloque=examen.bloque) | Q(cohorte__bloque=examen.bloque)
+                )
+            
+            insc_qs.filter(estado__in=[Inscripcion.CURSANDO, Inscripcion.PREINSCRIPTO]).update(
+                estado=Inscripcion.APROBADO
+            )
 
 
 @receiver(post_save, sender=Cohorte)

@@ -138,13 +138,15 @@ def _inscribir_hd(preinscripcion: PreinscripcionTerciario):
         if not estudiante:
             estudiante = Estudiante.objects.create(
                 dni=preinscripcion.dni,
-                estatus="Preinscripto",
+                estatus="Regular",
                 **fields_to_update
             )
         else:
-            # Actualizar todos los campos
+            # Actualizar todos los campos y asegurar estatus Regular
             for k, v in fields_to_update.items():
                 setattr(estudiante, k, v)
+            if estudiante.estatus == "Preinscripto":
+                estudiante.estatus = "Regular"
             estudiante.save()
 
         # Crear inscripción si no existe
