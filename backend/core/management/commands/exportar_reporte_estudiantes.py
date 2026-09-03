@@ -127,10 +127,19 @@ class Command(BaseCommand):
         )
 
         # Mapa de notas:
-        # Clave módulo: (estudiante_id, modulo_id) -> lista de dicts de notas
-        # Clave bloque: (estudiante_id, bloque_id) -> lista de dicts de notas
+        # 1. Clave módulo: (estudiante_id, modulo_id) -> lista de dicts de notas
+        # 2. Clave bloque: (estudiante_id, bloque_id) -> lista de dicts de notas
+        # 3. Clave nombre de bloque normalizado: (estudiante_id, bloque_nombre_norm) -> lista de dicts
         notas_modulo_map = {}
         notas_bloque_map = {}
+        notas_bloque_nombre_map = {}
+
+        def _norm(texto):
+            import unicodedata
+            if not texto:
+                return ""
+            nfkd = unicodedata.normalize("NFKD", texto)
+            return "".join(c for c in nfkd if not unicodedata.combining(c)).lower().strip()
 
         for n in notas_qs:
             fecha_rendida = (
@@ -139,20 +148,30 @@ class Command(BaseCommand):
                 else (n.created_at.date() if n.created_at else None)
             )
             calif_val = float(n.calificacion) if n.calificacion is not None else None
+            tipo_label = n.examen.get_tipo_examen_display() if n.examen else ""
             nota_info = {
                 "nota": calif_val,
                 "aprobado": n.aprobado,
                 "fecha": fecha_rendida,
-                "tipo_examen": n.examen.tipo_examen if n.examen else "",
+                "tipo_examen": tipo_label,
+                "tipo_raw": n.examen.tipo_examen if n.examen else "",
                 "es_definitiva": n.es_nota_definitiva,
             }
 
             if n.examen and n.examen.modulo_id:
                 key = (n.estudiante_id, n.examen.modulo_id)
                 notas_modulo_map.setdefault(key, []).append(nota_info)
+                # También mapear al bloque del módulo si existe
+                if n.examen.modulo.bloque_id:
+                    key_b = (n.estudiante_id, n.examen.modulo.bloque_id)
+                    notas_bloque_map.setdefault(key_b, []).append(nota_info)
+                    b_norm = _norm(n.examen.modulo.bloque.nombre)
+                    notas_bloque_nombre_map.setdefault((n.estudiante_id, b_norm), []).append(nota_info)
             elif n.examen and n.examen.bloque_id:
                 key = (n.estudiante_id, n.examen.bloque_id)
                 notas_bloque_map.setdefault(key, []).append(nota_info)
+                b_norm = _norm(n.examen.bloque.nombre)
+                notas_bloque_nombre_map.setdefault((n.estudiante_id, b_norm), []).append(nota_info)
 
         # ---------------------------------------------------------------------
         # 4. Creación del Workbook con openpyxl
@@ -282,11 +301,27 @@ class Command(BaseCommand):
             estado_cursada_display = dict_estados_inscripcion.get(estado_cursada_raw, estado_cursada_raw.capitalize())
 
             # Obtener notas correspondientes
+            # Buscar en:
+            # 1) Nota directa del módulo cursado
+            # 2) Notas del bloque asociado
+            # 3) Notas de bloques homónimos (ej. Hab.Dig. Terciario / CFP)
             notas_candidatas = []
             if modulo:
-                notas_candidatas = notas_modulo_map.get((est.id, modulo.id), [])
-            elif bloque:
-                notas_candidatas = notas_bloque_map.get((est.id, bloque.id), [])
+                notas_candidatas = list(notas_modulo_map.get((est.id, modulo.id), []))
+            
+            if bloque:
+                for nb in notas_bloque_map.get((est.id, bloque.id), []):
+                    if nb not in notas_candidatas:
+                        notas_candidatas.append(nb)
+                
+                # Búsqueda por similitud de nombre de bloque (para casos como Hab.Dig. Terciario)
+                b_norm = _norm(bloque.nombre)
+                for key_tuple, list_n in notas_bloque_nombre_map.items():
+                    e_id, b_nom_key = key_tuple
+                    if e_id == est.id and (b_norm in b_nom_key or b_nom_key in b_norm or ("hab.dig" in b_nom_key and "habilidades digitales" in b_norm)):
+                        for nb in list_n:
+                            if nb not in notas_candidatas:
+                                notas_candidatas.append(nb)
 
             # Si el estudiante rindió múltiples veces (parcial, recuperatorio, final),
             # o si no rindió ninguna:
