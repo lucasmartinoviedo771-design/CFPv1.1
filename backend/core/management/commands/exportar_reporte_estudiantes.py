@@ -303,25 +303,55 @@ class Command(BaseCommand):
             # Obtener notas correspondientes
             # Buscar en:
             # 1) Nota directa del módulo cursado
-            # 2) Notas del bloque asociado
-            # 3) Notas de bloques homónimos (ej. Hab.Dig. Terciario / CFP)
+            # 2) Notas del bloque del módulo
+            # 3) Notas del bloque de la cohorte
+            # 4) Notas de bloques homónimos / vinculados (ej. Hab.Dig. Terciario, Habilidades Digitales, etc.)
             notas_candidatas = []
-            if modulo:
-                notas_candidatas = list(notas_modulo_map.get((est.id, modulo.id), []))
             
-            if bloque:
+            # 1) Módulo directo
+            if modulo:
+                for n_mod in notas_modulo_map.get((est.id, modulo.id), []):
+                    if n_mod not in notas_candidatas:
+                        notas_candidatas.append(n_mod)
+                if modulo.bloque_id:
+                    for nb in notas_bloque_map.get((est.id, modulo.bloque_id), []):
+                        if nb not in notas_candidatas:
+                            notas_candidatas.append(nb)
+            
+            # 2) Bloque de la cohorte o módulo
+            if cohorte and cohorte.bloque_id:
+                for nb in notas_bloque_map.get((est.id, cohorte.bloque_id), []):
+                    if nb not in notas_candidatas:
+                        notas_candidatas.append(nb)
+            if bloque and bloque.id:
                 for nb in notas_bloque_map.get((est.id, bloque.id), []):
                     if nb not in notas_candidatas:
                         notas_candidatas.append(nb)
-                
-                # Búsqueda por similitud de nombre de bloque (para casos como Hab.Dig. Terciario)
-                b_norm = _norm(bloque.nombre)
+
+            # 3) Búsqueda heurística y por nombres normalizados
+            nombres_a_buscar = set()
+            if bloque and bloque.nombre:
+                nombres_a_buscar.add(_norm(bloque.nombre))
+            if modulo and modulo.bloque and modulo.bloque.nombre:
+                nombres_a_buscar.add(_norm(modulo.bloque.nombre))
+            if cohorte and cohorte.bloque and cohorte.bloque.nombre:
+                nombres_a_buscar.add(_norm(cohorte.bloque.nombre))
+            if modulo and modulo.nombre:
+                nombres_a_buscar.add(_norm(modulo.nombre))
+
+            for nom in list(nombres_a_buscar):
+                if "habilidad" in nom or "hab.dig" in nom or "digital" in nom:
+                    nombres_a_buscar.add("hab.dig. terciario")
+                    nombres_a_buscar.add("habilidades digitales")
+
+            for nom_target in nombres_a_buscar:
                 for key_tuple, list_n in notas_bloque_nombre_map.items():
                     e_id, b_nom_key = key_tuple
-                    if e_id == est.id and (b_norm in b_nom_key or b_nom_key in b_norm or ("hab.dig" in b_nom_key and "habilidades digitales" in b_norm)):
-                        for nb in list_n:
-                            if nb not in notas_candidatas:
-                                notas_candidatas.append(nb)
+                    if e_id == est.id:
+                        if nom_target in b_nom_key or b_nom_key in nom_target or (("hab.dig" in b_nom_key or "habilidad" in b_nom_key) and ("hab.dig" in nom_target or "habilidad" in nom_target)):
+                            for nb in list_n:
+                                if nb not in notas_candidatas:
+                                    notas_candidatas.append(nb)
 
             # Si el estudiante rindió múltiples veces (parcial, recuperatorio, final),
             # o si no rindió ninguna:
