@@ -128,9 +128,11 @@ class Command(BaseCommand):
 
         # Mapa de notas:
         # 1. Clave módulo: (estudiante_id, modulo_id) -> lista de dicts de notas
-        # 2. Clave bloque: (estudiante_id, bloque_id) -> lista de dicts de notas
-        # 3. Clave nombre de bloque normalizado: (estudiante_id, bloque_nombre_norm) -> lista de dicts
+        # 2. Clave módulo articulado homónimo: (estudiante_id, bloque_nombre_norm, modulo_nombre_norm) -> lista de dicts
+        # 3. Clave bloque: (estudiante_id, bloque_id) -> lista de dicts de notas (exámenes de bloque)
+        # 4. Clave nombre de bloque normalizado: (estudiante_id, bloque_nombre_norm) -> lista de dicts (exámenes de bloque)
         notas_modulo_map = {}
+        notas_modulo_nombre_map = {}
         notas_bloque_map = {}
         notas_bloque_nombre_map = {}
 
@@ -159,19 +161,23 @@ class Command(BaseCommand):
             }
 
             if n.examen and n.examen.modulo_id:
-                key = (n.estudiante_id, n.examen.modulo_id)
-                notas_modulo_map.setdefault(key, []).append(nota_info)
-                # También mapear al bloque del módulo si existe
-                if n.examen.modulo.bloque_id:
-                    key_b = (n.estudiante_id, n.examen.modulo.bloque_id)
-                    notas_bloque_map.setdefault(key_b, []).append(nota_info)
+                # Examen de módulo (PARCIAL, RECUP) -> EXCLUSIVO para este módulo
+                key_mod = (n.estudiante_id, n.examen.modulo_id)
+                notas_modulo_map.setdefault(key_mod, []).append(nota_info)
+                if n.examen.modulo and n.examen.modulo.bloque_id:
                     b_norm = _norm(n.examen.modulo.bloque.nombre)
-                    notas_bloque_nombre_map.setdefault((n.estudiante_id, b_norm), []).append(nota_info)
+                    m_norm = _norm(n.examen.modulo.nombre)
+                    notas_modulo_nombre_map.setdefault((n.estudiante_id, b_norm, m_norm), []).append(nota_info)
+                    if "habilidad" in b_norm or "hab.dig" in b_norm or "digital" in b_norm:
+                        notas_modulo_nombre_map.setdefault((n.estudiante_id, "hab_dig_generico", m_norm), []).append(nota_info)
             elif n.examen and n.examen.bloque_id:
+                # Examen de bloque (FINAL_VIRTUAL, FINAL_SINC, EQUIVALENCIA)
                 key = (n.estudiante_id, n.examen.bloque_id)
                 notas_bloque_map.setdefault(key, []).append(nota_info)
                 b_norm = _norm(n.examen.bloque.nombre)
                 notas_bloque_nombre_map.setdefault((n.estudiante_id, b_norm), []).append(nota_info)
+                if "habilidad" in b_norm or "hab.dig" in b_norm or "digital" in b_norm:
+                    notas_bloque_nombre_map.setdefault((n.estudiante_id, "hab_dig_generico"), []).append(nota_info)
 
         # ---------------------------------------------------------------------
         # 4. Creación del Workbook con openpyxl
@@ -300,58 +306,53 @@ class Command(BaseCommand):
             estado_cursada_raw = ins.estado or "PREINSCRIPTO"
             estado_cursada_display = dict_estados_inscripcion.get(estado_cursada_raw, estado_cursada_raw.capitalize())
 
-            # Obtener notas correspondientes
-            # Buscar en:
-            # 1) Nota directa del módulo cursado
-            # 2) Notas del bloque del módulo
-            # 3) Notas del bloque de la cohorte
-            # 4) Notas de bloques homónimos / vinculados (ej. Hab.Dig. Terciario, Habilidades Digitales, etc.)
+            # Obtener notas correspondientes:
+            # - Para un módulo cursado: buscar notas de evaluación exclusivas de ese módulo (parciales/recup)
+            #   o exámenes finales de bloque si el estudiante completó/aprobó el bloque (y no es el 1° módulo).
+            # - Para un estudiante cursando o preinscripto en un módulo: NUNCA arrastrar notas del módulo anterior.
             notas_candidatas = []
             
-            # 1) Módulo directo
             if modulo:
+                # 1. Notas directas de este módulo específico por ID
                 for n_mod in notas_modulo_map.get((est.id, modulo.id), []):
                     if n_mod not in notas_candidatas:
                         notas_candidatas.append(n_mod)
-                if modulo.bloque_id:
-                    for nb in notas_bloque_map.get((est.id, modulo.bloque_id), []):
-                        if nb not in notas_candidatas:
-                            notas_candidatas.append(nb)
-            
-            # 2) Bloque de la cohorte o módulo
-            if cohorte and cohorte.bloque_id:
-                for nb in notas_bloque_map.get((est.id, cohorte.bloque_id), []):
-                    if nb not in notas_candidatas:
-                        notas_candidatas.append(nb)
-            if bloque and bloque.id:
+                
+                # 2. Si no hay nota directa por ID, buscar módulos articulados homónimos (ej. Hab.Dig. Terciario)
+                if not notas_candidatas and modulo.bloque:
+                    b_norm = _norm(modulo.bloque.nombre)
+                    m_norm = _norm(modulo.nombre)
+                    for n_mod in notas_modulo_nombre_map.get((est.id, b_norm, m_norm), []):
+                        if n_mod not in notas_candidatas:
+                            notas_candidatas.append(n_mod)
+                    if not notas_candidatas and ("habilidad" in b_norm or "hab.dig" in b_norm or "digital" in b_norm):
+                        for n_mod in notas_modulo_nombre_map.get((est.id, "hab_dig_generico", m_norm), []):
+                            if n_mod not in notas_candidatas:
+                                notas_candidatas.append(n_mod)
+
+                # 3. Finales de bloque (FINAL_VIRTUAL, FINAL_SINC, EQUIVALENCIA):
+                # SOLO para el módulo final del bloque (no 1° módulo) y SOLO si el estudiante NO está Cursando/Preinscripto/Inactivo
+                m_norm = _norm(modulo.nombre) if modulo.nombre else ""
+                es_primer_modulo = ("modulo 1" in m_norm or "etapa 1" in m_norm) and not ("modulo 2" in m_norm or "etapa 2" in m_norm)
+                if not es_primer_modulo and estado_cursada_raw not in [Inscripcion.CURSANDO, Inscripcion.PREINSCRIPTO, Inscripcion.INACTIVO, Inscripcion.LIBRE]:
+                    if modulo.bloque_id:
+                        for nb in notas_bloque_map.get((est.id, modulo.bloque_id), []):
+                            if nb not in notas_candidatas:
+                                notas_candidatas.append(nb)
+                    if cohorte and cohorte.bloque_id:
+                        for nb in notas_bloque_map.get((est.id, cohorte.bloque_id), []):
+                            if nb not in notas_candidatas:
+                                notas_candidatas.append(nb)
+                    b_norm = _norm(modulo.bloque.nombre) if modulo.bloque else ""
+                    if "habilidad" in b_norm or "hab.dig" in b_norm or "digital" in b_norm:
+                        for nb in notas_bloque_nombre_map.get((est.id, "hab_dig_generico"), []):
+                            if nb not in notas_candidatas:
+                                notas_candidatas.append(nb)
+            elif bloque:
+                # Inscripción general a nivel bloque (sin módulo)
                 for nb in notas_bloque_map.get((est.id, bloque.id), []):
                     if nb not in notas_candidatas:
                         notas_candidatas.append(nb)
-
-            # 3) Búsqueda heurística y por nombres normalizados
-            nombres_a_buscar = set()
-            if bloque and bloque.nombre:
-                nombres_a_buscar.add(_norm(bloque.nombre))
-            if modulo and modulo.bloque and modulo.bloque.nombre:
-                nombres_a_buscar.add(_norm(modulo.bloque.nombre))
-            if cohorte and cohorte.bloque and cohorte.bloque.nombre:
-                nombres_a_buscar.add(_norm(cohorte.bloque.nombre))
-            if modulo and modulo.nombre:
-                nombres_a_buscar.add(_norm(modulo.nombre))
-
-            for nom in list(nombres_a_buscar):
-                if "habilidad" in nom or "hab.dig" in nom or "digital" in nom:
-                    nombres_a_buscar.add("hab.dig. terciario")
-                    nombres_a_buscar.add("habilidades digitales")
-
-            for nom_target in nombres_a_buscar:
-                for key_tuple, list_n in notas_bloque_nombre_map.items():
-                    e_id, b_nom_key = key_tuple
-                    if e_id == est.id:
-                        if nom_target in b_nom_key or b_nom_key in nom_target or (("hab.dig" in b_nom_key or "habilidad" in b_nom_key) and ("hab.dig" in nom_target or "habilidad" in nom_target)):
-                            for nb in list_n:
-                                if nb not in notas_candidatas:
-                                    notas_candidatas.append(nb)
 
             # Si el estudiante rindió múltiples veces (parcial, recuperatorio, final),
             # o si no rindió ninguna:
