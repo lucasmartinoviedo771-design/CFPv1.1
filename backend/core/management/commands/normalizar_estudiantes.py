@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 
 from core.models import Estudiante
 from core.utils.estudiante_normalization import (
+    normalize_ciudad,
     normalize_country_with_other,
     normalize_dni_digits,
     normalize_sexo,
@@ -9,6 +10,7 @@ from core.utils.estudiante_normalization import (
     to_title_case,
     to_upper,
 )
+
 
 
 class Command(BaseCommand):
@@ -97,7 +99,7 @@ class Command(BaseCommand):
 
             est.lugar_nacimiento = to_title_case(est.lugar_nacimiento)
             est.domicilio = to_title_case(est.domicilio)
-            est.ciudad = to_title_case(est.ciudad)
+            est.ciudad = normalize_ciudad(est.ciudad)
             est.barrio = to_title_case(est.barrio)
             est.lugar_trabajo = to_title_case(est.lugar_trabajo)
 

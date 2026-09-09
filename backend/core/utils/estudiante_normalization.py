@@ -55,6 +55,55 @@ def normalize_sexo(value: Any) -> str:
     return SEXO_CANONICAL.get(text.lower(), to_title_case(text))
 
 
+def normalize_ciudad(value: Any) -> str:
+    text = normalize_spaces(value)
+    if not text:
+        return ""
+    
+    # Normalizar texto para comparación
+    import unicodedata
+    nfkd = unicodedata.normalize("NFKD", text)
+    clean = "".join(c for c in nfkd if not unicodedata.combining(c)).lower().strip()
+
+    # Río Grande (variantes)
+    if "rio grande" in clean or "rg" in clean or clean in ("tdf", "tierra del fuego"):
+        return "Río Grande"
+
+    # Ushuaia (variantes y typos)
+    if "ushuaia" in clean or "usuahia" in clean:
+        return "Ushuaia"
+
+    # Tolhuin
+    if "tolhuin" in clean:
+        return "Tolhuin"
+
+    # Zona Rural
+    if "zona rural" in clean or "campo de doma" in clean or "estancia" in clean:
+        return "Zona Rural"
+
+    # CABA / Buenos Aires
+    if clean in ("caba", "ciudad autonoma de bs.as", "ciudad autonoma de buenos aires", "capital federal"):
+        return "CABA"
+
+    # Si es "Sin Informacion" o números/códigos postales inválidos
+    if clean in ("sin informacion", "undefined", "1744"):
+        return ""
+
+    # Quitar sufijos comunes como ", Argentina", ", Tierra Del Fuego...", etc.
+    partes = [p.strip() for p in text.split(",") if p.strip()]
+    if partes:
+        primera_parte = partes[0].strip()
+        # Verificar si la primera parte es normalizable
+        p_clean = "".join(c for c in unicodedata.normalize("NFKD", primera_parte) if not unicodedata.combining(c)).lower().strip()
+        if "rio grande" in p_clean:
+            return "Río Grande"
+        if "ushuaia" in p_clean or "usuahia" in p_clean:
+            return "Ushuaia"
+        if "tolhuin" in p_clean:
+            return "Tolhuin"
+    return to_title_case(text)
+
+
 def normalize_country_with_other(value: Any) -> Tuple[str, str]:
     text = normalize_spaces(value)
     if not text:
@@ -63,4 +112,3 @@ def normalize_country_with_other(value: Any) -> Tuple[str, str]:
     if canonical:
         return canonical, ""
     return "Otro", to_title_case(text)
-
