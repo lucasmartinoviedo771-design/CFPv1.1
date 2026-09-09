@@ -27,6 +27,7 @@ const ESTADO_INSCRIPCION_COLORS: Record<string, string> = {
 interface TerciarioAlumno {
   inscripcion_id: number;
   cohorte_nombre: string;
+  fecha_inscripcion?: string | null;
   apellido: string;
   nombre: string;
   dni: string;
@@ -87,47 +88,68 @@ export function AlumnosPanel() {
       .finally(() => setLoading(false));
   }, [filtroCohorte, filtroEstado, search]);
 
+  const calcularEdad = (fechaNacStr?: string | null): number | string => {
+    if (!fechaNacStr) return "—";
+    try {
+      const parts = fechaNacStr.split("-");
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const birthDate = new Date(year, month, day);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        return age >= 0 ? age : "—";
+      }
+      return "—";
+    } catch {
+      return "—";
+    }
+  };
+
   const exportExcel = () => {
-    const rows = alumnos.map((a, i) => ({
-      "#": i + 1,
-      Cohorte: a.cohorte_nombre,
-      Apellido: a.apellido,
-      Nombre: a.nombre,
-      DNI: a.dni,
-      CUIL: a.cuit || "—",
-      Email: a.email,
-      Teléfono: a.telefono || "—",
-      Celular: a.celular_preinsc || "—",
-      Sexo: a.sexo || "—",
-      "Fecha de Nacimiento": a.fecha_nacimiento || "—",
-      Domicilio: a.domicilio || "—",
-      Localidad: a.localidad || "—",
-      "Loc. de Nacimiento": a.localidad_nacimiento || "—",
-      "Prov. de Nacimiento": a.provincia_nacimiento || "—",
-      Nacionalidad: a.nacionalidad || "—",
-      "Secundaria Completa": a.finalizo_secundaria || "—",
-      "¿Posee Estudios Superiores?": a.posee_estudios_superiores ? "Sí" : "No",
-      "Estudios Superiores Finalizados": a.posee_estudios_superiores ? (a.estudios_superiores_finalizado === "si" ? "Sí" : a.estudios_superiores_finalizado === "no" ? "No" : a.estudios_superiores_finalizado || "—") : "No aplica",
-      "Carrera de Estudios Superiores": a.posee_estudios_superiores ? (a.carrera_superior || "—") : "No aplica",
-      "Posee PC": a.posee_pc ? "Sí" : "No",
-      "Posee Internet": a.posee_conectividad ? "Sí" : "No",
-      "Pueblo Originario": a.pueblo_originario ? "Sí" : "No",
-      "Posee Discapacidad": a.posee_discapacidad ? "Sí" : "No",
-      "Tipo Discapacidad": a.posee_discapacidad ? (a.tipo_discapacidad || "—") : "No aplica",
-      "Posee CUD": a.posee_discapacidad ? (a.posee_cud === true ? "Sí" : a.posee_cud === false ? "No" : "—") : "No aplica",
-      "Apoyo Inclusión": a.posee_discapacidad ? (a.apoyo_inclusion || "—") : "No aplica",
-      "Requiere Apoyo Específico": a.posee_discapacidad ? (a.requiere_apoyo_especifico === true ? "Sí" : a.requiere_apoyo_especifico === false ? "No" : "—") : "No aplica",
-      "Descripción Apoyo": a.posee_discapacidad ? (a.descripcion_apoyo || "—") : "No aplica",
-      "Estado HD": HD_ESTADO_LABELS[a.estado_hd || ""] || a.estado_hd || "—",
-      "Estado Inscripción": ESTADO_INSCRIPCION_LABELS[a.estado] || a.estado,
-      "Estado Preinscripción": a.estado_preinscripcion || "—",
-      Observaciones: a.observaciones || "—",
-    }));
+    const rows = alumnos.map((a, i) => {
+      const nombreCompleto = `${a.apellido || ""}, ${a.nombre || ""}`.trim().replace(/^,|,$/g, "").trim();
+      const edadCalculada = calcularEdad(a.fecha_nacimiento);
+
+      return {
+        "Número de Orden": i + 1,
+        "Fecha de Inscripción": a.fecha_inscripcion || "—",
+        "Correo": a.email || "—",
+        "Apellido y Nombre": nombreCompleto || "—",
+        "DNI": a.dni,
+        "CUIL": a.cuit || "—",
+        "Sexo": a.sexo || "—",
+        "Celular": a.celular_preinsc || a.telefono || "—",
+        "Fecha de Nacimiento": a.fecha_nacimiento || "—",
+        "Localidad de Nacimiento": a.localidad_nacimiento || "—",
+        "Provincia de Nacimiento": a.provincia_nacimiento || "—",
+        "Nacionalidad": a.nacionalidad || "—",
+        "Domicilio": a.domicilio || "—",
+        "Localidad": a.localidad || "—",
+        "Posee PC": a.posee_pc ? "Sí" : "No",
+        "Posee Internet": a.posee_conectividad ? "Sí" : "No",
+        "Pueblo Originario": a.pueblo_originario ? "Sí" : "No",
+        "Posee Discapacidad": a.posee_discapacidad ? "Sí" : "No",
+        "Tipo Discapacidad": a.posee_discapacidad ? (a.tipo_discapacidad || "—") : "No aplica",
+        "Posee CUD": a.posee_discapacidad ? (a.posee_cud === true ? "Sí" : a.posee_cud === false ? "No" : "—") : "No aplica",
+        "Apoyo Inclusión": a.posee_discapacidad ? (a.apoyo_inclusion || "—") : "No aplica",
+        "Requiere Apoyo Específico": a.posee_discapacidad ? (a.requiere_apoyo_especifico === true ? "Sí" : a.requiere_apoyo_especifico === false ? "No" : "—") : "No aplica",
+        "Descripción Apoyo": a.posee_discapacidad ? (a.descripcion_apoyo || "—") : "No aplica",
+        "Edad Calculada": edadCalculada,
+        "Observaciones": a.observaciones || "—",
+      };
+    });
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Alumnos");
     XLSX.writeFile(wb, "alumnos_terciario.xlsx");
   };
+
 
   const imprimir = () => {
     const filas = alumnos.map((a, i) => `

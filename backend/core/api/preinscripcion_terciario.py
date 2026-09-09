@@ -877,10 +877,19 @@ def listar_alumnos_terciario(
     for ins in qs:
         e = ins.estudiante
         preinsc = PreinscripcionTerciario.objects.filter(dni=e.dni).order_by("-created_at").first()
+        fecha_insc = None
+        if ins.created_at:
+            from django.utils import timezone
+            fecha_insc = timezone.localtime(ins.created_at).strftime("%Y-%m-%d")
+        elif preinsc and preinsc.created_at:
+            from django.utils import timezone
+            fecha_insc = timezone.localtime(preinsc.created_at).strftime("%Y-%m-%d")
+
         row = {
             "inscripcion_id": ins.id,
             "cohorte_id": ins.cohorte_id,
             "cohorte_nombre": ins.cohorte.nombre,
+            "fecha_inscripcion": fecha_insc or "",
             "estado": ins.estado,
             "estado_hd": ins.estado,
             # Datos personales
