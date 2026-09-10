@@ -14,6 +14,10 @@ db.sqlite3
 db.sqlite3-journal
 staticfiles/
 media/
+*.sql
+*.sql.gz
+backend/seed_test_data.py
+backend/wipe_data.py
 
 # IDEs:
 .idea/

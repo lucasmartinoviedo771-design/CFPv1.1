@@ -110,6 +110,26 @@ def crear_inscripcion(request, payload: InscripcionIn):
 @require_authenticated_group
 def actualizar_inscripcion(request, inscripcion_id: int, payload: InscripcionIn):
     insc = get_object_or_404(Inscripcion, pk=inscripcion_id)
+    if payload.estado == Inscripcion.EGRESADO:
+        prog = insc.cohorte.programa if insc.cohorte else None
+        if prog and prog.bloques.count() > 1:
+            req_bids = set(prog.bloques.values_list("id", flat=True))
+            current_bid = insc.modulo.bloque_id if insc.modulo else (insc.cohorte.bloque_id if insc.cohorte else None)
+            approved_bids = set(
+                Inscripcion.objects.filter(
+                    estudiante=insc.estudiante,
+                    cohorte__programa=prog,
+                    estado__in=[Inscripcion.APROBADO, Inscripcion.EGRESADO],
+                ).values_list("modulo__bloque_id", flat=True)
+            )
+            if current_bid:
+                approved_bids.add(current_bid)
+            if not req_bids.issubset(approved_bids):
+                from ninja.errors import HttpError
+                raise HttpError(
+                    400,
+                    f"No se puede marcar como EGRESADO: el estudiante solo tiene {len(approved_bids.intersection(req_bids))} de los {len(req_bids)} bloques requeridos para egresar de {prog.nombre}.",
+                )
     serializer = InscripcionSerializer(instance=insc, data=payload.dict(), partial=True)
     serializer.is_valid(raise_exception=True)
     serializer.save()
