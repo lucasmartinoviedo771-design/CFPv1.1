@@ -15,12 +15,24 @@ export interface FirstEntryItem {
   count: number;
 }
 
+export interface SexDistribution {
+  mujeres: number;
+  varones: number;
+  otro: number;
+  sin_especificar: number;
+  total: number;
+  mujeres_pct: number;
+  varones_pct: number;
+}
+
 export interface AuditRecordItem {
   id: number;
   person_id: string;
   name: string;
   dni: string;
   city: string;
+  sexo?: string;
+  sexo_raw?: string;
   education: string;
   regular: string;
   is_active: boolean;
@@ -89,6 +101,8 @@ export interface ExtendedDashboardStats {
   by_month: DistributionItem[];
   by_city: DistributionItem[];
   by_education: DistributionItem[];
+  by_sex?: DistributionItem[];
+  sex_distribution?: SexDistribution;
   first_entries: FirstEntryItem[];
   cross_matrix: CrossMatrixItem[];
   records?: PaginatedRecords;

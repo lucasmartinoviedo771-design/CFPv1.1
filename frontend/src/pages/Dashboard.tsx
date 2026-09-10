@@ -29,6 +29,7 @@ import TerritorialMap from '../components/Dashboard/TerritorialMap';
 import FirstEntryTable from '../components/Dashboard/FirstEntryTable';
 import CrossMatrixTable from '../components/Dashboard/CrossMatrixTable';
 import AuditableRecordsTable from '../components/Dashboard/AuditableRecordsTable';
+import SexDistributionWidget from '../components/Dashboard/SexDistributionWidget';
 
 type ModalType = 'activos' | 'egresados' | 'aprobacion' | null;
 
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const [localidad, setLocalidad] = useState<string>('');
   const [nivelEducativo, setNivelEducativo] = useState<string>('');
   const [estado, setEstado] = useState<string>('');
+  const [sexo, setSexo] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -107,6 +109,7 @@ export default function Dashboard() {
           localidad: localidad || undefined,
           nivel_educativo: nivelEducativo || undefined,
           estado: estado || undefined,
+          sexo: sexo || undefined,
           fecha_desde: fechaDesde || undefined,
           fecha_hasta: fechaHasta || undefined,
           search: searchQuery.trim() || undefined,
@@ -141,6 +144,7 @@ export default function Dashboard() {
     localidad,
     nivelEducativo,
     estado,
+    sexo,
     fechaDesde,
     fechaHasta,
     searchQuery,
@@ -161,6 +165,7 @@ export default function Dashboard() {
     setLocalidad('');
     setNivelEducativo('');
     setEstado('');
+    setSexo('');
     setSelectedYear('');
     setSelectedMonth('');
     setSearchQuery('');
@@ -201,6 +206,7 @@ export default function Dashboard() {
     const headers = [
       'Apellido y Nombres',
       'DNI',
+      'Sexo',
       'Localidad',
       'Regularidad',
       'Programa / Carrera',
@@ -221,6 +227,7 @@ export default function Dashboard() {
     const rows = items.map((r) => [
       r.name,
       r.dni,
+      r.sexo || '',
       r.city,
       r.regular,
       r.program,
@@ -321,6 +328,7 @@ export default function Dashboard() {
     localidad,
     nivelEducativo,
     estado,
+    sexo,
     selectedYear,
     selectedMonth,
     searchQuery,
@@ -365,6 +373,7 @@ export default function Dashboard() {
                 localidad: localidad || undefined,
                 nivel_educativo: nivelEducativo || undefined,
                 estado: estado || undefined,
+                sexo: sexo || undefined,
                 fecha_desde: fechaDesde || undefined,
                 fecha_hasta: fechaHasta || undefined,
                 search: searchQuery.trim() || undefined,
@@ -412,7 +421,7 @@ export default function Dashboard() {
 
       {/* BARRA DE FILTROS SUPERIOR Y BÚSQUEDA INSTANTÁNEA */}
       <section className="bg-[#0a0033]/90 border border-indigo-500/30 backdrop-blur-md rounded-2xl p-5 shadow-2xl space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3.5 items-end">
           {/* Programa */}
           <Select
             label="Programa / Carrera"
@@ -486,6 +495,25 @@ export default function Dashboard() {
             ]}
             value={estado}
             onChange={(e) => handleFilterChange(setEstado, e.target.value)}
+            className="bg-indigo-950/70 border-indigo-500/40 text-white text-xs h-10"
+          />
+
+          {/* Sexo */}
+          <Select
+            label="Sexo"
+            options={[
+              { value: '', label: 'Todos los sexos' },
+              { value: 'Mujeres', label: `Mujeres (${stats?.sex_distribution?.mujeres ?? 0})` },
+              { value: 'Varones', label: `Varones (${stats?.sex_distribution?.varones ?? 0})` },
+              ...(stats?.sex_distribution?.otro
+                ? [{ value: 'Otro', label: `Otro (${stats.sex_distribution.otro})` }]
+                : []),
+              ...(stats?.sex_distribution?.sin_especificar
+                ? [{ value: 'Sin especificar', label: `Sin esp. (${stats.sex_distribution.sin_especificar})` }]
+                : []),
+            ]}
+            value={sexo}
+            onChange={(e) => handleFilterChange(setSexo, e.target.value)}
             className="bg-indigo-950/70 border-indigo-500/40 text-white text-xs h-10"
           />
         </div>
@@ -569,6 +597,14 @@ export default function Dashboard() {
                 className="px-2.5 py-1 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs flex items-center gap-1 hover:bg-purple-500/30"
               >
                 Estado: {estado} <span className="font-bold">×</span>
+              </button>
+            )}
+            {sexo && (
+              <button
+                onClick={() => setSexo('')}
+                className="px-2.5 py-1 rounded-full bg-pink-500/20 border border-pink-500/40 text-pink-300 text-xs flex items-center gap-1 hover:bg-pink-500/30"
+              >
+                Sexo: {sexo} <span className="font-bold">×</span>
               </button>
             )}
             {selectedYear && (
@@ -675,6 +711,13 @@ export default function Dashboard() {
           borderClass="border-indigo-500/40"
         />
       </section>
+
+      {/* DISTRIBUCIÓN POR SEXO INTERACTIVA */}
+      <SexDistributionWidget
+        data={stats?.sex_distribution}
+        selectedSex={sexo}
+        onSelectSex={(val) => handleFilterChange(setSexo, val)}
+      />
 
       {/* NOTA DE INTERACTIVIDAD */}
       <p className="text-xs text-indigo-300/70 italic flex items-center gap-1.5">
@@ -932,12 +975,21 @@ export default function Dashboard() {
           <li>
             Las sumas por programa o año pueden superar el total general: una misma persona puede participar en varios programas o cursadas.
           </li>
-          {Boolean(stats?.in_course_students_count) && (
-            <li>
-              <strong>{(stats?.in_course_students_count ?? 0).toLocaleString('es-AR')}</strong> estudiantes se encuentran en curso con materias aprobadas (módulo 1 completado en trayectorias con módulos sucesivos).
-            </li>
-          )}
-        </ul>
+            {Boolean(stats?.in_course_students_count) && (
+              <li>
+                <strong>{(stats?.in_course_students_count ?? 0).toLocaleString('es-AR')}</strong> estudiantes se encuentran en curso con materias aprobadas (módulo 1 completado en trayectorias con módulos sucesivos).
+              </li>
+            )}
+            {Boolean(stats?.sex_distribution) && (
+              <li>
+                Composición por sexo en la selección actual:{' '}
+                <strong>{(stats?.sex_distribution?.mujeres ?? 0).toLocaleString('es-AR')} mujeres</strong>{' '}
+                ({stats?.sex_distribution?.mujeres_pct ?? 0}%) y{' '}
+                <strong>{(stats?.sex_distribution?.varones ?? 0).toLocaleString('es-AR')} varones</strong>{' '}
+                ({stats?.sex_distribution?.varones_pct ?? 0}%).
+              </li>
+            )}
+          </ul>
       </section>
 
       {/* INFORMACIÓN SECUNDARIA · NIVEL DE ESTUDIO (DESPLEGABLE) */}

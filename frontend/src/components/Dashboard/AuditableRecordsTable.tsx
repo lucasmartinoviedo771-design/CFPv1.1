@@ -36,6 +36,19 @@ export default function AuditableRecordsTable({
     }
   };
 
+  const getSexBadge = (sexo?: string) => {
+    switch (sexo) {
+      case 'Mujeres':
+        return 'bg-pink-500/20 text-pink-300 border-pink-500/40';
+      case 'Varones':
+        return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
+      case 'Otro':
+        return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+      default:
+        return 'bg-slate-500/20 text-slate-400 border-slate-500/40';
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap justify-between items-center gap-3">
@@ -61,6 +74,7 @@ export default function AuditableRecordsTable({
             <tr>
               <th className="py-3 px-3">Apellido y Nombres</th>
               <th className="py-3 px-3 font-mono">DNI</th>
+              <th className="py-3 px-3">Sexo</th>
               <th className="py-3 px-3">Localidad</th>
               <th className="py-3 px-3">Regularidad</th>
               <th className="py-3 px-3">Programa / Carrera</th>
@@ -81,14 +95,14 @@ export default function AuditableRecordsTable({
           <tbody className="divide-y divide-indigo-900/30 text-indigo-100">
             {isLoading ? (
               <tr>
-                <td colSpan={17} className="py-8 text-center text-indigo-300">
+                <td colSpan={18} className="py-8 text-center text-indigo-300">
                   <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-brand-accent"></div>
                   <p className="mt-2 text-xs">Cargando registros...</p>
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={17} className="py-8 text-center text-indigo-300/60 italic">
+                <td colSpan={18} className="py-8 text-center text-indigo-300/60 italic">
                   No se encontraron registros que coincidan con los filtros aplicados.
                 </td>
               </tr>
@@ -97,6 +111,15 @@ export default function AuditableRecordsTable({
                 <tr key={row.id} className="hover:bg-indigo-900/30 transition-colors">
                   <td className="py-2.5 px-3 font-semibold text-white">{row.name}</td>
                   <td className="py-2.5 px-3 font-mono text-indigo-300">{row.dni || 'Sin DNI'}</td>
+                  <td className="py-2.5 px-3">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold border ${getSexBadge(
+                        row.sexo
+                      )}`}
+                    >
+                      {row.sexo || '-'}
+                    </span>
+                  </td>
                   <td className="py-2.5 px-3 text-indigo-200">{row.city}</td>
                   <td className="py-2.5 px-3">
                     <span className="px-2 py-0.5 rounded text-[11px] bg-indigo-900/50 border border-indigo-500/30">

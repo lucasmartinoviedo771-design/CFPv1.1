@@ -48,6 +48,7 @@ def dashboard_stats(
     localidad: str = None,
     nivel_educativo: str = None,
     estado: str = None,
+    sexo: str = None,
     fecha_desde: date = None,
     fecha_hasta: date = None,
     search: str = None,
@@ -230,6 +231,16 @@ def dashboard_stats(
         m1 = bool(re.search(r"\bmodulo\s*1\b", _norm(m_name)))
         m2 = bool(re.search(r"\bmodulo\s*2\b", _norm(m_name)))
 
+        sexo_raw = (est.sexo or "").upper().strip() if est else ""
+        if sexo_raw == "F":
+            sexo_display = "Mujeres"
+        elif sexo_raw == "M":
+            sexo_display = "Varones"
+        elif sexo_raw == "O":
+            sexo_display = "Otro"
+        else:
+            sexo_display = "Sin especificar"
+
         for nd in notas_a_emitir:
             has_grade = nd.get("nota") is not None
             grade_str = f"{nd['nota']:.2f}" if has_grade else ""
@@ -241,6 +252,8 @@ def dashboard_stats(
                 "name": f"{est.apellido}, {est.nombre}",
                 "dni": est.dni or "",
                 "city": city_norm,
+                "sexo": sexo_display,
+                "sexo_raw": sexo_raw,
                 "education": est.nivel_educativo or "Sin información",
                 "regular": est.estatus or "Regular",
                 "is_active": est.is_active,
@@ -368,6 +381,22 @@ def dashboard_stats(
             continue
         if estado and _norm(r["status"]) != _norm(estado):
             continue
+        if sexo:
+            s_low = _norm(sexo)
+            if s_low in ["mujeres", "femenino", "mujer", "f"]:
+                if r["sexo_raw"] != "F":
+                    continue
+            elif s_low in ["varones", "masculino", "varon", "hombre", "m"]:
+                if r["sexo_raw"] != "M":
+                    continue
+            elif s_low in ["otro", "otros", "o"]:
+                if r["sexo_raw"] != "O":
+                    continue
+            elif s_low in ["sin especificar", "no informado", "sin datos"]:
+                if r["sexo_raw"] not in ["", None]:
+                    continue
+            elif _norm(r["sexo"]) != s_low:
+                continue
         if fecha_desde:
             f_ref = r["cohorte_fecha_inicio"] or r["created_at_date"]
             if not f_ref or f_ref < fecha_desde:
@@ -378,7 +407,7 @@ def dashboard_stats(
                 continue
         if search:
             s_low = _norm(search)
-            combined_search = _norm(f"{r['name']} {r['dni']} {r['cohort']} {r['module']} {r['program']} {r['year']} {r['month']}")
+            combined_search = _norm(f"{r['name']} {r['dni']} {r['cohort']} {r['module']} {r['program']} {r['year']} {r['month']} {r['sexo']}")
             if s_low not in combined_search:
                 continue
         filtered_rows.append(r)
@@ -427,6 +456,25 @@ def dashboard_stats(
 
     by_education_raw = _count_unique_by("education")
     by_education = sorted(by_education_raw, key=lambda x: x["count"], reverse=True)
+
+    by_sex_raw = _count_unique_by("sexo")
+    order_priority = {"Mujeres": 0, "Varones": 1, "Otro": 2, "Sin especificar": 3}
+    by_sex = sorted(by_sex_raw, key=lambda x: (order_priority.get(x["name"], 99), -x["count"]))
+
+    mujeres_count = len(set(r["person_id"] for r in filtered_rows if r["sexo_raw"] == "F"))
+    varones_count = len(set(r["person_id"] for r in filtered_rows if r["sexo_raw"] == "M"))
+    otro_count = len(set(r["person_id"] for r in filtered_rows if r["sexo_raw"] == "O"))
+    sin_esp_count = len(set(r["person_id"] for r in filtered_rows if r["sexo_raw"] not in ["F", "M", "O"]))
+
+    sex_distribution = {
+        "mujeres": mujeres_count,
+        "varones": varones_count,
+        "otro": otro_count,
+        "sin_especificar": sin_esp_count,
+        "total": unique_students_count,
+        "mujeres_pct": round(mujeres_count / unique_students_count * 100, 1) if unique_students_count > 0 else 0,
+        "varones_pct": round(varones_count / unique_students_count * 100, 1) if unique_students_count > 0 else 0,
+    }
 
     # Meses en orden cronológico del calendario
     by_month_map = defaultdict(set)
@@ -529,6 +577,8 @@ def dashboard_stats(
             "state": item["state"],
             "status": item["status"],
             "reason": item["reason"],
+            "sexo": item["sexo"],
+            "sexo_raw": item["sexo_raw"],
             "enroll": item["enroll"],
             "grade": item["grade"],
             "qualified": item["qualified"],
@@ -593,6 +643,8 @@ def dashboard_stats(
         "by_month": by_month,
         "by_city": by_city,
         "by_education": by_education,
+        "by_sex": by_sex,
+        "sex_distribution": sex_distribution,
 
         "first_entries": first_entries,
         "cross_matrix": cross_matrix,
